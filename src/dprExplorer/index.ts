@@ -3,3 +3,7 @@ export { DprFile } from './DprFile';
 export { DprojFile } from './DprojFile';
 export { ExecutableFile } from './ExecutableFile';
 export { DprExplorerProvider } from './provider';
+export { DprContextMenuCommands } from './contextMenu/commands';
+export { DprUtils } from './utils';
+export { Compiler } from './contextMenu/Compiler';
+export { CompilerStatusBar } from './contextMenu/CompilerStatusBar';

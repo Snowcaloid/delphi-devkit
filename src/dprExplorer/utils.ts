@@ -1,0 +1,153 @@
+import { Uri, workspace } from 'vscode';
+import { basename, dirname, join } from 'path';
+import { promises as fs } from 'fs';
+import { DOMParser } from '@xmldom/xmldom';
+
+/**
+ * Utility functions for DPR Explorer operations
+ */
+export class DprUtils {
+
+  /**
+   * Find the executable path from a DPROJ file by parsing its XML content
+   */
+  static async findExecutableFromDproj(dprojUri: Uri): Promise<Uri | null> {
+    try {
+      const dprojContent = await fs.readFile(dprojUri.fsPath, 'utf8');
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(dprojContent, 'text/xml');
+
+      // Find all PropertyGroup elements
+      const propertyGroups = xmlDoc.getElementsByTagName('PropertyGroup');
+
+      for (let i = 0; i < propertyGroups.length; i++) {
+        const propertyGroup = propertyGroups[i];
+        const dccElements = propertyGroup.getElementsByTagName('DCC_DependencyCheckOutputName');
+
+        if (dccElements.length > 0) {
+          const outputPath = dccElements[0].textContent;
+          if (outputPath) {
+            // The path might be relative to the DPROJ location
+            const dprojDir = dirname(dprojUri.fsPath);
+            const executablePath = join(dprojDir, outputPath);
+            return Uri.file(executablePath);
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to parse DPROJ file:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find the associated DPR file for a given DPROJ file
+   */
+  static async findDprFromDproj(dprojUri: Uri): Promise<Uri | null> {
+    try {
+      const dprojDir = dirname(dprojUri.fsPath);
+      const dprojName = basename(dprojUri.fsPath).replace(/\.[^/.]+$/, "");
+
+      // Look for a DPR file with the same base name in the same directory
+      const dprPath = join(dprojDir, `${dprojName}.dpr`);
+
+      try {
+        await workspace.fs.stat(Uri.file(dprPath));
+        return Uri.file(dprPath);
+      } catch {
+        // Try case variations
+        const dprPathUpper = join(dprojDir, `${dprojName}.DPR`);
+        try {
+          await workspace.fs.stat(Uri.file(dprPathUpper));
+          return Uri.file(dprPathUpper);
+        } catch {
+          return null;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to find DPR from DPROJ:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find the associated DPROJ file for a given DPR file
+   */
+  static async findDprojFromDpr(dprUri: Uri): Promise<Uri | null> {
+    try {
+      const dprDir = dirname(dprUri.fsPath);
+      const dprName = basename(dprUri.fsPath).replace(/\.[^/.]+$/, "");
+
+      // Look for a DPROJ file with the same base name in the same directory
+      const dprojPath = join(dprDir, `${dprName}.dproj`);
+
+      try {
+        await workspace.fs.stat(Uri.file(dprojPath));
+        return Uri.file(dprojPath);
+      } catch {
+        // Try case variations
+        const dprojPathUpper = join(dprDir, `${dprName}.DPROJ`);
+        try {
+          await workspace.fs.stat(Uri.file(dprojPathUpper));
+          return Uri.file(dprojPathUpper);
+        } catch {
+          return null;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to find DPROJ from DPR:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find the project files (DPR and DPROJ) associated with an executable
+   */
+  static async findProjectFromExecutable(executableUri: Uri): Promise<{ dpr?: Uri; dproj?: Uri }> {
+    try {
+      const execDir = dirname(executableUri.fsPath);
+      const execName = basename(executableUri.fsPath).replace(/\.[^/.]+$/, "");
+
+      const result: { dpr?: Uri; dproj?: Uri } = {};
+
+      // Look for DPR file
+      const dprPath = join(execDir, `${execName}.dpr`);
+      try {
+        await workspace.fs.stat(Uri.file(dprPath));
+        result.dpr = Uri.file(dprPath);
+      } catch {
+        // Try case variations
+        const dprPathUpper = join(execDir, `${execName}.DPR`);
+        try {
+          await workspace.fs.stat(Uri.file(dprPathUpper));
+          result.dpr = Uri.file(dprPathUpper);
+        } catch {
+          // DPR not found
+        }
+      }
+
+      // Look for DPROJ file
+      const dprojPath = join(execDir, `${execName}.dproj`);
+      try {
+        await workspace.fs.stat(Uri.file(dprojPath));
+        result.dproj = Uri.file(dprojPath);
+      } catch {
+        // Try case variations
+        const dprojPathUpper = join(execDir, `${execName}.DPROJ`);
+        try {
+          await workspace.fs.stat(Uri.file(dprojPathUpper));
+          result.dproj = Uri.file(dprojPathUpper);
+        } catch {
+          // DPROJ not found
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to find project from executable:', error);
+      return {};
+    }
+  }
+}

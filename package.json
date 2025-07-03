@@ -10,7 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:delphi-dfm"
+    "*"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -27,6 +27,35 @@
       {
         "command": "delphi-utils.launchExecutable",
         "title": "Launch Application"
+      },
+      {
+        "command": "delphi-utils.compileDpr",
+        "title": "Compile"
+      },
+      {
+        "command": "delphi-utils.recreateDpr",
+        "title": "Recreate"
+      },
+      {
+        "command": "delphi-utils.showInExplorer",
+        "title": "Show in Explorer"
+      },
+      {
+        "command": "delphi-utils.openInFileExplorer",
+        "title": "Open in File Explorer"
+      },
+      {
+        "command": "delphi-utils.runExecutable",
+        "title": "Run"
+      },
+      {
+        "command": "delphi-utils.selectCompilerConfiguration",
+        "title": "Select Delphi Compiler",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "delphi-utils.showCompilerDropdown",
+        "title": "Show Delphi Compiler Dropdown"
       }
     ],
     "views": {
@@ -54,6 +83,38 @@
           "command": "delphi-utils.refreshDprExplorer",
           "when": "view == dprExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "delphi-utils.selectCompilerConfiguration",
+          "when": "view == dprExplorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "delphi-utils.compileDpr",
+          "when": "view == dprExplorer",
+          "group": "1_build@1"
+        },
+        {
+          "command": "delphi-utils.recreateDpr",
+          "when": "view == dprExplorer",
+          "group": "1_build@2"
+        },
+        {
+          "command": "delphi-utils.showInExplorer",
+          "when": "view == dprExplorer",
+          "group": "2_files@1"
+        },
+        {
+          "command": "delphi-utils.openInFileExplorer",
+          "when": "view == dprExplorer",
+          "group": "2_files@2"
+        },
+        {
+          "command": "delphi-utils.runExecutable",
+          "when": "view == dprExplorer",
+          "group": "3_run@1"
         }
       ]
     },
@@ -67,7 +128,88 @@
           "Delphi DFM"
         ]
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "delphi-utils.showCompilerDropdown",
+        "key": "ctrl+shift+d c",
+        "mac": "cmd+shift+d c",
+        "when": "!terminalFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Delphi Utils",
+      "properties": {
+        "delphi-utils.dprExplorer.excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/__history/**",
+            "**/.history/**"
+          ],
+          "description": "Glob patterns for paths to exclude from the DPR file explorer. Use standard glob patterns like '**/folder/**' to exclude entire directories.",
+          "scope": "resource"
+        },
+        "delphi-utils.compiler.configurations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name for the Delphi version"
+              },
+              "rsVarsPath": {
+                "type": "string",
+                "description": "Path to the RSVars.bat file for this Delphi version"
+              },
+              "msBuildPath": {
+                "type": "string",
+                "description": "Path to MSBuild.exe for this Delphi version"
+              },
+              "buildArguments": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Default build arguments for this Delphi version"
+              }
+            },
+            "required": ["name", "rsVarsPath", "msBuildPath", "buildArguments"]
+          },
+          "default": [
+            {
+              "name": "Delphi 12",
+              "rsVarsPath": "C:\\Program Files (x86)\\Embarcadero\\Studio\\23.0\\bin\\rsvars.bat",
+              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
+              "buildArguments": ["/verbosity:minimal", "/p:DCC_DebugInformation=1", "/p:RuntimeIdentifiers=3.5", "/p:Configuration=Debug"]
+            },
+            {
+              "name": "Delphi 11",
+              "rsVarsPath": "C:\\Program Files (x86)\\Embarcadero\\Studio\\22.0\\bin\\rsvars.bat",
+              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
+              "buildArguments": ["/verbosity:minimal", "/p:DCC_DebugInformation=1", "/p:RuntimeIdentifiers=3.5", "/p:Configuration=Debug"]
+            },
+            {
+              "name": "Delphi 2007",
+              "rsVarsPath": "C:\\Program Files (x86)\\CodeGear\\RAD Studio\\5.0\\bin\\rsvars.bat",
+              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
+              "buildArguments": ["/verbosity:minimal", "/p:DCC_DebugInformation=True", "/p:RuntimeIdentifiers=3.5", "/p:Configuration=Debug"]
+            }
+          ],
+          "description": "Delphi compiler configurations with paths and build arguments",
+          "scope": "resource"
+        },
+        "delphi-utils.compiler.currentConfiguration": {
+          "type": "string",
+          "default": "Delphi 12",
+          "description": "Currently selected Delphi compiler configuration",
+          "scope": "resource"
+        }
+      }
+    }
   },
   "repository": {
     "url": "https://github.com/dontenwill/vscode-delphi-utils",
@@ -101,23 +243,6 @@
     "eslint": "^9.25.1",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.8.3"
-  },
-  "configuration": {
-    "title": "Delphi Utils",
-    "properties": {
-      "delphi-utils.dprExplorer.excludePatterns": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "default": [
-          "**/__history/**",
-          "**/.history/**"
-        ],
-        "description": "Glob patterns for paths to exclude from the DPR file explorer. Use standard glob patterns like '**/folder/**' to exclude entire directories.",
-        "scope": "resource"
-      }
-    }
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.8",
