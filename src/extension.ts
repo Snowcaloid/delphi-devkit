@@ -1,7 +1,7 @@
-import { ExtensionContext, commands, languages, window } from 'vscode';
+import { ExtensionContext, commands, languages, window, Uri, env } from 'vscode';
 import { dfmSwap } from './dfmSwap/command';
 import { DfmLanguageProvider } from './dfmLanguageSupport/provider';
-import { DprExplorerProvider } from './dprExplorer/provider';
+import { DprExplorerProvider } from './dprExplorer';
 
 export function activate(context: ExtensionContext): void {
   const swapCommand = commands.registerCommand('delphi-utils.swapToDfmPas', dfmSwap);
@@ -18,11 +18,21 @@ export function activate(context: ExtensionContext): void {
     dprExplorerProvider.refresh();
   });
 
+  const launchExecutableCommand = commands.registerCommand('delphi-utils.launchExecutable', async (uri: Uri) => {
+    try {
+      // Use the system's default application handler to launch the executable
+      await env.openExternal(uri);
+    } catch (error) {
+      window.showErrorMessage(`Failed to launch executable: ${error}`);
+    }
+  });
+
   context.subscriptions.push(
     swapCommand,
     definitionProvider,
     dprTreeView,
-    refreshDprCommand
+    refreshDprCommand,
+    launchExecutableCommand
   );
 }
 
