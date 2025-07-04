@@ -1,11 +1,11 @@
 import { commands, window, Uri, env, workspace } from 'vscode';
-import { DelphiProjectTreeItem } from '../DelphiProjectTreeItem';
-import { DelphiProject } from '../DelphiProject';
-import { DprFile } from '../DprFile';
-import { DprojFile } from '../DprojFile';
-import { DpkFile } from '../DpkFile';
-import { ExecutableFile } from '../ExecutableFile';
-import { IniFile } from '../IniFile';
+import { DelphiProjectTreeItem } from '../treeItems/DelphiProjectTreeItem';
+import { DelphiProject } from '../treeItems/DelphiProject';
+import { DprFile } from '../treeItems/DprFile';
+import { DprojFile } from '../treeItems/DprojFile';
+import { DpkFile } from '../treeItems/DpkFile';
+import { ExecutableFile } from '../treeItems/ExecutableFile';
+import { IniFile } from '../treeItems/IniFile';
 import { DelphiProjectUtils } from '../utils';
 import { Compiler } from './Compiler';
 import { basename, dirname, join } from 'path';

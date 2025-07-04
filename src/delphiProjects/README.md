@@ -12,6 +12,13 @@ This folder contains the implementation of the Delphi Projects explorer for VS C
 - **DelphiProjectUtils**: Utility functions for project file operations
 - **DelphiProjectContextMenuCommands**: Context menu commands for all project items
 
+### Core Services
+
+- **ProjectDiscovery**: Service for discovering Delphi projects in the workspace
+- **ProjectLoader**: Service for loading projects from cached configuration data
+- **ProjectCacheManager**: Utility for managing the project cache file operations
+- **types**: Type definitions for cache and data structures
+
 ### File Types
 
 - **DprFile**: Delphi program source files (.dpr)
