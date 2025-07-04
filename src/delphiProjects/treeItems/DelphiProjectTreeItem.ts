@@ -1,5 +1,4 @@
 import { TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
-import { dirname } from 'path';
 
 export abstract class DelphiProjectTreeItem extends TreeItem {
   constructor(
@@ -9,6 +8,5 @@ export abstract class DelphiProjectTreeItem extends TreeItem {
   ) {
     super(label, collapsibleState);
     this.tooltip = this.resourceUri.fsPath;
-    this.description = dirname(this.resourceUri.fsPath);
   }
 }
