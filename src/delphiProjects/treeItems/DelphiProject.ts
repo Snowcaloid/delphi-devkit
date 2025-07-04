@@ -31,12 +31,16 @@ export class DelphiProject extends DelphiProjectTreeItem {
   // Set icon based on actual project members (DPK > DPR > Library > fallback)
   setIcon(): void {
     if (this.dpk) {
+      console.log(`[DelphiProject.setIcon] ${this.label}: Using DPK icon`);
       this.iconPath = new ThemeIcon('package');
     } else if (this.dpr) {
+      console.log(`[DelphiProject.setIcon] ${this.label}: Using DPR icon`);
       this.iconPath = new ThemeIcon('run');
     } else if (this.projectType === ProjectType.Library) {
+      console.log(`[DelphiProject.setIcon] ${this.label}: Using Library icon`);
       this.iconPath = new ThemeIcon('library');
     } else {
+      console.log(`[DelphiProject.setIcon] ${this.label}: Using default icon`);
       this.iconPath = new ThemeIcon('symbol-class');
     }
   }

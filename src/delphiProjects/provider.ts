@@ -1,4 +1,4 @@
-import { TreeItem, TreeDataProvider, TreeItemCollapsibleState, EventEmitter, Event, Uri, workspace, ConfigurationChangeEvent, window, ProgressLocation } from 'vscode';
+import { TreeItem, TreeDataProvider, TreeItemCollapsibleState, EventEmitter, Event, Uri, workspace, ConfigurationChangeEvent, window, ProgressLocation, TreeDragAndDropController, DataTransfer, DataTransferItem } from 'vscode';
 import { basename } from 'path';
 import { DelphiProjectTreeItem } from './treeItems/DelphiProjectTreeItem';
 import { DelphiProject } from './treeItems/DelphiProject';
@@ -12,6 +12,7 @@ import { ProjectCacheManager } from './data/cacheManager';
 import { ProjectDiscovery } from './data/projectDiscovery';
 import { ProjectLoader } from './data/projectLoader';
 import { minimatch } from 'minimatch';
+import { DelphiProjectsDragAndDropController } from './treeItems/DragAndDropController';
 
 /**
  * Provides a tree view of Delphi projects found in the workspace.
@@ -36,6 +37,8 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
   readonly onDidChangeTreeData: Event<DelphiProjectTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   private cacheManager = new ProjectCacheManager();
   private forceRefreshCache = false;
+  public readonly dragAndDropController: DelphiProjectsDragAndDropController;
+  private customOrder: string[] | undefined;
 
   constructor() {
     // Watch for file system changes to refresh the tree (case-insensitive patterns)
@@ -65,6 +68,28 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
         // Removed: this.saveProjectsToConfig();
       }
     });
+    this.dragAndDropController = new DelphiProjectsDragAndDropController(() => this.refresh());
+  }
+
+  private getProjectKey(item: DelphiProjectTreeItem): string {
+    // Use absolute path as unique key
+    // @ts-ignore
+    return item.dpr?.fsPath || item.dproj?.fsPath || item.dpk?.fsPath || item.executable?.fsPath || item.ini?.fsPath || item.resourceUri?.fsPath || item.label;
+  }
+
+  private async getCurrentOrder(): Promise<string[]> {
+    if (this.customOrder) { return this.customOrder; }
+    const configData = await this.cacheManager.loadCacheData();
+    if (configData?.customOrder) { return configData.customOrder; }
+    // Fallback: use current project order
+    const projects = await ProjectDiscovery.getAllProjects();
+    return projects.map(p => p.dpr?.fsPath || p.dproj?.fsPath || p.dpk?.fsPath || p.executable?.fsPath || p.ini?.fsPath || p.label);
+  }
+
+  private async saveCustomOrder(order: string[]): Promise<void> {
+    const configData = await this.cacheManager.loadCacheData() || { lastUpdated: new Date().toISOString(), version: '1.0', defaultProjects: [] };
+    configData.customOrder = order;
+    await this.cacheManager.saveCacheData(configData);
   }
 
   private async saveProjectsToConfig(): Promise<void> {
@@ -124,52 +149,63 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
     try {
       if (!element) {
         console.log('DelphiProjectsProvider: Loading root projects...');
-        let configData: ProjectCacheData | null = null;
         let projects: DelphiProject[] | null = null;
+        let configData: ProjectCacheData | null = null;
         configData = await this.cacheManager.loadCacheData();
+        console.log('DelphiProjectsProvider: Loaded cache data:', configData);
         // If a group project is loaded, show only its projects
         if (configData && configData.currentGroupProject) {
-          // Convert ProjectData[] to DelphiProject[]
-          projects = await ProjectLoader.loadProjectsFromConfig({ defaultProjects: configData.currentGroupProject.projects });
+          await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', true));
+          try {
+            projects = await ProjectLoader.loadProjectsFromConfig({ defaultProjects: configData.currentGroupProject.projects });
+            console.log('DelphiProjectsProvider: Loaded group project projects:', projects);
+          } catch (err) {
+            console.error('DelphiProjectsProvider: Error loading group project projects:', err);
+          }
         } else {
-          if (this.forceRefreshCache) {
-            // Always rebuild cache if forced
-            projects = await ProjectDiscovery.getAllProjects();
-            await this.saveProjectsToConfig();
-            this.forceRefreshCache = false;
-          } else {
+          await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', false));
+          try {
             projects = await ProjectLoader.loadProjectsFromConfig(configData);
+            console.log('DelphiProjectsProvider: Loaded projects from config:', projects);
             if (!projects || projects.length === 0) {
               console.log('DelphiProjectsProvider: No cached projects found, searching file system...');
               try {
-                projects = await window.withProgress({
-                  location: ProgressLocation.Notification,
-                  title: "Searching for Delphi projects...",
-                  cancellable: false
-                }, async (progress) => {
-                  progress.report({ message: "Scanning workspace folders..." });
-                  const result = await Promise.race([
-                    ProjectDiscovery.getAllProjects(),
-                    new Promise<DelphiProject[]>((_, reject) =>
-                      setTimeout(() => reject(new Error('Project search timed out after 30 seconds')), 30000)
-                    )
-                  ]);
-                  progress.report({ message: `Found ${result.length} projects` });
-                  return result;
-                });
+                projects = await ProjectDiscovery.getAllProjects();
+                console.log('DelphiProjectsProvider: Discovered projects from file system:', projects);
+                await this.saveProjectsToConfig();
               } catch (error) {
                 console.error('DelphiProjectsProvider: Project search failed or timed out:', error);
                 window.showWarningMessage('Delphi project search failed or timed out. Please check your workspace and configuration.');
                 projects = [];
               }
-              console.log(`DelphiProjectsProvider: Found ${projects.length} projects`);
-              await this.saveProjectsToConfig();
-            } else {
-              console.log(`DelphiProjectsProvider: Loaded ${projects.length} projects from cache`);
             }
+          } catch (err) {
+            console.error('DelphiProjectsProvider: Error loading projects from config:', err);
           }
         }
-        if (!projects) { return []; }
+        if (!projects) {
+          console.warn('DelphiProjectsProvider: Projects is null or undefined after all loading attempts.');
+          return [];
+        }
+        // Custom order logic
+        if (
+          (configData?.customOrder && !configData.currentGroupProject) ||
+          (configData?.currentGroupProject && this.dragAndDropController.groupCustomOrder)
+        ) {
+          // Map custom order to projects
+          const keyMap = new Map<string, DelphiProject>();
+          for (const p of projects) {
+            const key = p.dpr?.fsPath || p.dproj?.fsPath || p.dpk?.fsPath || p.executable?.fsPath || p.ini?.fsPath || p.label;
+            keyMap.set(key, p);
+          }
+          const customOrder = configData?.currentGroupProject && this.dragAndDropController.groupCustomOrder
+            ? this.dragAndDropController.groupCustomOrder
+            : configData?.customOrder!;
+          const ordered = customOrder.map(key => keyMap.get(key)).filter(Boolean) as DelphiProject[];
+          // Add any new projects not in customOrder at the end
+          const missing = projects.filter(p => !customOrder.includes(p.dpr?.fsPath || p.dproj?.fsPath || p.dpk?.fsPath || p.executable?.fsPath || p.ini?.fsPath || p.label));
+          return [...ordered, ...missing];
+        }
         // Only sort if setting is enabled and not a group project
         const isGroupProject = !!(configData && configData.currentGroupProject);
         if (!isGroupProject) {
@@ -203,17 +239,23 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
 
         if (element.dproj) {
           const dprojFileName = basename(element.dproj.fsPath);
-          children.push(new DprojFile(dprojFileName, element.dproj));
+          const dprojItem = new DprojFile(dprojFileName, element.dproj);
+          dprojItem.parent = element;
+          children.push(dprojItem);
         }
 
         if (element.dpr) {
           const dprFileName = basename(element.dpr.fsPath);
-          children.push(new DprFile(dprFileName, element.dpr));
+          const dprItem = new DprFile(dprFileName, element.dpr);
+          dprItem.parent = element;
+          children.push(dprItem);
         }
 
         if (element.dpk) {
           const dpkFileName = basename(element.dpk.fsPath);
-          children.push(new DpkFile(dpkFileName, element.dpk));
+          const dpkItem = new DpkFile(dpkFileName, element.dpk);
+          dpkItem.parent = element;
+          children.push(dpkItem);
         }
 
         if (element.executable) {
@@ -224,6 +266,7 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
             element.ini ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None
           );
           executableItem.ini = element.ini;
+          executableItem.parent = element;
           children.push(executableItem);
         }
 
@@ -232,7 +275,9 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
         // Executable file with INI - return INI as child
         const children: DelphiProjectTreeItem[] = [];
         const iniFileName = basename(element.ini.fsPath);
-        children.push(new IniFile(iniFileName, element.ini));
+        const iniItem = new IniFile(iniFileName, element.ini);
+        iniItem.parent = element;
+        children.push(iniItem);
         return children;
       }
 

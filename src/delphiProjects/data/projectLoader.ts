@@ -129,6 +129,9 @@ export class ProjectLoader {
       const exists = await fileChecks.get(projectData.dprojAbsolutePath);
       if (exists) {
         project.dproj = Uri.file(projectData.dprojAbsolutePath);
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dproj set to ${projectData.dprojAbsolutePath}`);
+      } else {
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dproj missing (${projectData.dprojAbsolutePath})`);
       }
     }
 
@@ -137,6 +140,9 @@ export class ProjectLoader {
       const exists = await fileChecks.get(projectData.dprAbsolutePath);
       if (exists) {
         project.dpr = Uri.file(projectData.dprAbsolutePath);
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dpr set to ${projectData.dprAbsolutePath}`);
+      } else {
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dpr missing (${projectData.dprAbsolutePath})`);
       }
     }
 
@@ -145,6 +151,9 @@ export class ProjectLoader {
       const exists = await fileChecks.get(projectData.dpkAbsolutePath);
       if (exists) {
         project.dpk = Uri.file(projectData.dpkAbsolutePath);
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dpk set to ${projectData.dpkAbsolutePath}`);
+      } else {
+        console.log(`[restoreFileReferencesBatch] ${project.label}: dpk missing (${projectData.dpkAbsolutePath})`);
       }
     }
 
@@ -153,6 +162,9 @@ export class ProjectLoader {
       const exists = await fileChecks.get(projectData.executableAbsolutePath);
       if (exists) {
         project.executable = Uri.file(projectData.executableAbsolutePath);
+        console.log(`[restoreFileReferencesBatch] ${project.label}: executable set to ${projectData.executableAbsolutePath}`);
+      } else {
+        console.log(`[restoreFileReferencesBatch] ${project.label}: executable missing (${projectData.executableAbsolutePath})`);
       }
     }
 
@@ -161,6 +173,9 @@ export class ProjectLoader {
       const exists = await fileChecks.get(projectData.iniAbsolutePath);
       if (exists) {
         project.ini = Uri.file(projectData.iniAbsolutePath);
+        console.log(`[restoreFileReferencesBatch] ${project.label}: ini set to ${projectData.iniAbsolutePath}`);
+      } else {
+        console.log(`[restoreFileReferencesBatch] ${project.label}: ini missing (${projectData.iniAbsolutePath})`);
       }
     }
   }

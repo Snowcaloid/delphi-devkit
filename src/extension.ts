@@ -12,7 +12,8 @@ export function activate(context: ExtensionContext): void {
   // Register Delphi Projects Explorer
   const delphiProjectsProvider = new DelphiProjectsProvider();
   const dprTreeView = window.createTreeView('delphiProjects', {
-    treeDataProvider: delphiProjectsProvider
+    treeDataProvider: delphiProjectsProvider,
+    dragAndDropController: delphiProjectsProvider.dragAndDropController
   });
 
   const refreshDprCommand = commands.registerCommand('delphi-utils.refreshDelphiProjects', () => {

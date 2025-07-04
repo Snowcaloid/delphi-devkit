@@ -19,6 +19,10 @@ export interface ProjectCacheData {
     name: string;
     projects: ProjectData[];
   };
+  /**
+   * Stores the custom order of project absolute paths (if set by drag-and-drop)
+   */
+  customOrder?: string[];
 }
 
 /**

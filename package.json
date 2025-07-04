@@ -79,7 +79,8 @@
           "id": "delphiProjects",
           "name": "Delphi Projects",
           "when": "workbenchState != empty",
-          "icon": "$(file-code)"
+          "icon": "$(file-code)",
+          "canDragAndDrop": true
         }
       ]
     },
