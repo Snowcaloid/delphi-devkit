@@ -3,11 +3,13 @@
   "displayName": "Delphi Utils (beta)",
   "description": "Utilities for developing in Delphi using VS Code",
   "version": "0.1.0",
+  "publisher": "DontenwillAG",
+  "homepage": "https://www.dontenwill.de",
   "engines": {
     "vscode": "^1.101.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -319,14 +321,5 @@
   "dependencies": {
     "@xmldom/xmldom": "^0.9.8",
     "minimatch": "^10.0.3"
-  },
-  "files": [
-    "dist",
-    "assets",
-    "out",
-    "src",
-    "package.json",
-    "README.md",
-    "CHANGELOG.md"
-  ]
+  }
 }
