@@ -1,8 +1,8 @@
 {
   "name": "delphi-utils",
-  "displayName": "Delphi Utils",
+  "displayName": "Delphi Utils (beta)",
   "description": "Utilities for developing in Delphi using ",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.101.0"
   },
@@ -285,7 +285,7 @@
     }
   },
   "repository": {
-    "url": "https://github.com/dontenwill/vscode-delphi-utils",
+    "url": "https://github.com/dontenwill-standard/vscode_delphi_utils",
     "type": "git"
   },
   "scripts": {
