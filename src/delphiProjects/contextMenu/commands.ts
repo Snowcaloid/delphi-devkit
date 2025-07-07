@@ -10,6 +10,8 @@ import { DelphiProjectUtils } from '../utils';
 import { Compiler } from './Compiler';
 import { basename, dirname, join } from 'path';
 import { promises as fs } from 'fs';
+import { ProjectCacheManager } from '../data/cacheManager';
+import { getExpectedExePathFromDproj } from '../utils/getExpectedExePathFromDproj';
 
 /**
  * Context menu commands for Delphi Projects tree items
@@ -46,6 +48,26 @@ export class DelphiProjectContextMenuCommands {
     const dprojUri = await DelphiProjectContextMenuCommands.findDprojUri(item);
     if (dprojUri) {
       await Compiler.compile(dprojUri, false);
+      // After compile, check for .exe if item is a DPR project and has no .exe
+      let dprPath: string | undefined;
+      if (item instanceof DelphiProject && item.dpr && !item.executable) {
+        dprPath = item.dpr.fsPath;
+      } else if (item instanceof DprFile) {
+        dprPath = item.resourceUri.fsPath;
+      }
+      if (dprPath && dprojUri) {
+        // Use utility to get expected exe path
+        const exePath = await getExpectedExePathFromDproj(dprojUri.fsPath, dprPath);
+        if (exePath) {
+          try {
+            await fs.access(exePath);
+            // .exe exists, update cache
+            await DelphiProjectContextMenuCommands.updateExeInCache(dprPath, exePath);
+            // Optionally refresh the tree
+            commands.executeCommand('delphi-utils.refreshDelphiProjects');
+          } catch {}
+        }
+      }
     }
   }
 
@@ -246,15 +268,24 @@ export class DelphiProjectContextMenuCommands {
         window.showInformationMessage(`Opened existing INI file: ${iniPath}`);
       } catch {
         // File doesn't exist, create it
-        const defaultIniContent = `; Configuration file for ${executableName}
-; Created by Delphi Utils VS Code Extension
-
-[Settings]
-; Add your application settings here
-
-[Options]
-; Add your application options here
+        // Try to use .vscode/.delphi/default.ini if it exists
+        const path = require('path');
+        const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
+        let defaultIniContent = '';
+        let usedDefault = false;
+        if (workspaceRoot) {
+          const defaultIniPath = path.join(workspaceRoot, '.vscode', '.delphi', 'default.ini');
+          try {
+            const content = await fs.readFile(defaultIniPath, 'utf8');
+            defaultIniContent = content;
+            usedDefault = true;
+          } catch {}
+        }
+        if (!usedDefault) {
+          defaultIniContent = `;${iniPath}
+[CmdLineParam]
 `;
+        }
 
         try {
           await fs.writeFile(iniPath, defaultIniContent, 'utf8');
@@ -262,13 +293,62 @@ export class DelphiProjectContextMenuCommands {
           window.showInformationMessage(`Created and opened new INI file: ${iniPath}`);
 
           // Refresh the explorer to show the new INI file
-          commands.executeCommand('delphi-utils.refreshDelphiProjects');
+          const cacheManager = new ProjectCacheManager();
+          const cache = await cacheManager.loadCacheData();
+          if (cache && cache.currentGroupProject) {
+            // If group project mode is active, re-set context and refresh
+            // Update group project cache if active
+            if (cache && cache.currentGroupProject) {
+              // Find the project in the group project list and update its INI fields
+              const groupProjects = cache.currentGroupProject.projects;
+              for (const proj of groupProjects) {
+                if (proj.executableAbsolutePath === executableUri.fsPath) {
+                  proj.hasIni = true;
+                  proj.iniAbsolutePath = iniPath;
+                  proj.iniPath = workspace.asRelativePath(iniPath);
+                }
+              }
+              await cacheManager.saveCacheData(cache);
+              await commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', true);
+            } else {
+              // Otherwise, refresh default projects
+              commands.executeCommand('delphi-utils.refreshDelphiProjects');
+            }
+          }
         } catch (error) {
           window.showErrorMessage(`Failed to create INI file: ${error}`);
         }
       }
     } catch (error) {
       window.showErrorMessage(`Failed to configure INI file: ${error}`);
+    }
+  }
+
+  private static async updateExeInCache(dprPath: string, exePath: string): Promise<void> {
+    const cacheManager = new ProjectCacheManager();
+    const cache = await cacheManager.loadCacheData();
+    if (!cache) { return; }
+    let updated = false;
+    // Helper to update a project list
+    function updateProjects(projects: any[]): boolean {
+      let changed = false;
+      for (const proj of projects) {
+        if (proj.dprAbsolutePath === dprPath && !proj.hasExecutable) {
+          proj.hasExecutable = true;
+          proj.executableAbsolutePath = exePath;
+          proj.executablePath = exePath;
+          changed = true;
+        }
+      }
+      return changed;
+    }
+    // Update defaultProjects
+    if (updateProjects(cache.defaultProjects)) { updated = true; }
+    // Update group project if present
+    if (cache.currentGroupProject && updateProjects(cache.currentGroupProject.projects)) { updated = true; }
+    if (updated) {
+      cache.lastUpdated = new Date().toISOString();
+      await cacheManager.saveCacheData(cache);
     }
   }
 }

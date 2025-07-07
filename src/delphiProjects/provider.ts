@@ -13,6 +13,7 @@ import { ProjectDiscovery } from './data/projectDiscovery';
 import { ProjectLoader } from './data/projectLoader';
 import { minimatch } from 'minimatch';
 import { DelphiProjectsDragAndDropController } from './treeItems/DragAndDropController';
+import { getExpectedExePathFromDproj } from './utils/getExpectedExePathFromDproj';
 
 /**
  * Provides a tree view of Delphi projects found in the workspace.
@@ -51,11 +52,9 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
     [dprWatcher, dpkWatcher, dprojWatcher, iniWatcher].forEach(watcher => {
       watcher.onDidCreate(() => {
         this.refresh();
-        // Removed: this.saveProjectsToConfig();
       });
       watcher.onDidDelete(() => {
         this.refresh();
-        // Removed: this.saveProjectsToConfig();
       });
       watcher.onDidChange(() => this.refresh());
     });
@@ -65,7 +64,6 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
       if (event.affectsConfiguration('delphi-utils.delphiProjects.excludePatterns') ||
           event.affectsConfiguration('delphi-utils.delphiProjects.projectPaths')) {
         this.refresh();
-        // Removed: this.saveProjectsToConfig();
       }
     });
     this.dragAndDropController = new DelphiProjectsDragAndDropController(() => this.refresh());
@@ -98,24 +96,30 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
       const configData: ProjectCacheData = {
         lastUpdated: new Date().toISOString(),
         version: '1.0',
-        defaultProjects: projects.map(project => ({
-          name: project.label,
-          type: project.projectType,
-          hasDproj: !!project.dproj,
-          dprojPath: project.dproj ? workspace.asRelativePath(project.dproj) : undefined,
-          dprojAbsolutePath: project.dproj?.fsPath,
-          hasDpr: !!project.dpr,
-          dprPath: project.dpr ? workspace.asRelativePath(project.dpr) : undefined,
-          dprAbsolutePath: project.dpr?.fsPath,
-          hasDpk: !!project.dpk,
-          dpkPath: project.dpk ? workspace.asRelativePath(project.dpk) : undefined,
-          dpkAbsolutePath: project.dpk?.fsPath,
-          hasExecutable: !!project.executable,
-          executablePath: project.executable ? workspace.asRelativePath(project.executable) : undefined,
-          executableAbsolutePath: project.executable?.fsPath,
-          hasIni: !!project.ini,
-          iniPath: project.ini ? workspace.asRelativePath(project.ini) : undefined,
-          iniAbsolutePath: project.ini?.fsPath
+        defaultProjects: await Promise.all(projects.map(async project => {
+          let exePath: string | undefined = undefined;
+          if (project.dproj && project.dpr) {
+            exePath = await getExpectedExePathFromDproj(project.dproj.fsPath, project.dpr.fsPath) || undefined;
+          }
+          return {
+            name: project.label,
+            type: project.projectType,
+            hasDproj: !!project.dproj,
+            dprojPath: project.dproj ? workspace.asRelativePath(project.dproj) : undefined,
+            dprojAbsolutePath: project.dproj?.fsPath,
+            hasDpr: !!project.dpr,
+            dprPath: project.dpr ? workspace.asRelativePath(project.dpr) : undefined,
+            dprAbsolutePath: project.dpr?.fsPath,
+            hasDpk: !!project.dpk,
+            dpkPath: project.dpk ? workspace.asRelativePath(project.dpk) : undefined,
+            dpkAbsolutePath: project.dpk?.fsPath,
+            hasExecutable: !!exePath,
+            executablePath: exePath ? workspace.asRelativePath(exePath) : undefined,
+            executableAbsolutePath: exePath,
+            hasIni: !!project.ini,
+            iniPath: project.ini ? workspace.asRelativePath(project.ini) : undefined,
+            iniAbsolutePath: project.ini?.fsPath
+          };
         }))
         // groupProjects removed
       };
@@ -148,43 +152,48 @@ export class DelphiProjectsProvider implements TreeDataProvider<DelphiProjectTre
   async getChildren(element?: DelphiProjectTreeItem): Promise<DelphiProjectTreeItem[]> {
     try {
       if (!element) {
-        console.log('DelphiProjectsProvider: Loading root projects...');
         let projects: DelphiProject[] | null = null;
         let configData: ProjectCacheData | null = null;
-        configData = await this.cacheManager.loadCacheData();
-        console.log('DelphiProjectsProvider: Loaded cache data:', configData);
-        // If a group project is loaded, show only its projects
-        if (configData && configData.currentGroupProject) {
-          await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', true));
-          try {
-            projects = await ProjectLoader.loadProjectsFromConfig({ defaultProjects: configData.currentGroupProject.projects });
-            console.log('DelphiProjectsProvider: Loaded group project projects:', projects);
-          } catch (err) {
-            console.error('DelphiProjectsProvider: Error loading group project projects:', err);
-          }
+        if (this.forceRefreshCache) {
+          // [Delphi][Provider] Force cache refresh, running full project discovery
+          projects = await ProjectDiscovery.getAllProjects();
+          await this.saveProjectsToConfig();
+          this.forceRefreshCache = false;
         } else {
-          await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', false));
-          try {
-            projects = await ProjectLoader.loadProjectsFromConfig(configData);
-            console.log('DelphiProjectsProvider: Loaded projects from config:', projects);
-            if (!projects || projects.length === 0) {
-              console.log('DelphiProjectsProvider: No cached projects found, searching file system...');
-              try {
-                projects = await ProjectDiscovery.getAllProjects();
-                console.log('DelphiProjectsProvider: Discovered projects from file system:', projects);
-                await this.saveProjectsToConfig();
-              } catch (error) {
-                console.error('DelphiProjectsProvider: Project search failed or timed out:', error);
-                window.showWarningMessage('Delphi project search failed or timed out. Please check your workspace and configuration.');
-                projects = [];
-              }
+          configData = await this.cacheManager.loadCacheData();
+          // [Delphi][Provider] Loaded cache data
+          if (configData && configData.currentGroupProject) {
+            await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', true));
+            try {
+              projects = await ProjectLoader.loadProjectsFromConfig({ defaultProjects: configData.currentGroupProject.projects });
+              // [Delphi][Provider] Loaded group project projects
+            } catch (err) {
+              console.error('[Delphi][Provider] Error loading group project projects:', err);
             }
-          } catch (err) {
-            console.error('DelphiProjectsProvider: Error loading projects from config:', err);
+          } else {
+            await import('vscode').then(vscode => vscode.commands.executeCommand('setContext', 'delphiUtils:groupProjectLoaded', false));
+            try {
+              projects = await ProjectLoader.loadProjectsFromConfig(configData);
+              // [Delphi][Provider] Loaded projects from config
+              if (!projects || projects.length === 0) {
+                // [Delphi][Provider] No cached projects found, searching file system
+                try {
+                  projects = await ProjectDiscovery.getAllProjects();
+                  // [Delphi][Provider] Discovered projects from file system
+                  await this.saveProjectsToConfig();
+                } catch (error) {
+                  console.error('[Delphi][Provider] Project search failed or timed out:', error);
+                  window.showWarningMessage('Delphi project search failed or timed out. Please check your workspace and configuration.');
+                  projects = [];
+                }
+              }
+            } catch (err) {
+              console.error('[Delphi][Provider] Error loading projects from config:', err);
+            }
           }
         }
         if (!projects) {
-          console.warn('DelphiProjectsProvider: Projects is null or undefined after all loading attempts.');
+          console.warn('[Delphi][Provider] Projects is null or undefined after all loading attempts.');
           return [];
         }
         // Custom order logic

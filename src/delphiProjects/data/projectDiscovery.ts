@@ -13,14 +13,9 @@ export class ProjectDiscovery {
    * Discover all Delphi projects in the workspace based on configuration.
    */
   static async getAllProjects(): Promise<DelphiProject[]> {
-    console.log('ProjectDiscovery: Starting getAllProjects...');
-
     if (!workspace.workspaceFolders) {
-      console.log('ProjectDiscovery: No workspace folders found');
       return [];
     }
-
-    console.log(`ProjectDiscovery: Found ${workspace.workspaceFolders.length} workspace folders`);
 
     const projectMap = new Map<string, DelphiProject>(); // Key: project base name + directory
 
@@ -29,21 +24,15 @@ export class ProjectDiscovery {
     const projectPaths: string[] = config.get('projectPaths', ['**']);
     const excludePatterns: string[] = config.get('excludePatterns', []);
 
-    console.log('ProjectDiscovery: Project paths:', projectPaths);
-    console.log('ProjectDiscovery: Exclude patterns:', excludePatterns);
-
     for (const folder of workspace.workspaceFolders) {
-      console.log(`ProjectDiscovery: Processing folder: ${folder.uri.fsPath}`);
 
       // Create exclude pattern for workspace.findFiles
       const excludeGlob = excludePatterns.length > 0 ? `{${excludePatterns.join(',')}}` : undefined;
-      console.log('ProjectDiscovery: Using exclude glob:', excludeGlob);
 
       // Use optimized batch processing approach
       await this.processAllProjectFilesBatch(folder, projectPaths, excludeGlob, projectMap);
     }
 
-    console.log(`ProjectDiscovery: Finished processing, found ${projectMap.size} total projects`);
     return Array.from(projectMap.values());
   }
 
@@ -69,16 +58,12 @@ export class ProjectDiscovery {
       dpkPatterns.push(`${projectPath}/**/*.[Dd][Pp][Kk]`);
     }
 
-    console.log('ProjectDiscovery: Finding all project files in parallel...');
-
     // Find all files in parallel
     const [dprojFiles, dprFiles, dpkFiles] = await Promise.all([
       this.findFilesBatch(folder, dprojPatterns, excludeGlob),
       this.findFilesBatch(folder, dprPatterns, excludeGlob),
       this.findFilesBatch(folder, dpkPatterns, excludeGlob)
     ]);
-
-    console.log(`ProjectDiscovery: Found ${dprojFiles.length} DPROJ, ${dprFiles.length} DPR, ${dpkFiles.length} DPK files in ${Date.now() - startTime}ms`);
 
     // Create lookup maps for faster file association
     const filesByDir = this.createFilesByDirectoryMap(dprFiles, dpkFiles);
@@ -164,8 +149,6 @@ export class ProjectDiscovery {
     filesByDir: Map<string, { dpr?: Uri; dpk?: Uri; baseName: string }[]>,
     projectMap: Map<string, DelphiProject>
   ): Promise<void> {
-    console.log(`ProjectDiscovery: Processing ${dprojFiles.length} DPROJ files in batch...`);
-
     // Process DPROJ files with parallel executable parsing
     const dprojPromises = dprojFiles.map(async (dprojFile) => {
       const fileName = basename(dprojFile.fsPath);
@@ -184,7 +167,6 @@ export class ProjectDiscovery {
 
       const project = new DelphiProject(baseName, projectType);
       project.dproj = dprojFile;
-
       // Add corresponding files if found
       if (correspondingFiles?.dpk) {
         project.dpk = correspondingFiles.dpk;
@@ -192,7 +174,7 @@ export class ProjectDiscovery {
       if (correspondingFiles?.dpr) {
         project.dpr = correspondingFiles.dpr;
       }
-
+      project.setIcon();
       // Parse executable asynchronously (but don't await here for parallel processing)
       return this.processExecutableFromDprojAsync(project, dprojFile, baseName).then(() => {
         project.updateCollapsibleState();
@@ -208,7 +190,6 @@ export class ProjectDiscovery {
       if (result.status === 'fulfilled') {
         const { projectKey, project } = result.value;
         projectMap.set(projectKey, project);
-        console.log(`ProjectDiscovery: Added DPROJ project: ${project.label}`);
       } else {
         console.error('ProjectDiscovery: Failed to process DPROJ:', result.reason);
       }
@@ -223,8 +204,6 @@ export class ProjectDiscovery {
     dpkFiles: Uri[],
     projectMap: Map<string, DelphiProject>
   ): void {
-    console.log(`ProjectDiscovery: Processing standalone files: ${dprFiles.length} DPR, ${dpkFiles.length} DPK`);
-
     // Process standalone DPR files
     for (const dprFile of dprFiles) {
       const fileName = basename(dprFile.fsPath);

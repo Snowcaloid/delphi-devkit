@@ -7,7 +7,8 @@ import { ProjectCacheData } from '../types';
  * Utility class for managing the project cache file operations.
  */
 export class ProjectCacheManager {
-  private configFileName = 'delphiProjects.json';
+  private configFileName = 'cache.json';
+  private delphiDirName = '.delphi';
 
   /**
    * Get the path to the cache configuration file.
@@ -18,16 +19,16 @@ export class ProjectCacheManager {
     }
 
     const workspaceRoot = workspace.workspaceFolders[0].uri.fsPath;
-    const vscodeDir = join(workspaceRoot, '.vscode');
+    const delphiDir = join(workspaceRoot, '.vscode', this.delphiDirName);
 
-    // Ensure .vscode directory exists
+    // Ensure .vscode/.delphi directory exists
     try {
-      await fs.access(vscodeDir);
+      await fs.access(delphiDir);
     } catch {
-      await fs.mkdir(vscodeDir, { recursive: true });
+      await fs.mkdir(delphiDir, { recursive: true });
     }
 
-    return join(vscodeDir, this.configFileName);
+    return join(delphiDir, this.configFileName);
   }
 
   /**

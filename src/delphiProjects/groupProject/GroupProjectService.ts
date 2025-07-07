@@ -5,6 +5,7 @@ import { DelphiProjectUtils } from '../utils';
 import { ProjectData } from '../types';
 import * as path from 'path';
 import * as fs from 'fs';
+import { getExpectedExePathFromDproj } from '../utils/getExpectedExePathFromDproj';
 
 export class GroupProjectService {
   static async pickGroupProject(delphiProjectsProvider: { refresh: () => void }) {
@@ -49,17 +50,40 @@ export class GroupProjectService {
       // Find related files
       const dprUri = await DelphiProjectUtils.findDprFromDproj(absPath);
       const dpkUri = await DelphiProjectUtils.findDpkFromDproj(absPath);
-      const exeUri = await DelphiProjectUtils.findExecutableFromDproj(absPath);
-      // Find INI file in the same directory as the dproj (if any)
-      let iniUri: Uri | undefined = undefined;
-      try {
-        const dprojDir = path.dirname(absPath.fsPath);
-        const files: string[] = await fs.promises.readdir(dprojDir);
-        const iniFile = files.find((f: string) => f.toLowerCase().endsWith('.ini'));
-        if (iniFile) {
-          iniUri = Uri.file(path.join(dprojDir, iniFile));
+      // --- Executable detection: use getExpectedExePathFromDproj first ---
+      let exeUri: Uri | null = null;
+      if (absPath && dprUri) {
+        const expectedExePath = await getExpectedExePathFromDproj(absPath.fsPath, dprUri.fsPath);
+        if (expectedExePath && fs.existsSync(expectedExePath)) {
+          exeUri = Uri.file(expectedExePath);
         }
-      } catch {}
+      }
+      // Fallback to old method if not found
+      if (!exeUri) {
+        exeUri = await DelphiProjectUtils.findExecutableFromDproj(absPath);
+      }
+      // Find INI file matching the executable name in the executable's directory (like projectDiscovery)
+      let iniUri: Uri | undefined = undefined;
+      if (exeUri) {
+        const executableDir = path.dirname(exeUri.fsPath);
+        const executableName = path.basename(exeUri.fsPath, path.extname(exeUri.fsPath));
+        const iniPath = path.join(executableDir, `${executableName}.ini`);
+        try {
+          await fs.promises.access(iniPath);
+          iniUri = Uri.file(iniPath);
+        } catch {}
+      }
+      // If not found, fallback to any .ini in the dproj directory (legacy fallback)
+      if (!iniUri) {
+        try {
+          const dprojDir = path.dirname(absPath.fsPath);
+          const files: string[] = await fs.promises.readdir(dprojDir);
+          const iniFile = files.find((f: string) => f.toLowerCase().endsWith('.ini'));
+          if (iniFile) {
+            iniUri = Uri.file(path.join(dprojDir, iniFile));
+          }
+        } catch {}
+      }
       // Compose ProjectData
       projects.push({
         name: absPath.path.split(/[\\\/]/).pop()?.replace(/\.[^.]+$/, '') || absPath.path,

@@ -6,7 +6,6 @@ export class DfmLanguageProvider implements DefinitionProvider {
     if (!wordRange) { return; };
 
     const word = document.getText(wordRange);
-    console.log(`Clicked word: "${word}"`);
     // Ensure word is a valid function name: starts with letter or underscore
     if (!/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(word)) { return; };
 
@@ -17,7 +16,6 @@ export class DfmLanguageProvider implements DefinitionProvider {
     // Look for associated .pas file
     const dfmUri = document.uri;
     const pasPath = dfmUri.fsPath.replace(/\.dfm$/i, '.pas');
-    console.log(`Looking for .pas file at: ${pasPath}`);
     try {
       const pasUri = Uri.file(pasPath);
       const pasDoc = await workspace.openTextDocument(pasUri);
@@ -33,7 +31,7 @@ export class DfmLanguageProvider implements DefinitionProvider {
       }
     } catch (err) {
       const error = err as Error;
-      window.showErrorMessage(`Could not open matching .pas file: ${error.message}`);
+      window.showErrorMessage(`[Delphi][DfmLanguage] Could not open matching .pas file: ${error.message}`);
     }
 
     return;
