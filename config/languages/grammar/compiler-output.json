@@ -1,0 +1,58 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Delphi Compiler Output",
+  "scopeName": "text.output.delphi-compiler",
+  "patterns": [
+    {
+      "name": "meta.compiler-message.delphi",
+      "match": "^(\\[(ERROR|WARN|INFO|HINT)\\])(\\[[A-Z]\\d+\\])\\s+(.+?)\\s+(\\(line\\s+\\d+\\)):\\s+(.*)$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.severity.delphi",
+          "patterns": [
+            {
+              "match": "\\[ERROR\\]",
+              "name": "markup.error"
+            },
+            {
+              "match": "\\[WARN\\]",
+              "name": "markup.warning"
+            },
+            {
+              "match": "\\[INFO\\]",
+              "name": "markup.info"
+            },
+            {
+              "match": "\\[HINT\\]",
+              "name": "markup.hint"
+            }
+          ]
+        },
+        "3": {
+          "name": "constant.numeric"
+        },
+        "4": {
+          "name": "string.other.link"
+        },
+        "5": {
+          "name": "constant.numeric.line-number"
+        },
+        "6": {
+          "name": "string.unquoted"
+        }
+      }
+    },
+    {
+      "name": "string.other.link",
+      "match": "\\b[A-Za-z]:\\\\[^\\s\\(\\)]+\\.(pas|dpr|dpk|dproj|targets)\\b"
+    },
+    {
+      "name": "constant.numeric.line-number",
+      "match": "\\(line\\s+\\d+\\)"
+    },
+    {
+      "name": "constant.numeric",
+      "match": "\\[[A-Z]\\d+\\]"
+    }
+  ]
+}

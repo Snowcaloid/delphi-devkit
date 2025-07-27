@@ -1,76 +1,79 @@
 {
-  "name": "delphi-utils",
+  "name": "delphi-devkit",
   "displayName": "Delphi Utils (beta)",
   "description": "Utilities for developing in Delphi using VS Code",
   "version": "0.1.0",
-  "publisher": "DontenwillAG",
-  "homepage": "https://www.dontenwill.de",
+  "publisher": "Snowcaloid",
+  "homepage": "https://www.github.com/Snowcaloid",
+  "icon": "assets/DelphiHelmet.png",
   "engines": {
     "vscode": "^1.101.0"
   },
   "categories": [
     "Programming Languages"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:**"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "delphi-utils.swapToDfmPas",
+        "command": "delphi-devkit.swapToDfmPas",
         "title": "Delphi Utils: Swap .DFM/.PAS"
       },
       {
-        "command": "delphi-utils.refreshDelphiProjects",
+        "command": "delphi-devkit.projects.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "delphi-utils.launchExecutable",
+        "command": "delphi-devkit.projects.launchExecutable",
         "title": "Launch Application"
       },
       {
-        "command": "delphi-utils.compileDpr",
+        "command": "delphi-devkit.projects.compile",
         "title": "Compile"
       },
       {
-        "command": "delphi-utils.recreateDpr",
+        "command": "delphi-devkit.projects.recreate",
         "title": "Recreate"
       },
       {
-        "command": "delphi-utils.showInExplorer",
+        "command": "delphi-devkit.projects.showInExplorer",
         "title": "Show in Explorer"
       },
       {
-        "command": "delphi-utils.openInFileExplorer",
+        "command": "delphi-devkit.projects.openInFileExplorer",
         "title": "Open in File Explorer"
       },
       {
-        "command": "delphi-utils.runExecutable",
+        "command": "delphi-devkit.projects.runExecutable",
         "title": "Run"
       },
       {
-        "command": "delphi-utils.configureCreateIni",
+        "command": "delphi-devkit.projects.configureOrCreateIni",
         "title": "Configure/Create .ini"
       },
       {
-        "command": "delphi-utils.selectCompilerConfiguration",
+        "command": "delphi-devkit.selectCompilerConfiguration",
         "title": "Select Delphi Compiler",
         "icon": "$(tools)"
       },
       {
-        "command": "delphi-utils.showCompilerDropdown",
+        "command": "delphi-devkit.showCompilerDropdown",
         "title": "Show Delphi Compiler Dropdown"
       },
       {
-        "command": "delphi-utils.pickGroupProject",
+        "command": "delphi-devkit.projects.pickGroupProject",
         "title": "Pick Group Project",
         "icon": "$(file-submodule)"
       },
       {
-        "command": "delphi-utils.unloadGroupProject",
+        "command": "delphi-devkit.projects.unloadGroupProject",
         "title": "Unload Group Project",
         "icon": "$(close)",
-        "when": "view == delphiProjects && delphiUtils:groupProjectLoaded == true"
+        "when": "view == delphiProjects && delphiDevkit:isGroupProjectView == true"
       }
     ],
     "views": {
@@ -79,7 +82,7 @@
           "id": "delphiProjects",
           "name": "Projects",
           "when": "workbenchState != empty",
-          "icon": "assets/dproj.svg",
+          "icon": "assets/DelphiHelmetLine.svg",
           "canDragAndDrop": true
         }
       ]
@@ -89,61 +92,61 @@
         {
           "id": "delphi-explorer",
           "title": "delphi utils",
-          "icon": "assets/dproj.svg"
+          "icon": "assets/DelphiHelmetLine.svg"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "delphi-utils.refreshDelphiProjects",
+          "command": "delphi-devkit.projects.refresh",
           "when": "view == delphiProjects",
           "group": "navigation"
         },
         {
-          "command": "delphi-utils.selectCompilerConfiguration",
+          "command": "delphi-devkit.selectCompilerConfiguration",
           "when": "view == delphiProjects",
           "group": "navigation"
         },
         {
-          "command": "delphi-utils.pickGroupProject",
+          "command": "delphi-devkit.projects.pickGroupProject",
           "when": "view == delphiProjects",
           "group": "navigation@2"
         },
         {
-          "command": "delphi-utils.unloadGroupProject",
-          "when": "view == delphiProjects && delphiUtils:groupProjectLoaded == true",
+          "command": "delphi-devkit.projects.unloadGroupProject",
+          "when": "view == delphiProjects && delphiDevkit:isGroupProjectView == true",
           "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
-          "command": "delphi-utils.compileDpr",
+          "command": "delphi-devkit.projects.compile",
           "when": "view == delphiProjects",
           "group": "1_build@1"
         },
         {
-          "command": "delphi-utils.recreateDpr",
+          "command": "delphi-devkit.projects.recreate",
           "when": "view == delphiProjects",
           "group": "1_build@2"
         },
         {
-          "command": "delphi-utils.showInExplorer",
+          "command": "delphi-devkit.projects.showInExplorer",
           "when": "view == delphiProjects",
           "group": "2_files@1"
         },
         {
-          "command": "delphi-utils.openInFileExplorer",
+          "command": "delphi-devkit.projects.openInFileExplorer",
           "when": "view == delphiProjects",
           "group": "2_files@2"
         },
         {
-          "command": "delphi-utils.runExecutable",
+          "command": "delphi-devkit.projects.runExecutable",
           "when": "view == delphiProjects",
           "group": "3_run@1"
         },
         {
-          "command": "delphi-utils.configureCreateIni",
+          "command": "delphi-devkit.projects.configureOrCreateIni",
           "when": "view == delphiProjects",
           "group": "3_run@2"
         }
@@ -151,33 +154,57 @@
     },
     "languages": [
       {
-        "id": "delphi-dfm",
+        "id": "delphi-devkit.dfm",
         "extensions": [
           ".dfm"
         ],
         "aliases": [
+          "Delphi Form",
           "Delphi DFM"
         ]
+      },
+      {
+        "id": "delphi-devkit.compilerOutput",
+        "aliases": ["Delphi Compiler Output"],
+        "extensions": []
+      }
+    ],
+    "grammars": [
+      {
+        "language": "delphi-devkit.compilerOutput",
+        "scopeName": "text.output.delphi-compiler",
+        "path": "./config/languages/grammar/compiler-output.json"
       }
     ],
     "keybindings": [
       {
-        "command": "delphi-utils.swapToDfmPas",
+        "command": "delphi-devkit.swapToDfmPas",
         "key": "alt+f12",
         "mac": "alt+f12",
         "when": "editorTextFocus && (resourceExtname == '.pas' || resourceExtname == '.dfm')"
-      },
-      {
-        "command": "delphi-utils.showCompilerDropdown",
-        "key": "ctrl+shift+d c",
-        "mac": "cmd+shift+d c",
-        "when": "!terminalFocus"
       }
     ],
     "configuration": {
       "title": "Delphi Utils",
       "properties": {
-        "delphi-utils.delphiProjects.projectPaths": {
+        "delphi-devkit.projects.discovery.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow automatic discovery of Delphi projects in the workspace."
+        },
+        "delphi-devkit.projects.discovery.useFileSystemWatchers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use file system watchers to detect changes in Delphi project files. If false, requires manual refresh. When enabled with git, checkouts can be problematic.",
+          "scope": "resource"
+        },
+        "delphi-devkit.projects.gitCheckoutDelay": {
+          "type": "number",
+          "default": 30000,
+          "description": "Delay in milliseconds before reloading project watchers after a git checkout. This helps avoid issues with rapid git operations.",
+          "scope": "resource"
+        },
+        "delphi-devkit.projects.discovery.projectPaths": {
           "type": "array",
           "items": {
             "type": "string"
@@ -188,7 +215,7 @@
           "description": "Glob patterns specifying where to search for Delphi projects. Use patterns like 'src/**' to search only in specific directories, or '**' to search everywhere.",
           "scope": "resource"
         },
-        "delphi-utils.delphiProjects.excludePatterns": {
+        "delphi-devkit.projects.discovery.excludePatterns": {
           "type": "array",
           "items": {
             "type": "string"
@@ -200,12 +227,12 @@
           "description": "Glob patterns for paths to exclude from the Delphi Projects explorer. Use standard glob patterns like '**/folder/**' to exclude entire directories.",
           "scope": "resource"
         },
-        "delphi-utils.delphiProjects.sortProjects": {
+        "delphi-devkit.projects.sortProjects": {
           "type": "boolean",
           "default": false,
           "description": "Sort Delphi projects alphabetically in the explorer. If false, preserves original order."
         },
-        "delphi-utils.compiler.configurations": {
+        "delphi-devkit.compiler.configurations": {
           "type": "array",
           "items": {
             "type": "object",
@@ -228,6 +255,11 @@
                   "type": "string"
                 },
                 "description": "Default build arguments for this Delphi version"
+              },
+              "usePrettyFormat": {
+                "type": "boolean",
+                "default": true,
+                "description": "Use pretty format for build output. If false, unchanged compiler output."
               }
             },
             "required": [
@@ -275,7 +307,7 @@
           "description": "Delphi compiler configurations with paths and build arguments",
           "scope": "resource"
         },
-        "delphi-utils.compiler.currentConfiguration": {
+        "delphi-devkit.compiler.currentConfiguration": {
           "type": "string",
           "default": "Delphi 12",
           "description": "Currently selected Delphi compiler configuration",
@@ -314,12 +346,19 @@
     "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.25.3",
     "eslint": "^9.25.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "mock-fs": "^5.5.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@types/sql.js": "^1.4.9",
+    "@types/uuid": "^10.0.0",
     "@xmldom/xmldom": "^0.9.8",
-    "minimatch": "^10.0.3"
+    "minimatch": "^10.0.3",
+    "reflect-metadata": "^0.2.2",
+    "sql.js": "^1.13.0",
+    "typeorm": "^0.3.25",
+    "uuid": "^11.1.0"
   }
 }

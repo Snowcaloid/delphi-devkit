@@ -1,0 +1,57 @@
+{
+  "name": "Delphi Compiler Colors",
+  "type": "dark",
+  "colors": {
+    "delphiCompiler.errorForeground": "#ff6b6b",
+    "delphiCompiler.warningForeground": "#fdcb6e",
+    "delphiCompiler.hintForeground": "#74b9ff",
+    "delphiCompiler.infoForeground": "#55a3ff",
+    "delphiCompiler.errorCodeForeground": "#a29bfe",
+    "delphiCompiler.filePathForeground": "#00b894",
+    "delphiCompiler.lineNumberForeground": "#ffeaa7"
+  },
+  "tokenColors": [
+    {
+      "scope": "markup.error.delphi",
+      "settings": {
+        "foreground": "#ff6b6b"
+      }
+    },
+    {
+      "scope": "markup.warning.delphi",
+      "settings": {
+        "foreground": "#fdcb6e"
+      }
+    },
+    {
+      "scope": "markup.hint.delphi",
+      "settings": {
+        "foreground": "#74b9ff"
+      }
+    },
+    {
+      "scope": "markup.info.delphi",
+      "settings": {
+        "foreground": "#55a3ff"
+      }
+    },
+    {
+      "scope": "constant.other.error-code.delphi",
+      "settings": {
+        "foreground": "#a29bfe"
+      }
+    },
+    {
+      "scope": "string.other.filepath.delphi",
+      "settings": {
+        "foreground": "#00b894"
+      }
+    },
+    {
+      "scope": "constant.numeric.line-number.delphi",
+      "settings": {
+        "foreground": "#ffeaa7"
+      }
+    }
+  ]
+}

@@ -2,6 +2,9 @@
 	"compilerOptions": {
 		"module": "Node16",
 		"target": "ES2022",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": false,
 		"lib": [
 			"ES2022"
 		],

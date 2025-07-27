@@ -1,39 +1,86 @@
-# delphi-utils README
+# Delphi DevKit README
 
-Delphi programming language utilities
+Utilities for developing in Delphi using VS Code
 
 ## Features
 
-* .pas <-> .dfm swapping
-* .dfm -> .pas jumps with ctrl+click
-* Delphi Projects explorer with project tree view
-* Compiler support with multiple configurations
+* **File Navigation**: .pas <-> .dfm swapping with Alt+F12 hotkey
+* **Smart Navigation**: .dfm -> .pas jumps with Ctrl+click
+* **Project Explorer**: Delphi Projects tree view with drag & drop support
+* **Multi-Compiler Support**: Configure and switch between multiple Delphi versions
+* **Project Management**: Compile, recreate, run, and manage Delphi projects
+* **Group Project Support**: Load and manage Delphi group projects (.groupproj)
+* **File System Integration**: Show projects in Explorer, open in File Explorer
+* **Configuration Management**: Create and configure .ini files for executables
+
+## Commands
+
+* `Delphi Utils: Swap .DFM/.PAS` - Switch between form and unit files (Alt+F12)
+* `Select Delphi Compiler` - Choose the active compiler configuration
+* `Pick Group Project` - Load a Delphi group project
+* `Refresh` - Refresh the projects view
 
 ## Extension Settings
 
-This extension contributes the following settings:
+### Project Discovery
 
-### Delphi Projects
+* `delphi-devkit.projects.discovery.enable`: Enable automatic discovery of Delphi projects
+  * Default: `true`
 
-* `delphi-utils.delphiProjects.projectPaths`: Array of glob patterns specifying where to search for Delphi projects
+* `delphi-devkit.projects.discovery.useFileSystemWatchers`: Use file system watchers for live updates
+  * Default: `false`
+  * Note: Can be problematic with git checkouts when enabled
+
+* `delphi-devkit.projects.gitCheckoutDelay`: Delay before reloading after git checkout
+  * Default: `30000` (30 seconds)
+
+### Project Paths
+
+* `delphi-devkit.projects.discovery.projectPaths`: Glob patterns for project search locations
   * Default: `["**"]` (searches everywhere)
-  * Example: `["src/**", "projects/**"]` (searches only in src and projects directories)
+  * Example: `["src/**", "projects/**"]` (searches only in specific directories)
 
-* `delphi-utils.delphiProjects.excludePatterns`: Array of glob patterns for paths to exclude from search
+* `delphi-devkit.projects.discovery.excludePatterns`: Glob patterns for paths to exclude
   * Default: `["**/__history/**", "**/.history/**"]`
   * Example: `["**/temp/**", "**/backup/**", "**/bin/**"]`
 
+* `delphi-devkit.projects.sortProjects`: Sort projects alphabetically in explorer
+  * Default: `false`
+
 ### Compiler Configurations
 
-* `delphi-utils.compiler.configurations`: Array of Delphi compiler configurations
-* `delphi-utils.compiler.currentConfiguration`: Currently selected compiler configuration
+* `delphi-devkit.compiler.configurations`: Array of Delphi compiler configurations
+* `delphi-devkit.compiler.currentConfiguration`: Currently selected compiler configuration
+
+Each compiler configuration includes:
+
+* `name`: Display name for the Delphi version
+* `rsVarsPath`: Path to RSVars.bat file
+* `msBuildPath`: Path to MSBuild.exe
+* `buildArguments`: Default build arguments
+* `usePrettyFormat`: Use formatted build output (default: true)
 
 #### Example Configuration
 
 ```json
 {
-  "delphi-utils.delphiProjects.projectPaths": ["src/**", "projects/**"],
-  "delphi-utils.delphiProjects.excludePatterns": ["**/temp/**", "**/__history/**", "**/backup/**"]
+  "delphi-devkit.projects.discovery.projectPaths": ["src/**", "projects/**"],
+  "delphi-devkit.projects.discovery.excludePatterns": ["**/temp/**", "**/__history/**", "**/backup/**"],
+  "delphi-devkit.projects.sortProjects": true,
+  "delphi-devkit.compiler.configurations": [
+    {
+      "name": "Delphi 12",
+      "rsVarsPath": "C:\\Program Files (x86)\\Embarcadero\\Studio\\23.0\\bin\\rsvars.bat",
+      "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
+      "buildArguments": [
+        "/verbosity:minimal",
+        "/p:DCC_DebugInformation=1",
+        "/p:Configuration=Debug"
+      ],
+      "usePrettyFormat": true
+    }
+  ],
+  "delphi-devkit.compiler.currentConfiguration": "Delphi 12"
 }
 ```
 

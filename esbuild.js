@@ -5,6 +5,16 @@ const path = require('path');
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
+function copyAsset(source) {
+	const dest = path.join(__dirname, 'dist', path.basename(source));
+	try {
+		fs.copyFileSync(source, dest);
+		console.log(`✓ Copied ${path.basename(source)} to dist/`);
+	} catch (error) {
+		console.error(`✘ Failed to copy ${path.basename(source)}:`, error.message);
+	}
+}
+
 /**
  * @type {import('esbuild').Plugin}
  */
@@ -13,15 +23,11 @@ const copyAssetsPlugin = {
 	setup(build) {
 		build.onEnd(() => {
 			// Copy PowerShell script to dist folder
-			const sourceScript = path.join(__dirname, 'src', 'delphiProjects', 'contextMenu', 'compile.ps1');
-			const destScript = path.join(__dirname, 'dist', 'compile.ps1');
+			const sourceScript = path.join(__dirname, 'src', 'projects', 'contextMenu', 'compile.ps1');
+			copyAsset(sourceScript);
 
-			try {
-				fs.copyFileSync(sourceScript, destScript);
-				console.log('✓ PowerShell script copied to dist/');
-			} catch (error) {
-				console.error('✘ Failed to copy PowerShell script:', error.message);
-			}
+			const sourceWasm = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+			copyAsset(sourceWasm);
 		});
 	},
 };

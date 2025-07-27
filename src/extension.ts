@@ -1,26 +1,22 @@
-import { ExtensionContext, commands, languages, window, Uri, env, workspace, ProgressLocation } from 'vscode';
+import { ExtensionContext, commands, languages, window, Uri, env } from 'vscode';
 import { dfmSwap } from './dfmSwap/command';
 import { DfmLanguageProvider } from './dfmLanguageSupport/provider';
-import { DelphiProjectsProvider, DelphiProjectContextMenuCommands, CompilerStatusBar, Compiler } from './delphiProjects';
-import { GroupProjectService } from './delphiProjects/groupProject/GroupProjectService';
+import { Runtime } from './runtime';
+import { DelphiProjectContextMenuCommands } from './projects/contextMenu/commands';
 
-export function activate(context: ExtensionContext): void {
-  const swapCommand = commands.registerCommand('delphi-utils.swapToDfmPas', dfmSwap);
+export async function activate(context: ExtensionContext): Promise<void> {
+  await Runtime.initialize(context);
+  const swapCommand = commands.registerCommand('delphi-devkit.swapToDfmPas', dfmSwap);
   const definitionProvider = languages.registerDefinitionProvider(
-    { language: 'delphi-dfm', scheme: 'file' }, new DfmLanguageProvider());
+    { language: 'delphi-devkit.dfm', scheme: 'file' }, new DfmLanguageProvider());
 
   // Register Delphi Projects Explorer
-  const delphiProjectsProvider = new DelphiProjectsProvider();
-  const dprTreeView = window.createTreeView('delphiProjects', {
-    treeDataProvider: delphiProjectsProvider,
-    dragAndDropController: delphiProjectsProvider.dragAndDropController
+  const projectsTreeView = window.createTreeView('delphiProjects', {
+    treeDataProvider: Runtime.projectsProvider,
+    dragAndDropController: Runtime.projectsProvider.dragAndDropController
   });
 
-  const refreshDprCommand = commands.registerCommand('delphi-utils.refreshDelphiProjects', () => {
-    delphiProjectsProvider.refresh(true); // Force cache refresh
-  });
-
-  const launchExecutableCommand = commands.registerCommand('delphi-utils.launchExecutable', async (uri: Uri) => {
+  const launchExecutableCommand = commands.registerCommand('delphi-devkit.projects.launchExecutable', async (uri: Uri) => {
     try {
       // Use the system's default application handler to launch the executable
       await env.openExternal(uri);
@@ -32,33 +28,13 @@ export function activate(context: ExtensionContext): void {
   // Register Delphi Projects context menu commands
   const contextMenuCommands = DelphiProjectContextMenuCommands.registerCommands();
 
-  // Initialize compiler status bar
-  const compilerStatusBar = CompilerStatusBar.initialize();
-  const compilerStatusBarCommands = CompilerStatusBar.registerCommands();
-
-  const pickGroupProjectCommand = commands.registerCommand('delphi-utils.pickGroupProject', async () => {
-    await GroupProjectService.pickGroupProject(delphiProjectsProvider);
-  });
-
-  const unloadGroupProjectCommand = commands.registerCommand('delphi-utils.unloadGroupProject', async () => {
-    await GroupProjectService.unloadGroupProject(delphiProjectsProvider);
-  });
-
   context.subscriptions.push(
     swapCommand,
     definitionProvider,
-    dprTreeView,
-    refreshDprCommand,
+    projectsTreeView,
     launchExecutableCommand,
     ...contextMenuCommands,
-    ...compilerStatusBarCommands,
-    compilerStatusBar,
-    pickGroupProjectCommand,
-    unloadGroupProjectCommand
   );
 }
 
-export function deactivate(): void {
-  // Clean up compiler terminal
-  Compiler.dispose();
-}
+export function deactivate(): void {}

@@ -1,4 +1,4 @@
-import { window, Uri, workspace, TextEditor } from 'vscode';
+import { window, Uri, workspace } from 'vscode';
 import { extname } from 'path';
 
 export async function dfmSwap(): Promise<void> {
