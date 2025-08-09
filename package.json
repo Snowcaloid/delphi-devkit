@@ -1,6 +1,6 @@
 {
   "name": "delphi-devkit",
-  "displayName": "Delphi Utils (beta)",
+  "displayName": "Delphi Development Kit (DDK)",
   "description": "Utilities for developing in Delphi using VS Code",
   "version": "0.1.0",
   "publisher": "Snowcaloid",
@@ -19,61 +19,83 @@
   "contributes": {
     "commands": [
       {
-        "command": "delphi-devkit.swapToDfmPas",
-        "title": "Delphi Utils: Swap .DFM/.PAS"
-      },
-      {
         "command": "delphi-devkit.projects.refresh",
-        "title": "Refresh",
+        "title": "DDK: Refresh",
         "icon": "$(refresh)"
       },
       {
         "command": "delphi-devkit.projects.launchExecutable",
-        "title": "Launch Application"
+        "title": "DDK: Launch Application"
       },
       {
         "command": "delphi-devkit.projects.compile",
-        "title": "Compile"
+        "title": "DDK: Compile"
       },
       {
         "command": "delphi-devkit.projects.recreate",
-        "title": "Recreate"
+        "title": "DDK: Recreate"
       },
       {
         "command": "delphi-devkit.projects.showInExplorer",
-        "title": "Show in Explorer"
+        "title": "DDK: Show in Explorer"
       },
       {
         "command": "delphi-devkit.projects.openInFileExplorer",
-        "title": "Open in File Explorer"
+        "title": "DDK: Open in File Explorer"
       },
       {
         "command": "delphi-devkit.projects.runExecutable",
-        "title": "Run"
+        "title": "DDK: Run"
       },
       {
         "command": "delphi-devkit.projects.configureOrCreateIni",
-        "title": "Configure/Create .ini"
+        "title": "DDK: Configure/Create .ini"
       },
       {
-        "command": "delphi-devkit.selectCompilerConfiguration",
-        "title": "Select Delphi Compiler",
+        "command": "delphi-devkit.projects.selectCompilerConfiguration",
+        "title": "DDK: Select Delphi Compiler",
         "icon": "$(tools)"
       },
       {
-        "command": "delphi-devkit.showCompilerDropdown",
-        "title": "Show Delphi Compiler Dropdown"
+        "command": "delphi-devkit.projects.showCompilerDropdown",
+        "title": "DDK: Show Delphi Compiler Dropdown"
       },
       {
         "command": "delphi-devkit.projects.pickGroupProject",
-        "title": "Pick Group Project",
+        "title": "DDK: Pick Group Project",
         "icon": "$(file-submodule)"
       },
       {
         "command": "delphi-devkit.projects.unloadGroupProject",
-        "title": "Unload Group Project",
+        "title": "DDK: Unload Group Project",
         "icon": "$(close)",
         "when": "view == delphiProjects && delphiDevkit:isGroupProjectView == true"
+      },
+      {
+        "command": "delphi-devkit.projects.selectProject",
+        "title": "DDK: Select Project",
+        "icon": "$(arrow-right)",
+        "when": "view == delphiProjects"
+      },
+      {
+        "command": "delphi-devkit.projects.compileSelectedProject",
+        "title": "DDK: Compile Selected Project",
+        "when": "view == delphiProjects && delphiDevKit:isProjectSelected == true"
+      },
+      {
+        "command": "delphi-devkit.projects.recreateSelectedProject",
+        "title": "DDK: Recreate Selected Project",
+        "when": "view == delphiProjects && delphiDevKit:isProjectSelected == true"
+      },
+      {
+        "command": "delphi-devkit.projects.runSelectedProject",
+        "title": "DDK: Run Selected Project",
+        "when": "view == delphiProjects && delphiDevKit:isProjectSelected == true && delphiDevKit:doesSelectedProjectHaveExe == true"
+      },
+      {
+        "command": "delphi-devkit.dfm.swapToDfmPas",
+        "title": "DDK: Swap .DFM/.PAS",
+        "when": "editorTextFocus && (resourceExtname == '.pas' || resourceExtname == '.dfm')"
       }
     ],
     "views": {
@@ -104,7 +126,7 @@
           "group": "navigation"
         },
         {
-          "command": "delphi-devkit.selectCompilerConfiguration",
+          "command": "delphi-devkit.projects.selectCompilerConfiguration",
           "when": "view == delphiProjects",
           "group": "navigation"
         },
@@ -120,6 +142,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "delphi-devkit.projects.selectProject",
+          "when": "view == delphiProjects",
+          "group": "navigation@1"
+        },
         {
           "command": "delphi-devkit.projects.compile",
           "when": "view == delphiProjects",
@@ -178,14 +205,29 @@
     ],
     "keybindings": [
       {
-        "command": "delphi-devkit.swapToDfmPas",
+        "command": "delphi-devkit.dfm.swapToDfmPas",
         "key": "alt+f12",
         "mac": "alt+f12",
         "when": "editorTextFocus && (resourceExtname == '.pas' || resourceExtname == '.dfm')"
+      },
+      {
+        "command": "delphi-devkit.projects.compileSelectedProject",
+        "key": "ctrl+f9",
+        "when": "delphiDevKit:isProjectSelected == true"
+      },
+      {
+        "command": "delphi-devkit.projects.recreateSelectedProject",
+        "key": "shift+f9",
+        "when": "delphiDevKit:isProjectSelected == true"
+      },
+      {
+        "command": "delphi-devkit.projects.runSelectedProject",
+        "key": "f9",
+        "when": "delphiDevKit:doesSelectedProjectHaveExe == true"
       }
     ],
     "configuration": {
-      "title": "Delphi Utils",
+      "title": "Delphi Development Kit",
       "properties": {
         "delphi-devkit.projects.discovery.enable": {
           "type": "boolean",
@@ -232,7 +274,7 @@
           "default": false,
           "description": "Sort Delphi projects alphabetically in the explorer. If false, preserves original order."
         },
-        "delphi-devkit.compiler.configurations": {
+        "delphi-devkit.projects.compiler.configurations": {
           "type": "array",
           "items": {
             "type": "object",

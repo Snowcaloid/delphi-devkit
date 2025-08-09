@@ -3,6 +3,7 @@ import { DelphiProjectTreeItemType } from '../types';
 import { ProjectType } from './delphiProject';
 
 export interface DelphiProjectMainTreeItem {
+  projectId?: number;
   dproj?: Uri;
   dpr?: Uri;
   dpk?: Uri;

@@ -23,7 +23,7 @@ const copyAssetsPlugin = {
 	setup(build) {
 		build.onEnd(() => {
 			// Copy PowerShell script to dist folder
-			const sourceScript = path.join(__dirname, 'src', 'projects', 'contextMenu', 'compile.ps1');
+			const sourceScript = path.join(__dirname, 'src', 'projects', 'compiler', 'compile.ps1');
 			copyAsset(sourceScript);
 
 			const sourceWasm = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');

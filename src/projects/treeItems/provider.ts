@@ -19,6 +19,7 @@ import { Runtime, RuntimeProperty } from "../../runtime";
 import { basename } from "path";
 import { AppDataSource } from "../../db/datasource";
 import { Projects } from "../../constants";
+import { SelectedItemDecorator } from "./selectedItemDecorator";
 
 type NullableTreeItem = DelphiProjectTreeItem | undefined | null | void;
 
@@ -31,6 +32,7 @@ export class DelphiProjectsProvider
   public readonly onDidChangeTreeData: Event<NullableTreeItem> =
     this._onDidChangeTreeData.event;
   public readonly dragAndDropController: DelphiProjectsDragAndDropController;
+  public readonly selectedItemDecorator: SelectedItemDecorator;
 
   private createWatchers(): void {
     if (
@@ -149,6 +151,10 @@ export class DelphiProjectsProvider
     this.createConfigurationWatcher();
     this.createCommands();
     this.dragAndDropController = new DelphiProjectsDragAndDropController();
+    this.selectedItemDecorator = new SelectedItemDecorator();
+    Runtime.extension.subscriptions.push(
+      window.registerFileDecorationProvider(this.selectedItemDecorator)
+    );
     Runtime.subscribe((property, newValue, oldValue) => {
       switch (property) {
         case RuntimeProperty.Workspace:
@@ -213,6 +219,16 @@ export class DelphiProjectsProvider
         Projects.Context.IsGroupProjectView,
         ws.viewMode === WorkspaceViewMode.GroupProject
       );
+      commands.executeCommand( 
+        "setContext",
+        Projects.Context.IsProjectSelected,
+        false,
+      );
+      commands.executeCommand( 
+        "setContext",
+        Projects.Context.DoesSelectedProjectHaveExe,
+        false
+      );
       await Runtime.extension.workspaceState.update(
         Projects.Variables.IsGroupProjectView, 
         ws.viewMode === WorkspaceViewMode.GroupProject
@@ -241,14 +257,14 @@ export class DelphiProjectsProvider
       case WorkspaceViewMode.Discovery:
         return (await Promise.all(
           modifiedWorkspace.discoveredProjects.map(async (project) => {
-            return DelphiProject.fromData(project);
+            return DelphiProject.fromData(modifiedWorkspace, project);
           })
         )).sort((a, b) => a.sortValue.localeCompare(b.sortValue));
       case WorkspaceViewMode.GroupProject:
         if (modifiedWorkspace.currentGroupProject) {
           return (await Promise.all(
             modifiedWorkspace.currentGroupProject.projects.map(async (project) => {
-              return DelphiProject.fromData(project);
+              return DelphiProject.fromData(modifiedWorkspace, project);
             })
           )).sort((a, b) => a.sortValue.localeCompare(b.sortValue));
         } else {

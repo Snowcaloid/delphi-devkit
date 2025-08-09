@@ -8,7 +8,7 @@ export class CompilerPicker {
   constructor() {
     // Create status bar item aligned to the left with priority 100 (similar to Run and Debug)
     this.statusBarItem = window.createStatusBarItem('delphiCompiler', StatusBarAlignment.Left, 100);
-    this.statusBarItem.command = 'delphi-devkit.selectCompilerConfiguration';
+    this.statusBarItem.command = Projects.Command.SelectCompilerConfiguration;
     this.statusBarItem.tooltip = 'Select Delphi Compiler Configuration';
 
     // Initialize the display
@@ -21,7 +21,7 @@ export class CompilerPicker {
 
     // Listen for configuration changes
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('delphi-devkit.compiler')) {
+      if (event.affectsConfiguration(Projects.Config.full(Projects.Config.Compiler.NS))) {
         this.updateDisplay();
       }
     });

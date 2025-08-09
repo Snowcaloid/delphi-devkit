@@ -4,6 +4,7 @@ import { DfmLanguageProvider } from './dfmLanguageSupport/provider';
 import { Runtime } from './runtime';
 import { DelphiProjectContextMenuCommands } from './projects/contextMenu/commands';
 import { DFM, Projects } from './constants';
+import { ProjectCommands } from './projects/commands';
 
 export async function activate(context: ExtensionContext): Promise<void> {
   await Runtime.initialize(context);
@@ -28,7 +29,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   // Register Delphi Projects context menu commands
   const contextMenuCommands = DelphiProjectContextMenuCommands.registerCommands();
-
+  ProjectCommands.register();
   context.subscriptions.push(
     swapCommand,
     definitionProvider,

@@ -73,7 +73,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
   private registerCommands() {
     return [
       commands.registerCommand(
-        "delphi-devkit.selectCompilerConfiguration",
+        Projects.Command.SelectCompilerConfiguration,
         this.selectCompilerConfiguration.bind(this)
       ),
     ];
@@ -158,7 +158,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
         ...this.configuration.buildArguments,
       ];
       // Use extension path to find the script
-      const scriptPath = Runtime.extension.asAbsolutePath(join("src", "projects", "contextMenu", "compile.ps1"));
+      const scriptPath = Runtime.extension.asAbsolutePath(join("src", "projects", "compiler", "compile.ps1"));
       const buildArgumentsString = buildArguments.join(" ");
       let psArgs = [
         "-ExecutionPolicy", "Bypass",

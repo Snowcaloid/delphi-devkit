@@ -5,6 +5,8 @@ import { basename, dirname, join } from "path";
 import { promises as fs } from "fs";
 import { Runtime } from "../../runtime";
 import { Projects } from "../../constants";
+import { ProjectEntity } from "../../db/entities";
+import { WorkspaceViewMode } from "../types";
 
 /**
  * Context menu commands for Delphi Projects tree items
@@ -39,6 +41,10 @@ export class DelphiProjectContextMenuCommands {
         Projects.Command.ConfigureOrCreateIni,
         DelphiProjectContextMenuCommands.configureOrCreateIni
       ),
+      commands.registerCommand(
+        Projects.Command.SelectProject,
+        DelphiProjectContextMenuCommands.selectProject
+      )
     ];
   }
 
@@ -152,5 +158,26 @@ export class DelphiProjectContextMenuCommands {
       }
     }
     await this.createIniFile(item);
+  }
+
+  private static async selectProject(item: DelphiProjectTreeItem): Promise<void> {
+    await Runtime.db.modify(async (ws) => {
+      let projects: ProjectEntity[] = [];
+      switch (ws.viewMode) {
+        case WorkspaceViewMode.GroupProject:
+          if (ws.currentGroupProject) {
+            projects = ws.currentGroupProject.projects;
+          }
+          break;
+        case WorkspaceViewMode.Discovery:
+          projects = ws.discoveredProjects;
+          break;
+      }
+      const project = projects.find((p) => p.id === item.project.projectId);
+      if (!project) { return ws; }
+      ws.currentProject = project;
+      return ws;
+    });
+    await Runtime.projectsProvider.refreshTreeView();
   }
 }

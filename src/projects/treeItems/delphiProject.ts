@@ -1,4 +1,4 @@
-import { TreeItemCollapsibleState, ThemeIcon, Uri } from "vscode";
+import { TreeItemCollapsibleState, ThemeIcon, Uri, commands } from "vscode";
 import { DelphiProjectMainTreeItem, DelphiProjectTreeItem } from "./delphiProjectTreeItem";
 import { DelphiProjectTreeItemType } from "../types";
 import { DprojFile } from "./dprojFile";
@@ -7,10 +7,11 @@ import { IniFile } from "./iniFile";
 import { ExeFile } from "./exeFile";
 import { DpkFile } from "./dpkFile";
 import { basename } from "path";
-import { ProjectEntity } from "../../db/entities";
+import { ProjectEntity, WorkspaceEntity } from "../../db/entities";
 import { Runtime } from "../../runtime";
 import { SortedItem } from "../../utils/lexoSorter";
 import { fileExists } from "../../utils";
+import { Projects } from "../../constants";
 
 export enum ProjectType {
   Application = "application",
@@ -32,12 +33,28 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
     dproj?: Uri,
     dpr?: Uri,
     dpk?: Uri,
-    executable?: Uri,
-    ini?: Uri
+    exe?: Uri,
+    ini?: Uri,
+    selected: boolean = false
   ) {
-    const path = dproj || dpr || dpk || executable || ini;
+    const path = dproj || dpr || dpk || exe || ini;
     if (!path) { throw new Error("At least one project file must be provided."); }
-    const resourceUri = Uri.file(path.fsPath.replace(basename(path.fsPath), label));
+    const uriPath = path.fsPath.replace(basename(path.fsPath), label);
+    if (selected) {
+      commands.executeCommand( 
+        "setContext",
+        Projects.Context.IsProjectSelected,
+        true,
+      );
+      commands.executeCommand( 
+        "setContext",
+        Projects.Context.DoesSelectedProjectHaveExe,
+        !!exe
+      );
+    }
+    const resourceUri = selected ? 
+      Uri.from({ scheme: Projects.Scheme.Selected, path: uriPath }) : 
+      Uri.from({ scheme: Projects.Scheme.Default, path: uriPath });
     super(
       DelphiProjectTreeItemType.Project,
       label,
@@ -48,13 +65,13 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
     this.dproj = dproj;
     this.dpr = dpr;
     this.dpk = dpk;
-    this.exe = executable;
+    this.exe = exe;
     this.ini = ini;
     this.contextValue = "delphiProject";
     this.setIcon();
   }
 
-  public static fromData(data: ProjectEntity): DelphiProject {
+  public static fromData(workspace: WorkspaceEntity, data: ProjectEntity): DelphiProject {
     const project = new DelphiProject(
       data.name,
       <ProjectType>data.type,
@@ -62,7 +79,8 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
       data.dprPath ? Uri.file(data.dprPath) : undefined,
       data.dpkPath ? Uri.file(data.dpkPath) : undefined,
       data.exePath ? Uri.file(data.exePath) : undefined,
-      data.iniPath ? Uri.file(data.iniPath) : undefined
+      data.iniPath ? Uri.file(data.iniPath) : undefined,
+      workspace.currentProject?.id === data.id
     );
     project.projectId = data.id;
     project.sortValue = data.sortValue;
