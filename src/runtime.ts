@@ -53,6 +53,7 @@ type RuntimePropertyChangeListener = ((
 export abstract class Runtime {
   private static _listeners: RuntimePropertyChangeListener[] = [];
 
+  private static locks: string[] = [];
   private static _workspaceAvailable: boolean = false;
   private static gitAPI?: API;
   private static gitMap: Map<string, string> = new Map();
@@ -82,6 +83,11 @@ export abstract class Runtime {
     this.statusBar = new StatusBar(new CompilerPicker());
     this.watchGlobalState();
     this.watchGitState();
+  }
+
+  public static async finalize() {
+    await Promise.all(this.locks.map(async (l) => await this.extension.globalState.update(l, undefined)));
+    this.locks = [];
   }
 
   public static subscribe<T>(
@@ -196,6 +202,7 @@ export abstract class Runtime {
       lockInfo = this.getFlag<LockInfo>(name, lockHash);
     }
     await this.setFlag(name, { counter: (lockInfo?.counter || 0) + 1 }, lockHash);
+    this.locks.push(name);
     return lockHash;
   }
 
@@ -209,6 +216,7 @@ export abstract class Runtime {
     if (!!lockInfo && lockInfo.counter > 1) {
       await this.setFlag(name, { counter: lockInfo.counter - 1 }, lockHash);
     } else {
+      this.locks = this.locks.filter((l) => l !== name);
       await this.setFlag(name, undefined, lockHash);
     }
   }

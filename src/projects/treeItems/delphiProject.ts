@@ -72,6 +72,9 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
   }
 
   public static fromData(workspace: WorkspaceEntity, data: ProjectEntity): DelphiProject {
+    const selected = 
+      workspace.currentGroupProject?.currentProject?.id === data.id || 
+      workspace.currentProject?.id === data.id;
     const project = new DelphiProject(
       data.name,
       <ProjectType>data.type,
@@ -80,7 +83,7 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
       data.dpkPath ? Uri.file(data.dpkPath) : undefined,
       data.exePath ? Uri.file(data.exePath) : undefined,
       data.iniPath ? Uri.file(data.iniPath) : undefined,
-      workspace.currentProject?.id === data.id
+      selected
     );
     project.projectId = data.id;
     project.sortValue = data.sortValue;

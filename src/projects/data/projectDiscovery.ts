@@ -53,11 +53,11 @@ export class ProjectDiscovery {
     return projects;
   }
 
-  public async findFilesFromGroupProj(uri: Uri): Promise<ProjectEntity[]> {
+  public async findFilesFromGroupProj(groupProj: GroupProjectEntity): Promise<ProjectEntity[]> {
     if (!workspace.workspaceFolders?.length) {
       return [];
     }
-
+    const uri = Uri.file(groupProj.path);
     let projects: Array<ProjectEntity> = [];
     const dprojs = await new GroupProjParser().getDprojs(uri);
     const groupProjEntity = new GroupProjectEntity();
@@ -75,7 +75,7 @@ export class ProjectDiscovery {
         group.dpr = await dprojParser.findDpr(group.dproj!);
       })
     );
-    await this.assemble(filesByDir, projects);
+    await this.assemble(filesByDir, projects, groupProj);
     projects = projects.sort((a, b) => a.name.localeCompare(b.name));
     projects = new LexoSorter<ProjectEntity>(projects).items;
     return projects;
@@ -183,7 +183,8 @@ export class ProjectDiscovery {
 
   private async assemble(
     filesByDir: FolderLookupMap,
-    projects: Array<ProjectEntity>
+    projects: Array<ProjectEntity>,
+    groupProj: GroupProjectEntity | null = null
   ): Promise<void> {
     const dprojParser = new DprojParser();
     const ws = await Runtime.db.getWorkspace();
@@ -194,9 +195,13 @@ export class ProjectDiscovery {
           groups.map(async (group) => {
             const project = new ProjectEntity();
             projects.push(project);
+            if (groupProj) {
+              project.groupProject = groupProj;
+            } else {
+              project.workspace = ws;
+            }
             project.name = group.baseName;
             project.path = dirPath;
-            project.workspace = ws;
             project.dprojPath = group.dproj?.fsPath;
             project.dprPath = group.dpr?.fsPath;
             project.dpkPath = group.dpk?.fsPath;

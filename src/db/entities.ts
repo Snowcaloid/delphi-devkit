@@ -46,9 +46,6 @@ export class GroupProjectEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => WorkspaceEntity)
-  cacheWorkspace: WorkspaceEntity;
-
   @Column({ type: "varchar", length: 50 })
   name: string;
 
@@ -57,6 +54,10 @@ export class GroupProjectEntity {
 
   @OneToMany(() => ProjectEntity, (project) => project.groupProject, { cascade: true, eager: true })
   projects: ProjectEntity[];
+
+  @OneToOne(() => ProjectEntity, { nullable: true, eager: true, cascade: true })
+  @JoinColumn()
+  currentProject?: ProjectEntity;
 }
 
 @Entity()

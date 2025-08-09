@@ -175,7 +175,14 @@ export class DelphiProjectContextMenuCommands {
       }
       const project = projects.find((p) => p.id === item.project.projectId);
       if (!project) { return ws; }
-      ws.currentProject = project;
+      switch (ws.viewMode) {
+        case WorkspaceViewMode.GroupProject:
+          ws.currentGroupProject!.currentProject = project;
+          break;
+        case WorkspaceViewMode.Discovery:
+          ws.currentProject = project;
+          break;
+      }
       return ws;
     });
     await Runtime.projectsProvider.refreshTreeView();

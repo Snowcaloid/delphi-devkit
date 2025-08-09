@@ -105,22 +105,27 @@ export class DelphiProjectsProvider
     const pickGroupProjectCommand = commands.registerCommand(Projects.Command.PickGroupProject, async () => {
       const uri = await this.groupProjPicker.pickGroupProject();
       if (!uri) { return; }
-      const ws = await Runtime.db.modify(async (ws) => {
-        if (!ws) { return ws; }
+      let needToFindProjects = false;
+
+      let ws = await Runtime.db.modify(async (ws) => {
         let groupProj = await Runtime.db.getGroupProject(uri);
         if (groupProj) {
           ws.currentGroupProject = groupProj;
           return ws;
         }
-        const foundProjects = await new ProjectDiscovery().findFilesFromGroupProj(uri);
         groupProj = new GroupProjectEntity();
-        groupProj.cacheWorkspace = ws;
         groupProj.name = basename(uri.fsPath);
         groupProj.path = uri.fsPath;
-        groupProj.projects = foundProjects;
+        needToFindProjects = true;
         ws.currentGroupProject = groupProj;
         return ws;
       });
+      if (needToFindProjects) {
+        ws = await Runtime.db.modify(async (ws) => {
+          ws.currentGroupProject!.projects = await new ProjectDiscovery().findFilesFromGroupProj(ws.currentGroupProject!);
+          return ws;
+        });
+      }
       await this.refreshTreeView();
       window.showInformationMessage(`Loaded group project: ${ws?.currentGroupProject?.name}`);
     });

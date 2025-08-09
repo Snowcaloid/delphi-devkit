@@ -349,7 +349,7 @@
           "description": "Delphi compiler configurations with paths and build arguments",
           "scope": "resource"
         },
-        "delphi-devkit.compiler.currentConfiguration": {
+        "delphi-devkit.projects.compiler.currentConfiguration": {
           "type": "string",
           "default": "Delphi 12",
           "description": "Currently selected Delphi compiler configuration",
