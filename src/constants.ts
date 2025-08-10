@@ -13,7 +13,6 @@
         export const ExcludePatterns       = `${NS}.excludePatterns`;
       }
       export const GitCheckoutDelay = 'gitCheckoutDelay';
-      export const SortProjects     = 'sortProjects';
       export namespace Compiler {
         export const NS                   = 'compiler';
         export const Configurations       = `${NS}.configurations`;
@@ -39,7 +38,7 @@
       export const RecreateSelectedProject     = `${Projects.Config.Key}.recreateSelectedProject`;
       export const RunSelectedProject          = `${Projects.Config.Key}.runSelectedProject`;
     }
-    
+
   export namespace Variables {
     export const IsGroupProjectView = 'projects.isGroupProjectView';
   }
@@ -53,7 +52,7 @@
   export namespace View {
     export const Main = 'delphiProjects';
   }
-  
+
   export namespace Scheme {
     export const Default  = 'delphi-devkit';
     export const Selected = `${Default}.selected`;

@@ -182,22 +182,34 @@
     },
     "languages": [
       {
-        "id": "delphi-devkit.dfm",
+        "id": "delphi-devkit.delphi",
         "extensions": [
-          ".dfm"
+          ".pas",
+          ".dpr",
+          ".dpk",
+          ".dfm",
+          ".inc"
         ],
         "aliases": [
-          "Delphi Form",
-          "Delphi DFM"
-        ]
+          "Delphi",
+          "Object Pascal"
+        ],
+        "configuration": "./config/languages/delphi-language-configuration.json"
       },
       {
         "id": "delphi-devkit.compilerOutput",
-        "aliases": ["Delphi Compiler Output"],
+        "aliases": [
+          "Delphi Compiler Output"
+        ],
         "extensions": []
       }
     ],
     "grammars": [
+      {
+        "language": "delphi-devkit.delphi",
+        "scopeName": "source.pascal",
+        "path": "./config/languages/grammar/delphi.tmLanguage.json"
+      },
       {
         "language": "delphi-devkit.compilerOutput",
         "scopeName": "text.output.delphi-compiler",
@@ -231,23 +243,27 @@
       "title": "Delphi Development Kit",
       "properties": {
         "delphi-devkit.projects.discovery.enable": {
+          "title": "Project Discovery: Enable",
           "type": "boolean",
           "default": true,
           "description": "Allow automatic discovery of Delphi projects in the workspace."
         },
         "delphi-devkit.projects.discovery.useFileSystemWatchers": {
+          "title": "Project Discovery: Use File System Watchers",
           "type": "boolean",
           "default": false,
           "description": "Use file system watchers to detect changes in Delphi project files. If false, requires manual refresh. When enabled with git, checkouts can be problematic.",
           "scope": "resource"
         },
         "delphi-devkit.projects.gitCheckoutDelay": {
+          "title": "Project Discovery: Git Checkout Delay",
           "type": "number",
           "default": 30000,
           "description": "Delay in milliseconds before reloading project watchers after a git checkout. This helps avoid issues with rapid git operations.",
           "scope": "resource"
         },
         "delphi-devkit.projects.discovery.projectPaths": {
+          "title": "Project Discovery: Project Paths",
           "type": "array",
           "items": {
             "type": "string"
@@ -259,6 +275,7 @@
           "scope": "resource"
         },
         "delphi-devkit.projects.discovery.excludePatterns": {
+          "title": "Project Discovery: Exclude Patterns",
           "type": "array",
           "items": {
             "type": "string"
@@ -270,29 +287,29 @@
           "description": "Glob patterns for paths to exclude from the Delphi Projects explorer. Use standard glob patterns like '**/folder/**' to exclude entire directories.",
           "scope": "resource"
         },
-        "delphi-devkit.projects.sortProjects": {
-          "type": "boolean",
-          "default": false,
-          "description": "Sort Delphi projects alphabetically in the explorer. If false, preserves original order."
-        },
         "delphi-devkit.projects.compiler.configurations": {
+          "title": "Compilers",
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "name": {
+                "title": "Unique Name",
                 "type": "string",
                 "description": "Display name for the Delphi version"
               },
               "rsVarsPath": {
+                "title": "RSVars.bat Path",
                 "type": "string",
                 "description": "Path to the RSVars.bat file for this Delphi version"
               },
               "msBuildPath": {
+                "title": "MSBuild.exe Path",
                 "type": "string",
                 "description": "Path to MSBuild.exe for this Delphi version"
               },
               "buildArguments": {
+                "title": "Build Arguments",
                 "type": "array",
                 "items": {
                   "type": "string"
@@ -300,6 +317,7 @@
                 "description": "Default build arguments for this Delphi version"
               },
               "usePrettyFormat": {
+                "title": "Use Pretty Format",
                 "type": "boolean",
                 "default": true,
                 "description": "Use pretty format for build output. If false, unchanged compiler output."
@@ -351,16 +369,16 @@
           "scope": "resource"
         },
         "delphi-devkit.projects.compiler.currentConfiguration": {
+          "title": "Current Compiler",
           "type": "string",
           "default": "Delphi 12",
-          "description": "Currently selected Delphi compiler configuration",
-          "scope": "resource"
+          "description": "Currently selected Delphi compiler configuration"
         }
       }
     }
   },
   "repository": {
-    "url": "https://github.com/dontenwill-standard/vscode_delphi_utils",
+    "url": "https://github.com/Snowcaloid/delphi-devkit",
     "type": "git"
   },
   "scripts": {
@@ -402,6 +420,7 @@
     "reflect-metadata": "^0.2.2",
     "sql.js": "^1.13.0",
     "typeorm": "^0.3.25",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "vscode-languageclient": "^9.0.1"
   }
 }

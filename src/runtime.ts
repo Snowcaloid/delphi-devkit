@@ -8,6 +8,7 @@ import { createHash } from "crypto";
 import { v4 as uuid } from "uuid";
 import { DynamicObject, LockInfo } from "./typings";
 import { AppDataSource } from "./db/datasource";
+import { DelphiLanguageClient } from "./lsp/client";
 
 namespace WorkspaceKeys {
   const WORKSPACE_KEY = "projects<%ws>";
@@ -35,7 +36,7 @@ export enum RuntimeProperty {
 /**
  * Wrapper for all Statusbar components
  */
-class StatusBar { 
+class StatusBar {
   constructor(public compilerPicker: CompilerPicker) {}
 }
 
@@ -64,6 +65,7 @@ export abstract class Runtime {
   public static statusBar: StatusBar;
   public static extension: ExtensionContext;
   public static readonly windowID: string = uuid();
+  private static lsp: DelphiLanguageClient;
 
   static async initialize(context: ExtensionContext) {
     this.extension = context;
@@ -83,6 +85,7 @@ export abstract class Runtime {
     this.statusBar = new StatusBar(new CompilerPicker());
     this.watchGlobalState();
     this.watchGitState();
+    this.lsp = await new DelphiLanguageClient().start();
   }
 
   public static async finalize() {

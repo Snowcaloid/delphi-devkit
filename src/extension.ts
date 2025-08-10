@@ -10,7 +10,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   await Runtime.initialize(context);
   const swapCommand = commands.registerCommand(DFM.Commands.SwapToDfmPas, dfmSwap);
   const definitionProvider = languages.registerDefinitionProvider(
-    { language: 'delphi-devkit.dfm', scheme: 'file' }, new DfmLanguageProvider());
+    { language: 'delphi-devkit.delphi', scheme: 'file' }, new DfmLanguageProvider());
 
   // Register Delphi Projects Explorer
   const projectsTreeView = window.createTreeView(Projects.View.Main, {

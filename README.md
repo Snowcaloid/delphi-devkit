@@ -44,9 +44,6 @@ Utilities for developing in Delphi using VS Code
   * Default: `["**/__history/**", "**/.history/**"]`
   * Example: `["**/temp/**", "**/backup/**", "**/bin/**"]`
 
-* `delphi-devkit.projects.sortProjects`: Sort projects alphabetically in explorer
-  * Default: `false`
-
 ### Compiler Configurations
 
 * `delphi-devkit.compiler.configurations`: Array of Delphi compiler configurations
@@ -66,7 +63,6 @@ Each compiler configuration includes:
 {
   "delphi-devkit.projects.discovery.projectPaths": ["src/**", "projects/**"],
   "delphi-devkit.projects.discovery.excludePatterns": ["**/temp/**", "**/__history/**", "**/backup/**"],
-  "delphi-devkit.projects.sortProjects": true,
   "delphi-devkit.compiler.configurations": [
     {
       "name": "Delphi 12",
