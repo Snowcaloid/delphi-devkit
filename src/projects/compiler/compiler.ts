@@ -48,20 +48,20 @@ export class Compiler extends Restorable<WorkspaceEntity> {
     super(WorkspaceEntity);
     this.linkProvider = new CompilerOutputLinkProvider();
     languages.registerDocumentLinkProvider(
-      { language: "delphi-devkit.compilerOutput" }, 
-      this.linkProvider 
+      { language: "delphi-devkit.compilerOutput" },
+      this.linkProvider
     );
     Runtime.extension.subscriptions.push(...[
       this.outputChannel, this.diagnosticCollection, ...this.registerCommands()
     ]);
   }
-  
+
   public loadOptions(): FindOneOptions<WorkspaceEntity> {
     return {
       where: { hash: Runtime.workspaceHash}
     };
   };
-  
+
   public createCallback(): Coroutine<WorkspaceEntity> | undefined {
     return async () => Runtime.db.initializeWorkspace();
   }
@@ -162,15 +162,15 @@ export class Compiler extends Restorable<WorkspaceEntity> {
       const buildArgumentsString = buildArguments.join(" ");
       let psArgs = [
         "-ExecutionPolicy", "Bypass",
-        "-File", scriptPath,           // No quotes needed
-        "-ProjectPath", file.fsPath,
-        "-RSVarsPath", this.configuration.rsVarsPath,
-        "-MSBuildPath", this.configuration.msBuildPath,
-        "-FileName", fileName,
-        "-ActionDescription", actionDescription,
-        "-PathDescription", pathDescription,
-        "-BuildArguments", buildArgumentsString,
-        "-CompilerName", this.configuration.name,
+        "-File", `"${scriptPath}"`,
+        "-ProjectPath", `"${file.fsPath}"`,
+        "-RSVarsPath", `"${this.configuration.rsVarsPath}"`,
+        "-MSBuildPath", `"${this.configuration.msBuildPath}"`,
+        "-FileName", `"${fileName}"`,
+        "-ActionDescription", `"${actionDescription}"`,
+        "-PathDescription", `"${pathDescription}"`,
+        "-BuildArguments", `"${buildArgumentsString}"`,
+        "-CompilerName", `"${this.configuration.name}"`,
       ];
       if (this.configuration.usePrettyFormat) {
         psArgs.push("-UsePrettyFormat");
@@ -181,7 +181,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
       this.outputChannel.clear();
       this.outputChannel.show(true);
       // Run PowerShell script and capture output
-      const proc = spawn("powershell.exe", psArgs, { 
+      const proc = spawn("powershell.exe", psArgs, {
         stdio: ['pipe', 'pipe', 'pipe'],  // Explicit stdio configuration
         windowsHide: true  // Hide PowerShell window
       });
