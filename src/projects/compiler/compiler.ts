@@ -112,24 +112,27 @@ export class Compiler extends Restorable<WorkspaceEntity> {
   public set configuration(configurationName: string | undefined) {
     if (!configurationName) { return; }
     const config = workspace.getConfiguration(Projects.Config.Key);
-    config.update("currentConfiguration", configurationName, false);
+    config.update(Projects.Config.Compiler.CurrentConfiguration, configurationName, false);
     Runtime.db.modify(async (ws) => ws.compiler = configurationName);
     window.showInformationMessage(
       `Compiler configuration set to: ${configurationName}`
     );
   }
 
-  public get configuration(): CompilerConfiguration {
-    const config = workspace.getConfiguration(Projects.Config.Key);
-    const configurations: CompilerConfiguration[] = config.get(
-      Projects.Config.Compiler.Configurations,
-      []
-    );
-    const currentConfigName: string = config.get(
-      Projects.Config.Compiler.CurrentConfiguration,
-      Projects.Config.Compiler.Value_DefaultConfiguration
-    );
-    const currentConfig = configurations.find(
+  public async getConfiguration(canUseCache: boolean = true): Promise<CompilerConfiguration> {
+    let currentConfigName: string | undefined = undefined;
+    if (canUseCache) {
+      const ws = await Runtime.db.getWorkspace();
+      currentConfigName = ws?.compiler;
+    }
+    if (!currentConfigName) {
+      const config = workspace.getConfiguration(Projects.Config.Key);
+      currentConfigName = config.get(
+        Projects.Config.Compiler.CurrentConfiguration,
+        Projects.Config.Compiler.Value_DefaultConfiguration
+      );
+    }
+    const currentConfig = this.availableConfigurations.find(
       (cfg) => cfg.name === currentConfigName
     );
     if (!currentConfig) {
@@ -153,9 +156,10 @@ export class Compiler extends Restorable<WorkspaceEntity> {
         ? "recreate (clean + build)"
         : "compile (clean + make)";
       const buildTarget = recreate ? "Build" : "Make";
+      const config = await this.getConfiguration();
       const buildArguments = [
         `/t:Clean,${buildTarget}`,
-        ...this.configuration.buildArguments,
+        ...config.buildArguments,
       ];
       // Use extension path to find the script
       const scriptPath = Runtime.extension.asAbsolutePath(join("dist", "compile.ps1"));
@@ -164,19 +168,19 @@ export class Compiler extends Restorable<WorkspaceEntity> {
         "-ExecutionPolicy", "Bypass",
         "-File", scriptPath,
         "-ProjectPath", file.fsPath,
-        "-RSVarsPath", this.configuration.rsVarsPath,
-        "-MSBuildPath", this.configuration.msBuildPath,
+        "-RSVarsPath", config.rsVarsPath,
+        "-MSBuildPath", config.msBuildPath,
         "-FileName", fileName,
         "-ActionDescription", actionDescription,
         "-PathDescription", pathDescription,
         "-BuildArguments", buildArgumentsString,
-        "-CompilerName", this.configuration.name,
+        "-CompilerName", config.name,
       ];
-      if (this.configuration.usePrettyFormat) {
+      if (config.usePrettyFormat) {
         psArgs.push("-UsePrettyFormat");
       }
       window.showInformationMessage(
-        `Starting ${actionDescription} for ${fileName} using ${this.configuration.name}...`
+        `Starting ${actionDescription} for ${fileName} using ${config.name}...`
       );
       this.outputChannel.clear();
       this.outputChannel.show(true);
@@ -199,7 +203,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
       });
       proc.on("close", async (code: number) => {
         // Parse and publish diagnostics
-        const problemRegex = PROBLEMMATCHER_REGEX[+!!this.configuration.usePrettyFormat];
+        const problemRegex = PROBLEMMATCHER_REGEX[+!!config.usePrettyFormat];
         const lines = output.split(/\r?\n/);
         const batch = await Promise.all(
           lines.map(async (line) => {
@@ -207,7 +211,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
             if (match) {
               let filePath: string;
               let diagnostic: Diagnostic;
-              if (this.configuration.usePrettyFormat) {
+              if (config.usePrettyFormat) {
                 filePath = match[3];
                 const lineNum = parseInt(match[4], 10) - 1;
                 const message = match[5];

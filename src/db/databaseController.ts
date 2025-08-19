@@ -11,7 +11,7 @@ import { WorkspaceViewMode } from "../projects/types";
 
 export class DatabaseController {
 
-  
+
   public async getWorkspace(): Promise<WorkspaceEntity | null> {
     if (!Runtime.assertWorkspaceAvailable()) {
       return null;
@@ -51,10 +51,10 @@ export class DatabaseController {
       await AppDataSource.reset();
     });
   }
-    
-  public initializeWorkspace(): WorkspaceEntity {
+
+  public async initializeWorkspace(): Promise<WorkspaceEntity> {
     const workspace = new WorkspaceEntity();
-    workspace.compiler = Runtime.compiler.configuration.name;
+    workspace.compiler = (await Runtime.compiler.getConfiguration(false)).name;
     workspace.hash = Runtime.workspaceHashHumanReadable;
     workspace.lastUpdated = new Date();
     return workspace;
@@ -74,23 +74,23 @@ export class DatabaseController {
     let getChanges = (proj: ProjectEntity): [boolean, ProjectEntity | undefined] => {
       if (!proj) { return [false, proj]; }
       let changeCount = 0;
-      if (proj.dprojPath && !fileExists(proj.dprojPath)) { 
+      if (proj.dprojPath && !fileExists(proj.dprojPath)) {
         proj.dprojPath = undefined;
         changeCount++;
       }
-      if (proj.dprPath && !fileExists(proj.dprPath)) { 
+      if (proj.dprPath && !fileExists(proj.dprPath)) {
         proj.dprPath = undefined;
         changeCount++;
       }
-      if (proj.dpkPath && !fileExists(proj.dpkPath)) { 
+      if (proj.dpkPath && !fileExists(proj.dpkPath)) {
         proj.dpkPath = undefined;
         changeCount++;
       }
-      if (proj.exePath && !fileExists(proj.exePath)) { 
+      if (proj.exePath && !fileExists(proj.exePath)) {
         proj.exePath = undefined;
         changeCount++;
       }
-      if (proj.iniPath && !fileExists(proj.iniPath)) { 
+      if (proj.iniPath && !fileExists(proj.iniPath)) {
         proj.iniPath = undefined;
         changeCount++;
       }

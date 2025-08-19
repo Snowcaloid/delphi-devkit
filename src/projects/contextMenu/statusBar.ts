@@ -21,7 +21,7 @@ export class CompilerPicker {
 
     // Listen for configuration changes
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration(Projects.Config.full(Projects.Config.Compiler.NS))) {
+      if (event.affectsConfiguration(Projects.Config.full(Projects.Config.Compiler.CurrentConfiguration))) {
         this.updateDisplay();
       }
     });
@@ -41,7 +41,7 @@ export class CompilerPicker {
     try {
       const config = workspace.getConfiguration(Projects.Config.Key);
       const currentConfigName: string = config.get(
-        Projects.Config.Compiler.CurrentConfiguration, 
+        Projects.Config.Compiler.CurrentConfiguration,
         Projects.Config.Compiler.Value_DefaultConfiguration
       );
 
