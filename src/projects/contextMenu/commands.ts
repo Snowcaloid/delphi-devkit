@@ -1,4 +1,4 @@
-import { commands, window, Uri, env, workspace } from "vscode";
+import { commands, window, Uri, env } from "vscode";
 import { DelphiProjectTreeItem } from "../treeItems/delphiProjectTreeItem";
 import { DelphiProject } from "../treeItems/delphiProject";
 import { basename, dirname, join } from "path";
@@ -100,29 +100,18 @@ export class DelphiProjectContextMenuCommands {
     item: DelphiProjectTreeItem
   ): Promise<void> {
     // File doesn't exist, create it
-    // Try to use .vscode/.delphi/default.ini if it exists
-    const workspaceRoot = workspace.workspaceFolders?.[0]?.uri.fsPath;
+    // Try to use default.ini if it exists
     let iniPath = join(
       dirname(item.projectExe!.fsPath),
       `${basename(item.projectExe!.fsPath, ".exe")}.ini`
     );
-    let defaultIniContent = `; ${iniPath}\n[CmdLineParam]\n`;
-    let usedDefault = false;
-    if (workspaceRoot) {
-      const defaultIniPath = join(
-        workspaceRoot,
-        ".vscode",
-        ".delphi",
-        "default.ini"
-      );
-      try {
-        const content = await fs.readFile(defaultIniPath, "utf8");
-        defaultIniContent = content;
-        usedDefault = true;
-      } catch {}
-    }
+    let content = `; ${iniPath}\n[CmdLineParam]\n`;
+    const defaultIniPath = Runtime.extension.asAbsolutePath("dist/default.ini")
+    try {
+      content = await fs.readFile(defaultIniPath, "utf8");
+    } catch {}
 
-    await fs.writeFile(iniPath, defaultIniContent, "utf8");
+    await fs.writeFile(iniPath, content, "utf8");
     await commands.executeCommand("vscode.open", iniPath);
     window.showInformationMessage(
       `Created and opened new INI file: ${iniPath}`

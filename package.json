@@ -49,6 +49,11 @@
         "title": "DDK: Run"
       },
       {
+        "command": "delphi-devkit.projects.editDefaultIni",
+        "title": "DDK: Edit Default .ini",
+        "icon": "$(pencil)"
+      },
+      {
         "command": "delphi-devkit.projects.configureOrCreateIni",
         "title": "DDK: Configure/Create .ini"
       },

@@ -6,7 +6,8 @@ import {
   ConfigurationChangeEvent,
   commands,
   window,
-  TreeDataProvider
+  TreeDataProvider,
+  Uri
 } from "vscode";
 import { DelphiProjectTreeItem } from "./delphiProjectTreeItem";
 import { DelphiProjectTreeItemType, WorkspaceViewMode } from "../types";
@@ -95,10 +96,10 @@ export class DelphiProjectsProvider
 
   private createCommands() {
     const refreshDelphiProjects = commands.registerCommand(Projects.Command.Refresh, async () => {
-      if (!await Runtime.assertWorkspaceAvailable()) { 
+      if (!await Runtime.assertWorkspaceAvailable()) {
         window.showWarningMessage('No workspace available. Please open a workspace to refresh Delphi projects.');
-        return; 
-      }  
+        return;
+      }
       await this.refreshTreeView(true);
     });
 
@@ -142,10 +143,20 @@ export class DelphiProjectsProvider
       window.showInformationMessage('Unloaded group project. Showing default projects (if discovery is enabled).');
     });
 
+    const editDefaultIniCommand = commands.registerCommand(Projects.Command.EditDefaultIni, async () => {
+      const defaultIniPath = Runtime.extension.asAbsolutePath("dist/default.ini");
+      try {
+        await commands.executeCommand("vscode.open", Uri.file(defaultIniPath));
+      } catch (error) {
+        window.showErrorMessage(`Failed to open default.ini: ${error}`);
+      }
+    });
+
     Runtime.extension.subscriptions.push(...[
       refreshDelphiProjects,
       pickGroupProjectCommand,
-      unloadGroupProjectCommand
+      unloadGroupProjectCommand,
+      editDefaultIniCommand
     ]);
   }
 
@@ -224,22 +235,22 @@ export class DelphiProjectsProvider
         Projects.Context.IsGroupProjectView,
         ws.viewMode === WorkspaceViewMode.GroupProject
       );
-      commands.executeCommand( 
+      commands.executeCommand(
         "setContext",
         Projects.Context.IsProjectSelected,
         false,
       );
-      commands.executeCommand( 
+      commands.executeCommand(
         "setContext",
         Projects.Context.DoesSelectedProjectHaveExe,
         false
       );
       await Runtime.extension.workspaceState.update(
-        Projects.Variables.IsGroupProjectView, 
+        Projects.Variables.IsGroupProjectView,
         ws.viewMode === WorkspaceViewMode.GroupProject
       );
       switch (ws.viewMode) {
-        case WorkspaceViewMode.GroupProject: 
+        case WorkspaceViewMode.GroupProject:
           if (ws.currentGroupProject) {
             ws.currentGroupProject.projects = await Runtime.db.removeNonExistentFiles(ws.currentGroupProject.projects);
           }
@@ -249,7 +260,7 @@ export class DelphiProjectsProvider
           if (config && !config.get<boolean>(Projects.Config.Discovery.Enable, true)) {
             break;
           }
-        case WorkspaceViewMode.Discovery: 
+        case WorkspaceViewMode.Discovery:
           ws.discoveredProjects = await Runtime.db.removeNonExistentFiles(ws.discoveredProjects);
           if (!ws.discoveredProjects || ws.discoveredProjects.length === 0) {
             ws.discoveredProjects = await new ProjectDiscovery().findAllProjects();
