@@ -1,20 +1,18 @@
-import { commands, languages } from "vscode";
+import { languages } from "vscode";
 import { Feature } from "../types";
-import { DfmLanguageProvider } from "../dfmLanguageSupport/provider";
+import { DfmLanguageProvider } from "./language";
 import { Runtime } from "../runtime";
-import { dfmSwap } from "../dfmSwap/command";
-import { DFM } from "../constants";
+import { DfmCommands } from "./commands";
 
 
 export class DfmFeature implements Feature {
-    public async initialize(): Promise<void> {
-        const swapCommand = commands.registerCommand(DFM.Commands.SwapToDfmPas, dfmSwap);
-        const definitionProvider = languages.registerDefinitionProvider(
-            { language: 'delphi-devkit.dfm', scheme: 'file' }, new DfmLanguageProvider());
-
-        Runtime.extension.subscriptions.push(
-            swapCommand,
-            definitionProvider,
-        );
-    }
+  public async initialize(): Promise<void> {
+    Runtime.extension.subscriptions.push(
+      ...DfmCommands.registers,
+      languages.registerDefinitionProvider(
+        { language: 'delphi-devkit.dfm', scheme: 'file' },
+        new DfmLanguageProvider()
+      ),
+    );
+  }
 }

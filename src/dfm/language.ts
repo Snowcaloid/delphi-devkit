@@ -7,11 +7,11 @@ export class DfmLanguageProvider implements DefinitionProvider {
 
     const word = document.getText(wordRange);
     // Ensure word is a valid function name: starts with letter or underscore
-    if (!/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(word)) { return; };
+    if (!/^[_a-zA-Z][_a-zA-Z0-9]*$/.test(word)) { return; }
 
     const line = document.lineAt(position.line).text;
     const equalsIndex = line.indexOf('=');
-    if (equalsIndex === -1 || position.character <= equalsIndex) { return; };
+    if (equalsIndex === -1 || position.character <= equalsIndex) { return; }
 
     // Look for associated .pas file
     const dfmUri = document.uri;
