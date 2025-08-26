@@ -1,7 +1,7 @@
 import { ExtensionContext, extensions, window, workspace } from "vscode";
-import { DelphiProjectsProvider } from "./projects/treeItems/provider";
+import { DelphiProjectsTreeView } from "./projects/treeItems/treeView";
 import { Compiler } from "./projects/compiler/compiler";
-import { CompilerPicker } from "./projects/contextMenu/statusBar";
+import { CompilerPicker } from "./projects/compiler/statusBar";
 import { DatabaseController } from "./db/databaseController";
 import { API, GitExtension } from "./typings/git";
 import { createHash } from "crypto";
@@ -58,7 +58,7 @@ export abstract class Runtime {
   private static gitAPI?: API;
   private static gitMap: Map<string, string> = new Map();
   public static _workspaceHash: string;
-  public static projectsProvider: DelphiProjectsProvider;
+  public static projectsTreeView: DelphiProjectsTreeView;
   public static db: DatabaseController;
   public static compiler: Compiler;
   public static statusBar: StatusBar;
@@ -76,7 +76,7 @@ export abstract class Runtime {
     );
     this.workspaceHash = this.generateWorkspaceHash();
     this.workspaceAvailable = !!workspace.workspaceFolders?.length;
-    this.projectsProvider = new DelphiProjectsProvider();
+    this.projectsTreeView = new DelphiProjectsTreeView();
     await AppDataSource.initialize();
     this.db = new DatabaseController();
     this.compiler = new Compiler();

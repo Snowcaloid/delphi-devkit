@@ -13,8 +13,8 @@ export async function activate(context: ExtensionContext): Promise<void> {
 
   // Register Delphi Projects Explorer
   const projectsTreeView = window.createTreeView(Projects.View.Main, {
-    treeDataProvider: Runtime.projectsProvider,
-    dragAndDropController: Runtime.projectsProvider.dragAndDropController
+    treeDataProvider: Runtime.projectsTreeView,
+    dragAndDropController: Runtime.projectsTreeView.dragAndDropController
   });
 
   // Register Delphi Projects context menu commands

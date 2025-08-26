@@ -23,7 +23,7 @@ export class DelphiProjectsDragAndDropController
   ): Promise<void> {
     if (Runtime.extension.workspaceState.get(Projects.Variables.IsGroupProjectView)) {
       window.showErrorMessage("Drag and drop is not supported in group project view.");
-      return; 
+      return;
     }
     dataTransfer.set(
       "application/vnd.code.tree.projects",
@@ -41,11 +41,11 @@ export class DelphiProjectsDragAndDropController
     if (!Array.isArray(draggedKeys) || !draggedKeys.length) {
       return;
     }
-    let treeItems = (await Runtime.projectsProvider.getChildren()).filter((item): item is DelphiProject => item instanceof DelphiProject);
+    let treeItems = (await Runtime.projectsTreeView.getChildren()).filter((item): item is DelphiProject => item instanceof DelphiProject);
     let sorter = new LexoSorter<DelphiProject>(treeItems);
     let dragItem = treeItems.find((item) => item.projectUri.fsPath === draggedKeys[0]);
     if (!dragItem) { return; }
-    
+
     // Determine the target item for insertion
     let beforeItem: DelphiProject | null = null;
     if (target instanceof DelphiProject) {
@@ -53,9 +53,9 @@ export class DelphiProjectsDragAndDropController
     } else if (target?.project instanceof DelphiProject) {
       beforeItem = target.project;
     }
-    
+
     const newOrder = sorter.reorder(dragItem, beforeItem);
-    await Runtime.projectsProvider.save(newOrder);
-    Runtime.projectsProvider.refreshTreeView();
+    await Runtime.projectsTreeView.save(newOrder);
+    Runtime.projectsTreeView.refreshTreeView();
   }
 }

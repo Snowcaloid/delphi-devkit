@@ -201,7 +201,7 @@ export namespace Commands {
         }
         return ws;
       });
-      await Runtime.projectsProvider.refreshTreeView();
+      await Runtime.projectsTreeView.refreshTreeView();
     }
   }
 
@@ -256,11 +256,11 @@ export namespace Commands {
         window.showWarningMessage('No workspace available. Please open a workspace to refresh Delphi projects.');
         return;
       }
-      await Runtime.projectsProvider.refreshTreeView(true);
+      await Runtime.projectsTreeView.refreshTreeView(true);
     }
 
     private static async pickGroupProject(): Promise<void> {
-      const uri = await Runtime.projectsProvider.groupProjPicker.pickGroupProject();
+      const uri = await Runtime.projectsTreeView.groupProjPicker.pickGroupProject();
       if (!uri) { return; }
       let needToFindProjects = false;
 
@@ -283,7 +283,7 @@ export namespace Commands {
           return ws;
         });
       }
-      await Runtime.projectsProvider.refreshTreeView();
+      await Runtime.projectsTreeView.refreshTreeView();
       window.showInformationMessage(`Loaded group project: ${ws?.currentGroupProject?.name}`);
     }
 
@@ -295,7 +295,7 @@ export namespace Commands {
         }
         return ws;
       });
-      await Runtime.projectsProvider.refreshTreeView();
+      await Runtime.projectsTreeView.refreshTreeView();
       window.showInformationMessage('Unloaded group project. Showing default projects (if discovery is enabled).');
     }
 

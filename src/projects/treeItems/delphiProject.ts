@@ -41,19 +41,19 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
     if (!path) { throw new Error("At least one project file must be provided."); }
     const uriPath = path.fsPath.replace(basename(path.fsPath), label);
     if (selected) {
-      commands.executeCommand( 
+      commands.executeCommand(
         "setContext",
         Projects.Context.IsProjectSelected,
         true,
       );
-      commands.executeCommand( 
+      commands.executeCommand(
         "setContext",
         Projects.Context.DoesSelectedProjectHaveExe,
         !!exe
       );
     }
-    const resourceUri = selected ? 
-      Uri.from({ scheme: Projects.Scheme.Selected, path: uriPath }) : 
+    const resourceUri = selected ?
+      Uri.from({ scheme: Projects.Scheme.Selected, path: uriPath }) :
       Uri.from({ scheme: Projects.Scheme.Default, path: uriPath });
     super(
       DelphiProjectTreeItemType.Project,
@@ -72,8 +72,8 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
   }
 
   public static fromData(workspace: WorkspaceEntity, data: ProjectEntity): DelphiProject {
-    const selected = 
-      workspace.currentGroupProject?.currentProject?.id === data.id || 
+    const selected =
+      workspace.currentGroupProject?.currentProject?.id === data.id ||
       workspace.currentProject?.id === data.id;
     const project = new DelphiProject(
       data.name,
@@ -158,35 +158,35 @@ export class DelphiProject extends DelphiProjectTreeItem implements DelphiProjec
   async setDproj(value: Uri, save: boolean = false): Promise<void> {
     this.dproj = value;
     if (save) {
-      await Runtime.projectsProvider.save();
+      await Runtime.projectsTreeView.save();
     }
   }
 
   async setDpr(value: Uri, save: boolean = false): Promise<void> {
     this.dpr = value;
     if (save) {
-      await Runtime.projectsProvider.save();
+      await Runtime.projectsTreeView.save();
     }
   }
 
   async setDpk(value: Uri, save: boolean = false): Promise<void> {
     this.dpk = value;
     if (save) {
-      await Runtime.projectsProvider.save();
+      await Runtime.projectsTreeView.save();
     }
   }
 
   async setExecutable(value: Uri, save: boolean = false): Promise<void> {
     this.exe = value;
     if (save) {
-      await Runtime.projectsProvider.save();
+      await Runtime.projectsTreeView.save();
     }
   }
 
   async setIni(value: Uri, save: boolean = false): Promise<void> {
     this.ini = value;
     if (save) {
-      await Runtime.projectsProvider.save();
+      await Runtime.projectsTreeView.save();
     }
   }
 

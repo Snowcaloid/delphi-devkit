@@ -22,7 +22,7 @@ import { SelectedItemDecorator } from "./selectedItemDecorator";
 
 type NullableTreeItem = DelphiProjectTreeItem | undefined | null | void;
 
-export class DelphiProjectsProvider
+export class DelphiProjectsTreeView
   implements TreeDataProvider<DelphiProjectTreeItem>
 {
   private _onDidChangeTreeData: EventEmitter<NullableTreeItem> =
