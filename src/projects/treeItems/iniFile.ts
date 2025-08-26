@@ -2,6 +2,7 @@ import { ThemeIcon, Uri } from 'vscode';
 import { DelphiProjectTreeItem } from './delphiProjectTreeItem';
 import { DelphiProjectTreeItemType } from '../../types';
 import { ProjectType } from './delphiProject';
+import { Projects } from '../../constants';
 
 export class IniFile extends DelphiProjectTreeItem {
   constructor(
@@ -10,9 +11,9 @@ export class IniFile extends DelphiProjectTreeItem {
   ) {
     super(DelphiProjectTreeItemType.IniFile, label, resourceUri, ProjectType.Application);
     this.command = {
-      command: 'vscode.open',
+      command: Projects.Command.ConfigureOrCreateIni,
       title: 'Open INI File',
-      arguments: [this.resourceUri]
+      arguments: [this.projectIni]
     };
     this.iconPath = new ThemeIcon('settings');
     this.contextValue = 'iniFile';

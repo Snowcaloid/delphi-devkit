@@ -12,7 +12,7 @@ export class DprFile extends DelphiProjectTreeItem {
     this.command = {
       command: 'vscode.open',
       title: 'Open DPR File',
-      arguments: [this.resourceUri]
+      arguments: [this.projectDpr]
     };
     this.iconPath = new ThemeIcon('file-code');
     this.contextValue = 'dprFile';

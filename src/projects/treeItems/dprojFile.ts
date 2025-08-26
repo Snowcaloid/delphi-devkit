@@ -13,7 +13,7 @@ export class DprojFile extends DelphiProjectTreeItem {
     this.command = {
       command: 'vscode.open',
       title: 'Open DPROJ File',
-      arguments: [this.resourceUri]
+      arguments: [this.projectDproj]
     };
     this.iconPath = new ThemeIcon('gear');
     this.contextValue = 'dprojFile';

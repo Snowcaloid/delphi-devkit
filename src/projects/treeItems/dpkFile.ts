@@ -12,7 +12,7 @@ export class DpkFile extends DelphiProjectTreeItem {
     this.command = {
       command: 'vscode.open',
       title: 'Open DPK File',
-      arguments: [this.resourceUri]
+      arguments: [this.projectDpk]
     };
     this.iconPath = new ThemeIcon('package');
     this.contextValue = 'dpkFile';
