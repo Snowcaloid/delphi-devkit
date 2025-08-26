@@ -116,7 +116,7 @@ export class DelphiProjectsTreeView
     return Promise.all(
       projects
         .filter((project) => project instanceof DelphiProject)
-        .map((project) => project.marshal())
+        .map((project) => project.entity)
     );
   }
 

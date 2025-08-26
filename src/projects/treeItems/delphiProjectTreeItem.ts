@@ -1,15 +1,10 @@
 import { TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { DelphiProjectTreeItemType } from '../../types';
 import { ProjectType } from './delphiProject';
+import { ProjectEntity } from '../../db/entities';
 
 export interface DelphiProjectMainTreeItem {
-  projectId?: number;
-  dproj?: Uri;
-  dpr?: Uri;
-  dpk?: Uri;
-  exe?: Uri;
-  ini?: Uri;
-  sortValue: string;
+  entity: ProjectEntity;
   resourceUri: Uri;
 }
 
@@ -31,26 +26,36 @@ export abstract class DelphiProjectTreeItem extends TreeItem {
   }
 
   public get projectSortValue(): string {
-    return this.project.sortValue;
+    return this.project.entity.sortValue;
   }
 
   public get projectDproj(): Uri | undefined {
-    return this.project.dproj;
+    if (this.project.entity.dprojPath) {
+      return Uri.file(this.project.entity.dprojPath);
+    }
   }
 
   public get projectDpr(): Uri | undefined {
-    return this.project.dpr;
+    if (this.project.entity.dprPath) {
+      return Uri.file(this.project.entity.dprPath);
+    }
   }
 
   public get projectDpk(): Uri | undefined {
-    return this.project.dpk;
+    if (this.project.entity.dpkPath) {
+      return Uri.file(this.project.entity.dpkPath);
+    }
   }
 
   public get projectExe(): Uri | undefined {
-    return this.project.exe;
+    if (this.project.entity.exePath) {
+      return Uri.file(this.project.entity.exePath);
+    }
   }
 
   public get projectIni(): Uri | undefined {
-    return this.project.ini;
+    if (this.project.entity.iniPath) {
+      return Uri.file(this.project.entity.iniPath);
+    }
   }
 }

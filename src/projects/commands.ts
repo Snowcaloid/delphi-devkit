@@ -189,7 +189,7 @@ export namespace ProjectsCommands {
             projects = ws.discoveredProjects;
             break;
         }
-        const project = projects.find((p) => p.id === item.project.projectId);
+        const project = projects.find((p) => p.id === item.project.entity.id);
         if (!project) { return ws; }
         switch (ws.viewMode) {
           case WorkspaceViewMode.GroupProject:
