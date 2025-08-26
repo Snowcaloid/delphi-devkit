@@ -25,10 +25,6 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "delphi-devkit.projects.launchExecutable",
-        "title": "DDK: Launch Application"
-      },
-      {
         "command": "delphi-devkit.projects.compile",
         "title": "DDK: Compile"
       },

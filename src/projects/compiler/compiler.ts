@@ -2,7 +2,6 @@ import {
   Uri,
   workspace,
   window,
-  commands,
   Diagnostic,
   DiagnosticSeverity,
   Range,
@@ -52,7 +51,7 @@ export class Compiler extends Restorable<WorkspaceEntity> {
       this.linkProvider
     );
     Runtime.extension.subscriptions.push(...[
-      this.outputChannel, this.diagnosticCollection, ...this.registerCommands()
+      this.outputChannel, this.diagnosticCollection
     ]);
   }
 
@@ -70,40 +69,6 @@ export class Compiler extends Restorable<WorkspaceEntity> {
     this.configuration = entity.compiler;
   }
 
-  private registerCommands() {
-    return [
-      commands.registerCommand(
-        Projects.Command.SelectCompilerConfiguration,
-        this.selectCompilerConfiguration.bind(this)
-      ),
-    ];
-  }
-
-  public async selectCompilerConfiguration(): Promise<void> {
-    const configurations = this.availableConfigurations;
-
-    if (!configurations.length) {
-      window.showErrorMessage(
-        "No compiler configurations found. Please configure Delphi compiler settings."
-      );
-      return;
-    }
-
-    const items = configurations.map((config) => ({
-      label: config.name,
-      description: config.rsVarsPath,
-      detail: `MSBuild: ${config.msBuildPath}`,
-    }));
-
-    const selected = await window.showQuickPick(items, {
-      placeHolder: "Select Delphi Compiler Configuration",
-      matchOnDescription: true,
-      matchOnDetail: true,
-    });
-
-    this.configuration = selected?.label;
-  }
-
   public get availableConfigurations(): CompilerConfiguration[] {
     const config = workspace.getConfiguration(Projects.Config.Key);
     return config.get<CompilerConfiguration[]>(Projects.Config.Compiler.Configurations, []);
@@ -113,7 +78,9 @@ export class Compiler extends Restorable<WorkspaceEntity> {
     if (!configurationName) { return; }
     const config = workspace.getConfiguration(Projects.Config.Key);
     config.update(Projects.Config.Compiler.CurrentConfiguration, configurationName, false);
-    Runtime.db.modify(async (ws) => ws.compiler = configurationName);
+    Runtime.db.modify(async (ws) => ws.compiler = configurationName).then(() => {
+      Runtime.statusBar.compilerPicker.updateDisplay();
+    });
     window.showInformationMessage(
       `Compiler configuration set to: ${configurationName}`
     );

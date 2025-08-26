@@ -1,10 +1,9 @@
-import { ExtensionContext, commands, languages, window, Uri, env } from 'vscode';
+import { ExtensionContext, commands, languages, window } from 'vscode';
 import { dfmSwap } from './dfmSwap/command';
 import { DfmLanguageProvider } from './dfmLanguageSupport/provider';
 import { Runtime } from './runtime';
-import { DelphiProjectContextMenuCommands } from './projects/contextMenu/commands';
 import { DFM, Projects } from './constants';
-import { ProjectCommands } from './projects/commands';
+import { Commands } from './projects/commands';
 
 export async function activate(context: ExtensionContext): Promise<void> {
   await Runtime.initialize(context);
@@ -18,24 +17,12 @@ export async function activate(context: ExtensionContext): Promise<void> {
     dragAndDropController: Runtime.projectsProvider.dragAndDropController
   });
 
-  const launchExecutableCommand = commands.registerCommand(Projects.Command.LaunchExecutable, async (uri: Uri) => {
-    try {
-      // Use the system's default application handler to launch the executable
-      await env.openExternal(uri);
-    } catch (error) {
-      window.showErrorMessage(`Failed to launch executable: ${error}`);
-    }
-  });
-
   // Register Delphi Projects context menu commands
-  const contextMenuCommands = DelphiProjectContextMenuCommands.registerCommands();
-  ProjectCommands.register();
+  Commands.register();
   context.subscriptions.push(
     swapCommand,
     definitionProvider,
     projectsTreeView,
-    launchExecutableCommand,
-    ...contextMenuCommands,
   );
 }
 

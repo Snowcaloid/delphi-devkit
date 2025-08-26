@@ -1,5 +1,5 @@
 import { window, StatusBarAlignment, StatusBarItem, workspace } from 'vscode';
-import { Runtime } from '../../runtime';
+import { Runtime, RuntimeProperty } from '../../runtime';
 import { Projects } from '../../constants';
 
 export class CompilerPicker {
@@ -27,17 +27,21 @@ export class CompilerPicker {
     });
 
     // Listen for workspace changes
-    Runtime.subscribe(() => {
-      if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
-        this.statusBarItem.show();
-      } else {
-        this.statusBarItem.hide();
+    Runtime.subscribe((property, newValue: boolean) => {
+      switch (property) {
+        case RuntimeProperty.WorkspaceAvailable:
+          if (newValue) {
+            this.statusBarItem.show();
+          } else {
+            this.statusBarItem.hide();
+          }
+          break;
       }
     });
     Runtime.extension.subscriptions.push(this.statusBarItem);
   }
 
-  private async updateDisplay(): Promise<void> {
+  public async updateDisplay(): Promise<void> {
     try {
       const config = workspace.getConfiguration(Projects.Config.Key);
       const currentConfigName: string = config.get(

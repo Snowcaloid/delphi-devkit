@@ -24,7 +24,6 @@
     }
     export namespace Command {
       export const Refresh                     = `${Projects.Config.Key}.refresh`;
-      export const LaunchExecutable            = `${Projects.Config.Key}.launchExecutable`;
       export const Compile                     = `${Projects.Config.Key}.compile`;
       export const Recreate                    = `${Projects.Config.Key}.recreate`;
       export const ShowInExplorer              = `${Projects.Config.Key}.showInExplorer`;

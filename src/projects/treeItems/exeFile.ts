@@ -10,7 +10,7 @@ export class ExeFile extends DelphiProjectTreeItem {
   ) {
     super(DelphiProjectTreeItemType.ExecutableFile, label, resourceUri, ProjectType.Application);
     this.command = {
-      command: 'delphi-devkit.projects.launchExecutable',
+      command: 'delphi-devkit.projects.runExecutable',
       title: 'Launch Application',
       arguments: [this.resourceUri]
     };

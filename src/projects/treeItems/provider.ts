@@ -7,17 +7,15 @@ import {
   commands,
   window,
   TreeDataProvider,
-  Uri
 } from "vscode";
 import { DelphiProjectTreeItem } from "./delphiProjectTreeItem";
 import { DelphiProjectTreeItemType, WorkspaceViewMode } from "../types";
 import { DelphiProject } from "./delphiProject";
 import { ProjectDiscovery } from "../data/projectDiscovery";
 import { DelphiProjectsDragAndDropController } from "./DragAndDropController";
-import { GroupProjectEntity, ProjectEntity } from "../../db/entities";
+import { ProjectEntity } from "../../db/entities";
 import { GroupProjectPicker } from "../pickers/groupProjPicker";
 import { Runtime, RuntimeProperty } from "../../runtime";
-import { basename } from "path";
 import { AppDataSource } from "../../db/datasource";
 import { Projects } from "../../constants";
 import { SelectedItemDecorator } from "./selectedItemDecorator";
@@ -94,78 +92,11 @@ export class DelphiProjectsProvider
     });
   }
 
-  private createCommands() {
-    const refreshDelphiProjects = commands.registerCommand(Projects.Command.Refresh, async () => {
-      if (!await Runtime.assertWorkspaceAvailable()) {
-        window.showWarningMessage('No workspace available. Please open a workspace to refresh Delphi projects.');
-        return;
-      }
-      await this.refreshTreeView(true);
-    });
-
-    const pickGroupProjectCommand = commands.registerCommand(Projects.Command.PickGroupProject, async () => {
-      const uri = await this.groupProjPicker.pickGroupProject();
-      if (!uri) { return; }
-      let needToFindProjects = false;
-
-      let ws = await Runtime.db.modify(async (ws) => {
-        let groupProj = await Runtime.db.getGroupProject(uri);
-        if (groupProj) {
-          ws.currentGroupProject = groupProj;
-          return ws;
-        }
-        groupProj = new GroupProjectEntity();
-        groupProj.name = basename(uri.fsPath);
-        groupProj.path = uri.fsPath;
-        needToFindProjects = true;
-        ws.currentGroupProject = groupProj;
-        return ws;
-      });
-      if (needToFindProjects) {
-        ws = await Runtime.db.modify(async (ws) => {
-          ws.currentGroupProject!.projects = await new ProjectDiscovery().findFilesFromGroupProj(ws.currentGroupProject!);
-          return ws;
-        });
-      }
-      await this.refreshTreeView();
-      window.showInformationMessage(`Loaded group project: ${ws?.currentGroupProject?.name}`);
-    });
-
-    const unloadGroupProjectCommand = commands.registerCommand(Projects.Command.UnloadGroupProject, async () => {
-      await Runtime.db.modify(async (ws) => {
-        if (ws.viewMode === WorkspaceViewMode.GroupProject) {
-          ws.currentGroupProject = null;
-          ws.lastUpdated = new Date();
-        }
-        return ws;
-      });
-      await this.refreshTreeView();
-      window.showInformationMessage('Unloaded group project. Showing default projects (if discovery is enabled).');
-    });
-
-    const editDefaultIniCommand = commands.registerCommand(Projects.Command.EditDefaultIni, async () => {
-      const defaultIniPath = Runtime.extension.asAbsolutePath("dist/default.ini");
-      try {
-        await commands.executeCommand("vscode.open", Uri.file(defaultIniPath));
-      } catch (error) {
-        window.showErrorMessage(`Failed to open default.ini: ${error}`);
-      }
-    });
-
-    Runtime.extension.subscriptions.push(...[
-      refreshDelphiProjects,
-      pickGroupProjectCommand,
-      unloadGroupProjectCommand,
-      editDefaultIniCommand
-    ]);
-  }
-
   constructor(
-    private readonly groupProjPicker: GroupProjectPicker = new GroupProjectPicker()
+    public readonly groupProjPicker: GroupProjectPicker = new GroupProjectPicker()
   ) {
     this.createWatchers();
     this.createConfigurationWatcher();
-    this.createCommands();
     this.dragAndDropController = new DelphiProjectsDragAndDropController();
     this.selectedItemDecorator = new SelectedItemDecorator();
     Runtime.extension.subscriptions.push(
