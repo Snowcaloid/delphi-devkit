@@ -36,7 +36,6 @@ Each compiler configuration includes:
 * `rsVarsPath`: Path to RSVars.bat file
 * `msBuildPath`: Path to MSBuild.exe
 * `buildArguments`: Default build arguments
-* `usePrettyFormat`: Use formatted build output (default: true)
 
 #### Example Configuration
 
@@ -51,8 +50,7 @@ Each compiler configuration includes:
         "/verbosity:minimal",
         "/p:DCC_DebugInformation=1",
         "/p:Configuration=Debug"
-      ],
-      "usePrettyFormat": true
+      ]
     }
   ]
 }

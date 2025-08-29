@@ -1,4 +1,4 @@
-import { ObjectLiteral } from "typeorm";
+import { ObjectLiteral } from 'typeorm';
 
 /**
  * Typing for an object whose properties can be dynamically added.

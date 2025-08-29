@@ -21,7 +21,7 @@
     "commands": [
       {
         "command": "ddk.projects.refresh",
-        "title": "Refresh File Status",
+        "title": "Discover File Paths",
         "icon": "$(refresh)",
         "category": "DDK TreeView Context Menu",
         "when": "false"
@@ -224,65 +224,72 @@
       "view/item/context": [
         {
           "command": "ddk.projects.selectProject",
-          "when": "view == ddk.view.projects.workspaces && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "select@1"
+          "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
+          "group": "1_select@1"
         },
         {
           "command": "ddk.projects.compile",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "compiler@1"
+          "group": "2_compiler@1"
         },
         {
           "command": "ddk.projects.recreate",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "compiler@2"
+          "group": "2_compiler@2"
         },
         {
           "command": "ddk.projects.showInExplorer",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.projectFile)",
-          "group": "file_actions@1"
+          "group": "3_file_actions@1"
         },
         {
           "command": "ddk.projects.openInFileExplorer",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.projectFile)",
-          "group": "file_actions@2"
+          "group": "3_file_actions@2"
+        },
+        {
+          "command": "ddk.projects.refresh",
+          "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
+          "group": "3_file_actions@2"
         },
         {
           "command": "ddk.projects.runExecutable",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "exe_actions@1"
+          "group": "4_exe_actions@1"
         },
         {
           "command": "ddk.projects.configureOrCreateIni",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "exe_actions@2"
+          "group": "4_exe_actions@2"
         },
         {
           "command": "ddk.projects.renameWorkspace",
           "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
-          "group": "workspace@1"
+          "group": "5_workspace@1"
         },
         {
           "command": "ddk.projects.removeWorkspace",
           "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
-          "group": "workspace@2"
+          "group": "5_workspace@2"
         },
         {
           "command": "ddk.projects.addProject",
           "when": "view == ddk.view.projects.workspaces && viewItem",
-          "group": "project@1"
+          "group": "6_project@1"
         },
         {
           "command": "ddk.projects.removeProject",
           "when": "view == ddk.view.projects.workspaces && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
-          "group": "project@2"
+          "group": "6_project@2"
         }
       ]
     },
     "languages": [
       {
         "id": "ddk.dfm",
-        "extensions": [".dfm"],
+        "extensions": [
+          ".dfm"
+        ],
         "aliases": [
           "Delphi Form",
           "Delphi DFM"
@@ -290,7 +297,9 @@
       },
       {
         "id": "ddk.pas",
-        "extensions": [".pas"],
+        "extensions": [
+          ".pas"
+        ],
         "aliases": [
           "Pascal Unit",
           "Delphi Unit"
@@ -298,14 +307,18 @@
       },
       {
         "id": "ddk.dpr",
-        "extensions": [".dpr"],
+        "extensions": [
+          ".dpr"
+        ],
         "aliases": [
           "Delphi Application File"
         ]
       },
       {
         "id": "ddk.dproj",
-        "extensions": [".dproj"],
+        "extensions": [
+          ".dproj"
+        ],
         "aliases": [
           "Delphi Project File",
           "Delphi Project Configuration"
@@ -313,14 +326,18 @@
       },
       {
         "id": "ddk.dpk",
-        "extensions": [".dpk"],
+        "extensions": [
+          ".dpk"
+        ],
         "aliases": [
           "Delphi Package File"
         ]
       },
       {
         "id": "ddk.inc",
-        "extensions": [".inc"],
+        "extensions": [
+          ".inc"
+        ],
         "aliases": [
           "Include File",
           "Delphi Include File"
@@ -328,7 +345,9 @@
       },
       {
         "id": "ddk.compilerOutput",
-        "aliases": ["Delphi Compiler Output"],
+        "aliases": [
+          "Delphi Compiler Output"
+        ],
         "extensions": []
       }
     ],
@@ -388,11 +407,6 @@
                   "type": "string"
                 },
                 "description": "Default build arguments for this Delphi version"
-              },
-              "usePrettyFormat": {
-                "type": "boolean",
-                "default": true,
-                "description": "Use pretty format for build output. If false, unchanged compiler output."
               }
             },
             "required": [
@@ -454,6 +468,23 @@
     "url": "https://github.com/dontenwill-standard/vscode_delphi_utils",
     "type": "git"
   },
+  "prettier": {
+    "overrides": [
+      {
+        "files": "*.ts",
+        "options": {
+          "printWidth": 150,
+          "singleQuote": true,
+          "trailingComma": "none",
+          "useTabs": false,
+          "tabWidth": 2,
+          "semi": true,
+          "bracketSpacing": true,
+          "bracketSameLine": true
+        }
+      }
+    ]
+  },
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
@@ -489,6 +520,7 @@
     "@types/sql.js": "^1.4.9",
     "@types/uuid": "^10.0.0",
     "@xmldom/xmldom": "^0.9.8",
+    "lexorank": "^1.0.5",
     "minimatch": "^10.0.3",
     "reflect-metadata": "^0.2.2",
     "sql.js": "^1.13.0",

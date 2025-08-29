@@ -2,39 +2,36 @@
  * Base DataSource class for managing SQLite database using TypeORM and sql.js.
  */
 
-import { join } from "path";
-import { DataSource, EntityManager } from "typeorm";
-import { accessSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import initSqlJs from "sql.js";
-import { Entities } from "./entities";
-import { Runtime } from "../runtime";
+import { join } from 'path';
+import { DataSource, EntityManager } from 'typeorm';
+import { accessSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import initSqlJs from 'sql.js';
+import { Entities } from './entities';
+import { Runtime } from '../runtime';
 
-const CACHE_DB_FILE_NAME = "vscode.ddk.cachedb";
+const CACHE_DB_FILE_NAME = 'vscode.ddk.cachedb';
 
 export class AppDataSource extends DataSource {
   private static sqljs: any;
 
   public static async initialize(): Promise<void> {
     this.sqljs = await initSqlJs({
-      locateFile: (file: string) =>
-        Runtime.extension.asAbsolutePath(`dist/${file}`),
+      locateFile: (file: string) => Runtime.extension.asAbsolutePath(`dist/${file}`)
     });
   }
 
   private constructor(dbBuffer?: any) {
     super({
-      type: "sqljs",
+      type: 'sqljs',
       driver: AppDataSource.sqljs,
       database: dbBuffer,
       entities: Entities.ALL,
       synchronize: true,
-      logging: false,
+      logging: false
     });
   }
 
-  public static async transaction(
-    callback: (manager: EntityManager) => Promise<void>
-  ): Promise<void> {
+  public static async transaction(callback: (manager: EntityManager) => Promise<void>): Promise<void> {
     const dataSource = new this(this.getReadBuffer());
     await dataSource.initialize();
     await dataSource.manager.transaction(async (manager) => {
@@ -43,9 +40,7 @@ export class AppDataSource extends DataSource {
     await dataSource.saveToFile();
   }
 
-  public static async readConnection(
-    callback: (manager: EntityManager) => Promise<void>
-  ): Promise<void> {
+  public static async readConnection(callback: (manager: EntityManager) => Promise<void>): Promise<void> {
     const dataSource = new this(this.getReadBuffer());
     await dataSource.initialize();
     await callback(dataSource.manager);

@@ -3,7 +3,6 @@ import { promises as fs } from 'fs';
 import { dirname } from 'path';
 import { fileExists } from '../../utils';
 
-
 export class GroupProjParser {
   public async getDprojs(groupProjUri: Uri): Promise<Uri[]> {
     const content = await fs.readFile(groupProjUri.fsPath, 'utf8');
@@ -15,12 +14,7 @@ export class GroupProjParser {
       const relPath = match[1];
       if (relPath.toLowerCase().endsWith('.dproj')) {
         const absolutePath = Uri.joinPath(Uri.file(dirname(groupProjUri.fsPath)), relPath);
-        if (
-          !dprojPaths.find(p => p.fsPath === absolutePath.fsPath) && 
-          fileExists(absolutePath)
-        ) {
-          dprojPaths.push(absolutePath);
-        }
+        if (!dprojPaths.find((p) => p.fsPath === absolutePath.fsPath) && fileExists(absolutePath)) dprojPaths.push(absolutePath);
       }
     }
     return dprojPaths;

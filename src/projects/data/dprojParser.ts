@@ -1,12 +1,12 @@
-import { Uri, workspace } from "vscode";
-import { promises as fs } from "fs";
-import { dirname, join, basename } from "path";
-import { basenameNoExt, fileExists, removeBOM } from "../../utils";
-import { DOMParser } from "@xmldom/xmldom";
+import { Uri, workspace } from 'vscode';
+import { promises as fs } from 'fs';
+import { dirname, join, basename } from 'path';
+import { basenameNoExt, fileExists, removeBOM } from '../../utils';
+import { DOMParser } from '@xmldom/xmldom';
 
 export class DprojParser {
   public async findExecutable(dprojUri?: Uri): Promise<Uri | undefined> {
-    if (!dprojUri) { return; }
+    if (!dprojUri) return;
     try {
       let dprojContent = await fs.readFile(dprojUri.fsPath, 'utf8');
       dprojContent = removeBOM(dprojContent);
@@ -21,9 +21,7 @@ export class DprojParser {
           // The path might be relative to the DPROJ location
           const dprojDir = dirname(dprojUri.fsPath);
           const executablePath = join(dprojDir, outputPath);
-          if (fileExists(executablePath)) {
-            return Uri.file(executablePath);
-          }
+          if (fileExists(executablePath)) return Uri.file(executablePath);
         }
       }
 
@@ -53,9 +51,7 @@ export class DprojParser {
             // The path might be relative to the DPROJ location
             const dprojDir = dirname(dprojUri.fsPath);
             const executablePath = join(dprojDir, outputPath, basename(dprojUri.fsPath).replace('.dproj', '.exe'));
-            if (fileExists(executablePath)) {
-              return Uri.file(executablePath);
-            }
+            if (fileExists(executablePath)) return Uri.file(executablePath);
           }
         }
       }
@@ -75,9 +71,7 @@ export class DprojParser {
     const dprPattern = join(dprojDir, `${dprojName}.[Dd][Pp][Rr]`);
     const foundFiles = await workspace.findFiles(dprPattern);
 
-    if (foundFiles.length > 0) {
-      return foundFiles[0];
-    }
+    if (foundFiles.length > 0) return foundFiles[0];
   }
 
   public async findDpk(dprojUri: Uri): Promise<Uri | undefined> {
@@ -88,8 +82,6 @@ export class DprojParser {
     const dprPattern = join(dprojDir, `${dprojName}.[Dd][Pp][Kk]`);
     const foundFiles = await workspace.findFiles(dprPattern);
 
-    if (foundFiles.length > 0) {
-      return foundFiles[0];
-    }
+    if (foundFiles.length > 0) return foundFiles[0];
   }
 }

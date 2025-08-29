@@ -1,71 +1,73 @@
-import { commands, env, Uri, window, Disposable, workspace, ConfigurationTarget, TreeItem } from "vscode";
-import { dirname, join } from "path";
-import { promises as fs } from "fs";
-import { Runtime } from "../runtime";
-import { PROJECTS } from "../constants";
-import { Coroutine } from "../typings";
-import { Entities } from "../db/entities";
-import { DelphiProjectTreeItem } from "./treeItems/delphiProjectTreeItem";
-import { DelphiProject } from "./treeItems/delphiProject";
-import { ProjectFileDiscovery } from "./data/projectDiscovery";
-import { assertError, basenameNoExt } from "../utils";
-import { ExtensionDataExport } from "../types";
-import { WorkspaceItem } from "./treeItems/workspaceItem";
-import { LexoSorter } from "../utils/lexoSorter";
-
+import { commands, env, Uri, window, Disposable, workspace, ConfigurationTarget, TreeItem } from 'vscode';
+import { dirname, join } from 'path';
+import { promises as fs } from 'fs';
+import { Runtime } from '../runtime';
+import { PROJECTS } from '../constants';
+import { Coroutine } from '../typings';
+import { Entities } from '../db/entities';
+import { BaseFileItem } from './trees/items/baseFile';
+import { ProjectItem } from './trees/items/project';
+import { ProjectFileDiscovery } from './data/projectDiscovery';
+import { assertError, basenameNoExt } from '../utils';
+import { ExtensionDataExport, ProjectLinkType } from '../types';
+import { WorkspaceItem } from './trees/items/workspaceItem';
+import { LexoSorter } from '../utils/lexoSorter';
 
 export namespace ProjectsCommands {
   export function register() {
-    Runtime.extension.subscriptions.push(...[
-      ...SelectedProject.registers,
-      ...ContextMenu.registers,
-      ...Compiler.registers,
-      ...ProjectsTreeView.registers,
-      ...Configuration.registers,
-    ]);
+    Runtime.extension.subscriptions.push(
+      ...[...SelectedProject.registers, ...ContextMenu.registers, ...Compiler.registers, ...ProjectsTreeView.registers, ...Configuration.registers]
+    );
   }
   export class SelectedProject {
     public static get registers(): Disposable[] {
       return [
         commands.registerCommand(PROJECTS.COMMAND.COMPILE_SELECTED_PROJECT, this.compileSelectedProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RECREATE_SELECTED_PROJECT, this.recreateSelectedProject.bind(this)),
-        commands.registerCommand(PROJECTS.COMMAND.RUN_SELECTED_PROJECT, this.runSelectedProject.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.RUN_SELECTED_PROJECT, this.runSelectedProject.bind(this))
       ];
     }
 
-    private static async selectedProjectAction(callback: Coroutine<void, [DelphiProject]>): Promise<void> {
-      const config = await Runtime.db.getConfiguration();
-      if (!config.selectedProject) { return; }
+    private static async selectedProjectAction(callback: Coroutine<void, [ProjectItem]>): Promise<void> {
+      const config = Runtime.configEntity;
+      if (!config.selectedProject) return;
       const project = config.selectedProject;
-      const item = Runtime.projects.workspacesTreeView.items.find(i => i.entity.id === project.id) ||
-        Runtime.projects.groupProjectsTreeView.items.find(i => i.entity.id === project.id);
-      if (!item) { return; }
+      const item =
+        Runtime.projects.workspacesTreeView.projects.find((i) => i.entity.id === project.id) ||
+        Runtime.projects.groupProjectTreeView.projects.find((i) => i.entity.id === project.id);
+      if (!item) return;
       await callback(item);
     }
 
     private static async compileSelectedProject() {
       await this.selectedProjectAction(async (item) => {
-        if (item.link.owner instanceof Entities.Workspace) {
-          Runtime.projects.compiler.compileWorkspaceItem(item, false);
-        } else if (item.link.owner instanceof Entities.GroupProject) {
-          Runtime.projects.compiler.compileGroupProjectItem(item, false);
+        switch (item.link.linkType) {
+          case ProjectLinkType.Workspace:
+            Runtime.projects.compiler.compileWorkspaceItem(item, false);
+            break;
+          case ProjectLinkType.GroupProject:
+            Runtime.projects.compiler.compileGroupProjectItem(item, false);
+            break;
         }
       });
     }
 
     private static async recreateSelectedProject() {
       await this.selectedProjectAction(async (item) => {
-        if (item.link.owner instanceof Entities.Workspace) {
-          Runtime.projects.compiler.compileWorkspaceItem(item, true);
-        } else if (item.link.owner instanceof Entities.GroupProject) {
-          Runtime.projects.compiler.compileGroupProjectItem(item, true);
+        switch (item.link.linkType) {
+          case ProjectLinkType.Workspace:
+            Runtime.projects.compiler.compileWorkspaceItem(item, true);
+            break;
+          case ProjectLinkType.GroupProject:
+            Runtime.projects.compiler.compileGroupProjectItem(item, true);
+            break;
         }
       });
     }
 
     private static async runSelectedProject() {
       await this.selectedProjectAction(async (item) => {
-        if (!item.projectExe) { return; }
+        if (!item.projectExe) return;
         try {
           // Use the system's default application handler to launch the executable
           await env.openExternal(item.projectExe);
@@ -89,36 +91,38 @@ export namespace ProjectsCommands {
       ];
     }
 
-    private static async compile(item: DelphiProjectTreeItem): Promise<void> {
-      if (item.project.link.owner instanceof Entities.Workspace) {
-        Runtime.projects.compiler.compileWorkspaceItem(item.project as DelphiProject, false);
-      } else if (item.project.link.owner instanceof Entities.GroupProject) {
-        Runtime.projects.compiler.compileGroupProjectItem(item.project as DelphiProject, false);
+    private static async compile(item: BaseFileItem): Promise<void> {
+      switch (item.project.link.linkType) {
+        case ProjectLinkType.Workspace:
+          Runtime.projects.compiler.compileWorkspaceItem(item.project as ProjectItem, false);
+          break;
+        case ProjectLinkType.GroupProject:
+          Runtime.projects.compiler.compileGroupProjectItem(item.project as ProjectItem, false);
+          break;
       }
     }
 
-    private static async recreate(item: DelphiProjectTreeItem): Promise<void> {
-      if (item.project.link.owner instanceof Entities.Workspace) {
-        Runtime.projects.compiler.compileWorkspaceItem(item.project as DelphiProject, true);
-      } else if (item.project.link.owner instanceof Entities.GroupProject) {
-        Runtime.projects.compiler.compileGroupProjectItem(item.project as DelphiProject, true);
+    private static async recreate(item: BaseFileItem): Promise<void> {
+      switch (item.project.link.linkType) {
+        case ProjectLinkType.Workspace:
+          Runtime.projects.compiler.compileWorkspaceItem(item.project as ProjectItem, true);
+          break;
+        case ProjectLinkType.GroupProject:
+          Runtime.projects.compiler.compileGroupProjectItem(item.project as ProjectItem, true);
+          break;
       }
     }
 
-    private static async showInExplorer(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async showInExplorer(item: BaseFileItem): Promise<void> {
       try {
         // Focus the file in VS Code explorer
-        await commands.executeCommand("revealInExplorer", item.resourceUri);
+        await commands.executeCommand('revealInExplorer', item.resourceUri);
       } catch (error) {
         window.showErrorMessage(`Failed to show in explorer: ${error}`);
       }
     }
 
-    private static async openInFileExplorer(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async openInFileExplorer(item: BaseFileItem): Promise<void> {
       try {
         // Open the containing folder in system file explorer
         const folderUri = Uri.file(dirname(item.resourceUri.fsPath));
@@ -128,118 +132,94 @@ export namespace ProjectsCommands {
       }
     }
 
-    private static async runExecutable(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async runExecutable(item: BaseFileItem): Promise<void> {
       if (item.projectExe) {
         await env.openExternal(item.projectExe);
         window.showInformationMessage(`Running: ${item.projectExe.fsPath}`);
-      } else {
-        window.showWarningMessage(`No executable found for: ${item.label}`);
-      }
+      } else window.showWarningMessage(`No executable found for: ${item.label}`);
     }
 
-    private static async createIniFile(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async createIniFile(item: BaseFileItem): Promise<void> {
       // File doesn't exist, create it
       // Try to use default.ini if it exists
-      let iniPath = join(
-        dirname(item.projectExe!.fsPath),
-        `${basenameNoExt(item.projectExe!.fsPath)}.ini`
-      );
+      let iniPath = join(dirname(item.projectExe!.fsPath), `${basenameNoExt(item.projectExe!.fsPath)}.ini`);
       let content = `; ${iniPath}\n[CmdLineParam]\n`;
-      const defaultIniPath = Runtime.extension.asAbsolutePath("dist/default.ini");
+      const defaultIniPath = Runtime.extension.asAbsolutePath('dist/default.ini');
       try {
-        content = await fs.readFile(defaultIniPath, "utf8");
-      } catch { }
+        content = await fs.readFile(defaultIniPath, 'utf8');
+      } catch {}
 
-      await fs.writeFile(iniPath, content, "utf8");
-      await commands.executeCommand("vscode.open", iniPath);
-      window.showInformationMessage(
-        `Created and opened new INI file: ${iniPath}`
-      );
+      await fs.writeFile(iniPath, content, 'utf8');
+      await commands.executeCommand('vscode.open', iniPath);
+      window.showInformationMessage(`Created and opened new INI file: ${iniPath}`);
 
       let project = item.project ? item.project : item;
-      if (!(project instanceof DelphiProject)) {
-        return;
-      }
+      if (!(project instanceof ProjectItem)) return;
+
       await project.setIni(iniPath);
     }
 
-    private static async configureOrCreateIni(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async configureOrCreateIni(item: BaseFileItem): Promise<void> {
       if (!item.projectExe) {
-        window.showWarningMessage(
-          `No executable for: ${item.label} - cannot create INI file.`
-        );
+        window.showWarningMessage(`No executable for: ${item.label} - cannot create INI file.`);
         return;
       }
-      if (item.projectIni) {
+      if (item.projectIni)
         try {
           await fs.access(item.projectIni.fsPath);
           // File exists, open it for editing
-          await commands.executeCommand("vscode.open", item.projectIni);
-          window.showInformationMessage(
-            `Opened existing INI file: ${item.projectIni.fsPath}`
-          );
+          await commands.executeCommand('vscode.open', item.projectIni);
+          window.showInformationMessage(`Opened existing INI file: ${item.projectIni.fsPath}`);
           return;
         } catch {
           // File doesn't exist, fall through to create it
         }
-      }
+
       await this.createIniFile(item);
     }
 
-    private static async selectProject(item: DelphiProjectTreeItem): Promise<void> {
-      const config = await Runtime.db.getConfiguration();
+    private static async selectProject(item: BaseFileItem): Promise<void> {
+      const config = Runtime.configEntity;
       config.selectedProject = item.project.entity;
-      await Runtime.db.saveConfiguration(config);
+      await Runtime.db.save(config);
+      await Runtime.projects.workspacesTreeView.refresh();
+      await Runtime.projects.groupProjectTreeView.refresh();
+      window.showInformationMessage(`Selected project: ${item.label}`);
     }
   }
 
   export class Compiler {
     public static get registers(): Disposable[] {
-      return [
-        commands.registerCommand(
-          PROJECTS.COMMAND.SELECT_COMPILER,
-          this.selectCompilerConfiguration.bind(this)
-        ),
-      ];
+      return [commands.registerCommand(PROJECTS.COMMAND.SELECT_COMPILER, this.selectCompilerConfiguration.bind(this))];
     }
 
     public static async selectCompilerConfiguration(): Promise<void> {
-      const configurations = Runtime.projects.compiler.availableConfigurations;
+      const configurations = Runtime.compilerConfigurations;
 
       if (!configurations.length) {
-        window.showErrorMessage(
-          "No compiler configurations found. Please configure Delphi compiler settings."
-        );
+        window.showErrorMessage('No compiler configurations found. Please configure Delphi compiler settings.');
         return;
       }
 
       const items = configurations.map((config) => ({
         label: config.name,
         description: config.rsVarsPath,
-        detail: `MSBuild: ${config.msBuildPath}`,
+        detail: `MSBuild: ${config.msBuildPath}`
       }));
 
       const selected = await window.showQuickPick(items, {
-        placeHolder: "Select Delphi Compiler Configuration",
+        placeHolder: 'Select Delphi Compiler Configuration',
         matchOnDescription: true,
-        matchOnDetail: true,
+        matchOnDetail: true
       });
 
-      if (!selected) { return; }
+      if (!selected) return;
 
-      const config = await Runtime.db.getConfiguration();
+      const config = Runtime.configEntity;
       config.groupProjectsCompiler = selected.label;
-      await Runtime.db.saveConfiguration(config);
+      await Runtime.db.save(config);
       await Runtime.projects.compilerStatusBarItem.updateDisplay();
-      window.showInformationMessage(
-        `Compiler configuration set to: ${selected?.label}`
-      );
+      window.showInformationMessage(`Compiler configuration set to: ${selected?.label}`);
     }
   }
 
@@ -254,37 +234,43 @@ export namespace ProjectsCommands {
     }
 
     private static async refreshDelphiProjects(): Promise<void> {
-      Runtime.projects.workspacesTreeView.refreshTreeView();
-      Runtime.projects.groupProjectsTreeView.refreshTreeView();
+      Runtime.projects.workspacesTreeView.refresh();
+      Runtime.projects.groupProjectTreeView.refresh();
     }
 
     private static async pickGroupProject(): Promise<void> {
       const uri = await Runtime.projects.groupProjectPicker.pickGroupProject();
-      if (!uri) { return; }
+      if (!uri) return;
       let groupProject = await Runtime.db.getGroupProject(uri.fsPath);
       if (!groupProject) {
         const projects = await new ProjectFileDiscovery().findFilesFromGroupProj(uri);
         groupProject = await Runtime.db.addGroupProject(basenameNoExt(uri), uri.fsPath, projects);
       }
-      const config = await Runtime.db.getConfiguration();
+      const config = Runtime.configEntity;
       config.selectedGroupProject = groupProject;
-      await Runtime.db.saveConfiguration(config);
-      await Runtime.projects.groupProjectsTreeView.refreshTreeView();
+      if (config.selectedProject && !groupProject.projects.some((link) => link.project.id === config.selectedProject?.id))
+        config.selectedProject = null;
+
+      await Runtime.db.save(config);
+      await Runtime.projects.groupProjectTreeView.refresh();
       window.showInformationMessage(`Loaded group project: ${groupProject?.name || uri.fsPath}`);
     }
 
     private static async unloadGroupProject(): Promise<void> {
-      const config = await Runtime.db.getConfiguration();
+      const config = Runtime.configEntity;
+      if (config.selectedProject && config.selectedGroupProject?.projects.some((link) => link.project.id === config.selectedProject?.id))
+        config.selectedProject = null;
+
       config.selectedGroupProject = null;
-      await Runtime.db.saveConfiguration(config);
-      await Runtime.projects.workspacesTreeView.refreshTreeView();
+      await Runtime.db.save(config);
+      await Runtime.projects.groupProjectTreeView.refresh();
       window.showInformationMessage('Unloaded group project. Showing default projects (if discovery is enabled).');
     }
 
     private static async editDefaultIni(): Promise<void> {
-      const defaultIniPath = Runtime.extension.asAbsolutePath("dist/default.ini");
+      const defaultIniPath = Runtime.extension.asAbsolutePath('dist/default.ini');
       try {
-        await commands.executeCommand("vscode.open", Uri.file(defaultIniPath));
+        await commands.executeCommand('vscode.open', Uri.file(defaultIniPath));
       } catch (error) {
         window.showErrorMessage(`Failed to open default.ini: ${error}`);
       }
@@ -300,7 +286,7 @@ export namespace ProjectsCommands {
         commands.registerCommand(PROJECTS.COMMAND.REMOVE_PROJECT, this.removeProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.ADD_WORKSPACE, this.addWorkspace.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RENAME_WORKSPACE, this.renameWorkspace.bind(this)),
-        commands.registerCommand(PROJECTS.COMMAND.REMOVE_WORKSPACE, this.removeWorkspace.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.REMOVE_WORKSPACE, this.removeWorkspace.bind(this))
       ];
     }
 
@@ -314,13 +300,10 @@ export namespace ProjectsCommands {
         },
         defaultUri: Uri.file(join(env.appRoot, 'configuration.ddk.json'))
       });
-      if (!fileUri) { return; }
+      if (!fileUri) return;
       try {
-        const config = await Runtime.db.getConfiguration();
-        const data = new ExtensionDataExport.FileContent(
-          config,
-          Runtime.projects.compiler.availableConfigurations
-        );
+        const config = Runtime.configEntity;
+        const data = new ExtensionDataExport.FileContent(config, Runtime.compilerConfigurations);
         await fs.writeFile(fileUri.fsPath, JSON.stringify(data, null, 2), 'utf8');
         window.showInformationMessage('Configuration exported successfully.');
       } catch (error) {
@@ -329,29 +312,28 @@ export namespace ProjectsCommands {
     }
 
     private static async importConfigurationV1_0(data: ExtensionDataExport.FileContent): Promise<void> {
-      await Runtime.db.saveConfiguration(data.configuration);
-      if (data.compilers) {
-        await workspace.getConfiguration(PROJECTS.CONFIG.KEY).update(
-          PROJECTS.CONFIG.COMPILER.CONFIGURATIONS,
-          data.compilers || [],
-          ConfigurationTarget.Global
-        );
-      }
+      await Runtime.db.save(data.configuration);
+      if (data.compilers)
+        await workspace
+          .getConfiguration(PROJECTS.CONFIG.KEY)
+          .update(PROJECTS.CONFIG.COMPILER.CONFIGURATIONS, data.compilers || [], ConfigurationTarget.Global);
     }
 
     private static async importConfiguration(): Promise<void> {
-      const fileUri = (await window.showOpenDialog({
-        canSelectMany: false,
-        title: 'Import DDK Configuration',
-        canSelectFolders: false,
-        canSelectFiles: true,
-        openLabel: 'Import',
-        filters: {
-          'DDK JSON files': ['ddk.json'],
-          'All files': ['*']
-        }
-      }))?.[0];
-      if (!fileUri) { return; }
+      const fileUri = (
+        await window.showOpenDialog({
+          canSelectMany: false,
+          title: 'Import DDK Configuration',
+          canSelectFolders: false,
+          canSelectFiles: true,
+          openLabel: 'Import',
+          filters: {
+            'DDK JSON files': ['ddk.json'],
+            'All files': ['*']
+          }
+        })
+      )?.[0];
+      if (!fileUri) return;
       try {
         const content = await fs.readFile(fileUri.fsPath, 'utf8');
         const data = JSON.parse(content) as ExtensionDataExport.FileContent;
@@ -364,35 +346,27 @@ export namespace ProjectsCommands {
               window.showErrorMessage(`Unsupported configuration version: ${data.version}`);
               return;
           }
-          await Runtime.projects.workspacesTreeView.refreshTreeView();
-          await Runtime.projects.groupProjectsTreeView.refreshTreeView();
+          await Runtime.projects.workspacesTreeView.refresh();
+          await Runtime.projects.groupProjectTreeView.refresh();
           await Runtime.projects.compilerStatusBarItem.updateDisplay();
           window.showInformationMessage('Configuration imported successfully.');
-        } else {
-          window.showErrorMessage('Invalid configuration file.');
-        }
+        } else window.showErrorMessage('Invalid configuration file.');
       } catch (error) {
         window.showErrorMessage(`Failed to import configuration: ${error}`);
       }
     }
 
-    private static async addProject(
-      item: TreeItem
-    ): Promise<void> {
+    private static async addProject(item: TreeItem): Promise<void> {
       const itemInWorkspaceContext = (i: TreeItem) => {
-        return (i instanceof WorkspaceItem) || (i instanceof DelphiProjectTreeItem && i.project.link.owner instanceof Entities.Workspace);
+        return i instanceof WorkspaceItem || (i instanceof BaseFileItem && i.project.link.linkType === ProjectLinkType.Workspace);
       };
-      if (!assertError(itemInWorkspaceContext(item), 'This command only works when invoked inside the context of a workspace tree item.')) {
-        return;
-      }
-      const ws = item instanceof WorkspaceItem ?
-        item.workspace :
-        (item as DelphiProjectTreeItem).project.link.owner as Entities.Workspace;
+      if (!assertError(itemInWorkspaceContext(item), 'This command only works when invoked inside the context of a workspace tree item.')) return;
 
-      if (!assertError(ws, 'Selected workspace not found.')) {
-        return;
-      }
-      const uris = (await window.showOpenDialog({
+      const ws = item instanceof WorkspaceItem ? item.workspace : (item as BaseFileItem).project.link.workspaceSafe;
+
+      if (!assertError(ws, 'Selected workspace not found.')) return;
+
+      const uris = await window.showOpenDialog({
         canSelectMany: true,
         title: 'Add Delphi Projects',
         canSelectFolders: false,
@@ -401,14 +375,14 @@ export namespace ProjectsCommands {
         filters: {
           'Delphi Project Files': ['dproj', 'dpr', 'dpk']
         }
-      }));
-      if (!assertError(uris, 'No project files selected')) { return; }
+      });
+      if (!assertError(uris, 'No project files selected')) return;
       await Promise.all(
         uris!.map(async (uri) => {
-          if (!uri) { return; }
+          if (!uri) return;
           const projectName = basenameNoExt(uri);
           let files = await new ProjectFileDiscovery().findFiles(Uri.file(dirname(uri.fsPath)), basenameNoExt(uri));
-          if (files.isEmpty) { return; }
+          if (files.isEmpty) return;
           const project = new Entities.Project();
           project.name = projectName;
           project.path = join(dirname(uri.fsPath), projectName);
@@ -417,54 +391,49 @@ export namespace ProjectsCommands {
           project.dpk = files.dpk?.fsPath || null;
           project.exe = files.exe?.fsPath || null;
           project.ini = files.ini?.fsPath || null;
-          const link = new Entities.WorkspaceProjectLink();
+          const link = new Entities.WorkspaceLink();
           link.project = project;
-          link.workspace = ws;
-          ws.projects.push(link);
+          link.workspace = ws!;
+          ws!.projects.push(link);
         })
       );
-      ws.projects = new LexoSorter(ws.projects).items;
-      await Runtime.db.saveWorkspace(ws);
-      Runtime.projects.workspacesTreeView.refreshTreeView();
+      ws!.projects = new LexoSorter(ws!.projects).items;
+      await Runtime.db.save(ws!);
+      Runtime.projects.workspacesTreeView.refresh();
     }
 
-    private static async removeProject(
-      item: DelphiProjectTreeItem
-    ): Promise<void> {
+    private static async removeProject(item: BaseFileItem): Promise<void> {
       const project = item.project.entity;
       const link = item.project.link;
-      if (!assertError(link.owner instanceof Entities.Workspace, 'Only workspace projects can be removed.')) {
-        return;
-      }
+      if (!assertError(link.linkType === ProjectLinkType.Workspace, 'Only workspace projects can be removed.')) return;
+
       const confirm = await window.showWarningMessage(
-        `Are you sure you want to remove project ${project.name} from workspace "${link.owner.name}"? This will not delete any files.`,
+        `Are you sure you want to remove project ${project.name}? This will not delete any files.`,
         { modal: true },
         'Remove'
       );
-      if (confirm !== 'Remove') { return; }
+      if (confirm !== 'Remove') return;
       await Runtime.db.removeProjectLink(link);
-      await Runtime.projects.workspacesTreeView.refreshTreeView();
+      await Runtime.projects.workspacesTreeView.refresh();
       window.showInformationMessage(`Removed project: ${item.label}`);
     }
 
     private static checkWorkspaceName(name: string, config: Entities.Configuration): string | undefined {
-      if (!name || !name.trim()) {
-        return 'Workspace name cannot be empty';
-      } else if (config.workspaces.some(ws => ws.name.toLowerCase() === name.trim().toLowerCase())) {
+      if (!name || !name.trim()) return 'Workspace name cannot be empty';
+      else if (config.workspaces.some((ws) => ws.name.toLowerCase() === name.trim().toLowerCase()))
         return 'A workspace with this name already exists';
-      }
     }
 
     private static async addWorkspace(): Promise<void> {
-      const config = await Runtime.db.getConfiguration();
+      const config = Runtime.configEntity;
       const name = await window.showInputBox({
         prompt: 'Enter a name for the new workspace',
         placeHolder: 'Workspace Name',
         validateInput: (value) => this.checkWorkspaceName(value, config)
       });
-      if (!assertError(name, 'Cannot create Workspace without name.')) { return; }
+      if (!assertError(name, 'Cannot create Workspace without name.')) return;
       const compilerName = await window.showQuickPick(
-        Runtime.projects.compiler.availableConfigurations.map(cfg => ({
+        Runtime.compilerConfigurations.map((cfg) => ({
           label: cfg.name,
           description: cfg.rsVarsPath,
           detail: `MSBuild: ${cfg.msBuildPath}`
@@ -476,42 +445,41 @@ export namespace ProjectsCommands {
           canPickMany: false
         }
       );
-      if (!assertError(compilerName, 'Cannot create Workspace without compiler configuration.')) { return; }
-      const workspace = await Runtime.db.addWorkspace(name!.trim(), compilerName!.label);
-      await Runtime.projects.workspacesTreeView.refreshTreeView();
+      if (!assertError(compilerName, 'Cannot create Workspace without compiler configuration.')) return;
+      const workspace = new Entities.Workspace();
+      workspace.name = name!.trim();
+      workspace.compiler = compilerName!.label;
+      config.workspaces.push(workspace);
+      config.workspaces = new LexoSorter(config.workspaces).items;
+      await Runtime.db.save(config);
+      await Runtime.projects.workspacesTreeView.refresh();
       window.showInformationMessage(`Created new workspace: ${workspace.name}`);
     }
 
-    private static async removeWorkspace(
-      item: WorkspaceItem
-    ): Promise<void> {
-      if (!assertError(item instanceof WorkspaceItem, 'This command can only be invoked on a workspace tree item.')) {
-        return;
-      }
+    private static async removeWorkspace(item: WorkspaceItem): Promise<void> {
+      if (!assertError(item instanceof WorkspaceItem, 'This command can only be invoked on a workspace tree item.')) return;
+
       const ws = item.workspace;
       await Runtime.db.removeWorkspace(ws);
-      await Runtime.projects.workspacesTreeView.refreshTreeView();
+      await Runtime.projects.workspacesTreeView.refresh();
       window.showInformationMessage(`Removed workspace: ${ws.name}`);
     }
 
-    private static async renameWorkspace(
-      item: WorkspaceItem
-    ): Promise<void> {
-      if (!assertError(item instanceof WorkspaceItem, 'This command can only be invoked on a workspace tree item.')) {
-        return;
-      }
+    private static async renameWorkspace(item: WorkspaceItem): Promise<void> {
+      if (!assertError(item instanceof WorkspaceItem, 'This command can only be invoked on a workspace tree item.')) return;
+
       const ws = item.workspace;
-      const config = await Runtime.db.getConfiguration();
+      const config = Runtime.configEntity;
       const newName = await window.showInputBox({
         prompt: 'Enter a new name for the workspace',
         placeHolder: 'Workspace Name',
         value: ws.name,
         validateInput: (value) => this.checkWorkspaceName(value, config)
       });
-      if (!assertError(newName && newName.trim() && newName.trim() !== ws.name, 'Workspace name not changed.')) { return; }
+      if (!assertError(newName && newName.trim() && newName.trim() !== ws.name, 'Workspace name not changed.')) return;
       ws.name = newName!.trim();
-      await Runtime.db.saveWorkspace(ws);
-      await Runtime.projects.workspacesTreeView.refreshTreeView();
+      await Runtime.db.save(ws);
+      await Runtime.projects.workspacesTreeView.refresh();
       window.showInformationMessage(`Renamed workspace to: ${ws.name}`);
     }
   }

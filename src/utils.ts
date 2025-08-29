@@ -1,24 +1,23 @@
-import { dirname, basename, join, extname } from "path/posix";
-import { Uri, workspace, window } from "vscode";
-import fs from "fs";
+import { dirname, basename, join, extname } from 'path';
+import { Uri, workspace, window } from 'vscode';
+import fs from 'fs';
 
 export function fileExists(filePath: string | Uri | undefined | null): boolean {
   try {
-    return !!filePath && !!(fs.statSync(filePath instanceof Uri ? filePath.fsPath : filePath));
+    return !!filePath && !!fs.statSync(filePath instanceof Uri ? filePath.fsPath : filePath);
   } catch {
     return false;
   }
 }
 
 export function removeBOM(content: string): string {
-  if (content.charCodeAt(0) === 0xFEFF) {
-    return content.substring(1);
-  }
+  if (content.charCodeAt(0) === 0xfeff) return content.substring(1);
+
   return content;
 }
 
 export async function findIniFromExecutable(executableUri?: string): Promise<Uri | undefined> {
-  if (!executableUri) { return undefined; }
+  if (!executableUri) return undefined;
   try {
     const executableDir = dirname(executableUri);
     const executableName = basenameNoExt(executableUri);
@@ -38,16 +37,14 @@ export async function findIniFromExecutable(executableUri?: string): Promise<Uri
 }
 
 export function basenameNoExt(filePath: string | Uri): string {
-  if (filePath instanceof Uri) {
-    filePath = filePath.fsPath;
-  }
+  if (filePath instanceof Uri) filePath = filePath.fsPath;
+
   return basename(filePath, extname(filePath));
 }
 
 function assert(condition: boolean, message: string, callback: (message: string) => any): boolean {
-  if (condition) {
-    return true;
-  }
+  if (condition) return true;
+
   callback(message);
   return false;
 }

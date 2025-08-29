@@ -30,9 +30,6 @@
 .PARAMETER CompilerName
     Display name of the compiler being used.
 
-.PARAMETER UsePrettyFormat
-    Optional. If set to true, uses a pretty format for output messages.
-
 .EXAMPLE
     .\compile.ps1 -ProjectPath "C:\MyProject\MyApp.dproj" -RSVarsPath "C:\Program Files\Embarcadero\Studio\21.0\bin\rsvars.bat" -MSBuildPath "C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe" -FileName "MyApp.dproj" -ActionDescription "compile / recreate" -PathDescription "MyProject folder" -BuildArguments "/t:Clean,Build /verbosity:minimal /p:Configuration=Debug" -CompilerName "Delphi 12"
 
@@ -67,10 +64,7 @@ param(
   [string]$BuildArguments,
 
   [Parameter(Mandatory = $true)]
-  [string]$CompilerName,
-
-  [Parameter(Mandatory = $false)]
-  [switch]$UsePrettyFormat
+  [string]$CompilerName
 )
 function Get-CompilerObject {
   param ($line)
@@ -185,13 +179,8 @@ try {
   # Combine project path with build arguments
   $allBuildArgs = @($ProjectPath) + $buildArgsArray
 
-  if ($UsePrettyFormat) {
-    & $MSBuildPath @allBuildArgs | ForEach-Object {
-      Format-Output $_.Trim()
-    }
-  }
-  else {
-    & $MSBuildPath @allBuildArgs
+  & $MSBuildPath @allBuildArgs | ForEach-Object {
+    Format-Output $_.Trim()
   }
 
   if ($LASTEXITCODE -eq 0) {

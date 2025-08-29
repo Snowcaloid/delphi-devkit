@@ -4,9 +4,7 @@ import { DFM } from '../constants';
 
 export class DfmCommands {
   public static get registers(): Disposable[] {
-    return [
-      commands.registerCommand(DFM.Commands.SWAP_DFM_PAS, this.dfmSwap.bind(this))
-    ];
+    return [commands.registerCommand(DFM.Commands.SWAP_DFM_PAS, this.dfmSwap.bind(this))];
   }
   private static async dfmSwap(): Promise<void> {
     const editor = window.activeTextEditor;
@@ -28,9 +26,7 @@ export class DfmCommands {
     const targetUri = Uri.file(targetPath);
 
     const openEditors = window.visibleTextEditors;
-    const alreadyOpen = openEditors.find(openEditor =>
-      openEditor.document.uri.fsPath.toLowerCase() === targetPath.toLowerCase()
-    );
+    const alreadyOpen = openEditors.find((openEditor) => openEditor.document.uri.fsPath.toLowerCase() === targetPath.toLowerCase());
 
     if (alreadyOpen) {
       await window.showTextDocument(alreadyOpen.document, alreadyOpen.viewColumn);

@@ -5,4 +5,4 @@ export async function activate(context: ExtensionContext): Promise<void> {
   await Runtime.initialize(context);
 }
 
-export async function deactivate(): Promise<void> { }
+export async function deactivate(): Promise<void> {}

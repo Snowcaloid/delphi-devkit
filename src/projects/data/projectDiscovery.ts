@@ -1,9 +1,9 @@
-import { Uri } from "vscode";
-import { dirname } from "path";
+import { Uri } from 'vscode';
+import { dirname } from 'path';
 import { basenameNoExt, fileExists, findIniFromExecutable } from '../../utils';
-import { Entities } from "../../db/entities";
-import { DprojParser } from "./dprojParser";
-import { GroupProjParser } from "./groupProjParser";
+import { Entities } from '../../db/entities';
+import { DprojParser } from './dprojParser';
+import { GroupProjParser } from './groupProjParser';
 
 class ProjectFiles {
   public constructor(
@@ -11,7 +11,7 @@ class ProjectFiles {
     public readonly dpr?: Uri,
     public readonly dpk?: Uri,
     public readonly exe?: Uri,
-    public readonly ini?: Uri,
+    public readonly ini?: Uri
   ) {}
 
   public get isEmpty(): boolean {
@@ -30,12 +30,12 @@ export class ProjectFileDiscovery {
     const dprojParser = new DprojParser();
     let exe: Uri | undefined = undefined;
     let ini: Uri | undefined = undefined;
-    if (dproj && dpr && !dpk) { // dproj + dpr exist and dpk does not
+    if (dproj && dpr && !dpk)
+      // dproj + dpr exist and dpk does not
       exe = await dprojParser.findExecutable(dproj);
-    }
-    if (exe) {
-      ini = await findIniFromExecutable(exe.fsPath);
-    }
+
+    if (exe) ini = await findIniFromExecutable(exe.fsPath);
+
     return new ProjectFiles(dproj, dpr, dpk, exe, ini);
   }
 
@@ -63,6 +63,5 @@ export class ProjectFileDiscovery {
         })
       )
     ).filter((project) => project !== undefined);
-
   }
 }
