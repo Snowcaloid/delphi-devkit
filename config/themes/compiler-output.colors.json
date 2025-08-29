@@ -1,15 +1,7 @@
 {
+  "$schema": "vscode://schemas/color-theme",
   "name": "Delphi Compiler Colors",
   "type": "dark",
-  "colors": {
-    "delphiCompiler.errorForeground": "#ff6b6b",
-    "delphiCompiler.warningForeground": "#fdcb6e",
-    "delphiCompiler.hintForeground": "#74b9ff",
-    "delphiCompiler.infoForeground": "#55a3ff",
-    "delphiCompiler.errorCodeForeground": "#a29bfe",
-    "delphiCompiler.filePathForeground": "#00b894",
-    "delphiCompiler.lineNumberForeground": "#ffeaa7"
-  },
   "tokenColors": [
     {
       "scope": "markup.error.delphi",

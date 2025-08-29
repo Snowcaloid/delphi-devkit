@@ -282,12 +282,48 @@
     "languages": [
       {
         "id": "ddk.dfm",
-        "extensions": [
-          ".dfm"
-        ],
+        "extensions": [".dfm"],
         "aliases": [
           "Delphi Form",
           "Delphi DFM"
+        ]
+      },
+      {
+        "id": "ddk.pas",
+        "extensions": [".pas"],
+        "aliases": [
+          "Pascal Unit",
+          "Delphi Unit"
+        ]
+      },
+      {
+        "id": "ddk.dpr",
+        "extensions": [".dpr"],
+        "aliases": [
+          "Delphi Application File"
+        ]
+      },
+      {
+        "id": "ddk.dproj",
+        "extensions": [".dproj"],
+        "aliases": [
+          "Delphi Project File",
+          "Delphi Project Configuration"
+        ]
+      },
+      {
+        "id": "ddk.dpk",
+        "extensions": [".dpk"],
+        "aliases": [
+          "Delphi Package File"
+        ]
+      },
+      {
+        "id": "ddk.inc",
+        "extensions": [".inc"],
+        "aliases": [
+          "Include File",
+          "Delphi Include File"
         ]
       },
       {
@@ -405,7 +441,14 @@
           "scope": "resource"
         }
       }
-    }
+    },
+    "iconThemes": [
+      {
+        "id": "ddk-file-icons",
+        "label": "DDK Delphi File Icons",
+        "path": "./config/iconThemes/ddk-file-icons.json"
+      }
+    ]
   },
   "repository": {
     "url": "https://github.com/dontenwill-standard/vscode_delphi_utils",
