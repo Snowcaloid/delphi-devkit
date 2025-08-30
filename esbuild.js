@@ -37,6 +37,9 @@ const copyAssetsPlugin = {
 
 			const readmeFile = path.join(__dirname, 'README.md');
 			copyAsset(readmeFile);
+
+			const changelog = path.join(__dirname, 'CHANGELOG.md');
+			copyAsset(changelog);
 		});
 	},
 };
