@@ -8,8 +8,6 @@ This extension does not include any proprietary Embarcadero code, libraries or b
 
 ## Features
 
-* **File Navigation**: .pas <-> .dfm swapping with Alt+F12 hotkey
-* **Smart Navigation**: .dfm -> .pas jumps with Ctrl+click
 * **Dual Project Views**: Two separate project management approaches:
   - **Self-Defined Workspaces**: User-customizable project workspaces with drag & drop support
   - **Loaded Group Project**: Load and manage Delphi group projects (.groupproj) - readonly view
@@ -21,11 +19,13 @@ This extension does not include any proprietary Embarcadero code, libraries or b
 * **Visual Indicators**: File icons for Delphi files and missing file indicators
 * **Configuration Import/Export**: Backup and restore your entire DDK configuration
 * **Database-Driven**: Internal database for persistent project and workspace management
+* **File Navigation**: .pas <-> .dfm swapping with Alt+F12 hotkey
+* **Smart Navigation**: .dfm -> .pas jumps with Ctrl+click
 
 ## Commands
 
 ### File Navigation
-* `Delphi Utils: Swap .DFM/.PAS` - Switch between form and unit files (Alt+F12)
+* `Swap .DFM/.PAS` - Switch between form and unit files (Alt+F12)
 
 ### Project Management
 * `Select Delphi Compiler for Group Projects` - Choose the active compiler configuration for .groupproj files
@@ -116,6 +116,11 @@ None so far.
 ## Release Notes
 
 Users appreciate release notes as you update your extension.
+
+### 1.1.0
+
+- Fixed the issue where the compiler's diagnostic output was always mapped as information and added error code to diagnostics.
+- Added support for hyperlinks in compiler output channel.
 
 ### 1.0.0
 

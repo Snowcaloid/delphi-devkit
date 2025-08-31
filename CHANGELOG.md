@@ -4,6 +4,12 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.1.0] - 2025-08-31
+
+- Fixed the issue where the compiler's diagnostic output was always mapped as information.
+- Added error code to diagnostics.
+- Added support for hyperlinks in compiler output channel, enabling error/hint/warning codes to link directly to the Embarcadero documentation, and file paths to resolve.
+
 ## [1.0.0] - 2025-08-30
 
 - Removed Project Discovery in favor of a more streamlined approach.
@@ -44,8 +50,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 # Feature Roadmap
 
-- [ ] Fixing Diagnostics to show correct types of issues.
-- [ ] Linking the compiler output to files.
+- [x] Fixing Diagnostics to show correct types of issues.
+- [x] Linking the compiler output to files.
+- [ ] Add timestamps to compiler output lines.
 - [ ] Support for compiling / recreating all projects in a workspace / group project.
 - [ ] Support for commandline execution of unit tests (DUnit).
 - [ ] Integrate Delphi Language Server with background compiler. For now, you can use the [OmniPascal extension](https://marketplace.visualstudio.com/items?itemName=Wosi.omnipascal).
