@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Compiles a Delphi project using MSBuild with configurable parameters.
 
@@ -80,7 +80,7 @@ function Get-CompilerObject {
       LineNumber = $matches[2] # (123)
       TypeText   = $matches[4] # Warning
       Code       = $matches[5] # W1234
-      Message    = $matches[6] 
+      Message    = $matches[6]
     }
   }
 
@@ -94,16 +94,17 @@ function Format-Output {
     $color = 'Red'
     $type = 'ERROR'
     switch ($object.Code[0]) {
-      'W' { 
-        $color = 'Yellow' 
+      'W' {
+        $color = 'Yellow'
         $type = 'WARN'
       }
-      'H' { 
-        $color = 'Green' 
+      'H' {
+        $color = 'Green'
         $type = 'HINT'
       }
     }
-    $outLine = "[$type][$($object.Code)] $($object.FileName) (line $($object.LineNumber)): $($object.Message)"
+    # Convert Windows-Style path to URI:
+    $outLine = "[$type][$($object.Code)] $($object.FileName):$($object.LineNumber) - $($object.Message)"
     Write-Host $outLine -ForegroundColor $color
   } elseif ($line -ne "") {
     # If no match, just output the line as is
@@ -113,12 +114,26 @@ function Format-Output {
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-Write-Host "++++++++++++++++++++++++++++++++START++++++++++++++++++++++++++++++++" -ForegroundColor Green
-Write-Host -NoNewline "+++" -ForegroundColor Green; Write-Host " Delphi Utils - $FileName" -ForegroundColor Yellow
-Write-Host -NoNewline "+++" -ForegroundColor Green; Write-Host " Action: $ActionDescription" -ForegroundColor Yellow
-Write-Host -NoNewline "+++" -ForegroundColor Green; Write-Host " Path: $PathDescription" -ForegroundColor Yellow
-Write-Host -NoNewline "+++" -ForegroundColor Green; Write-Host " Compiler: $CompilerName" -ForegroundColor Yellow
-Write-Host "++++++++++++++++++++++++++++++++START++++++++++++++++++++++++++++++++" -ForegroundColor Green
+function Draw-Header ([string]$header) {
+  function Format-Line ([string]$text, [int]$totalWidth = 70) {
+    $padding = $totalWidth - $text.Length - 2 
+    if ($padding -le 0) {
+      return $text
+    }
+    $leftPadding = [math]::Floor($padding / 2)
+    return " " + (" " * $leftPadding) + " $text"
+
+  }  
+  Write-Host "╒══════════════════════════════════════════════════════════════════════╕" 
+  Write-Host( Format-Line "🅳🅳🅺 $header 🅳🅳🅺" 72)
+  Write-Host( Format-Line "→ $FileName ←" )
+  Write-Host( Format-Line "🗲 Action: $ActionDescription" )
+  Write-Host( Format-Line "📂︎ Path: $PathDescription" 71 )
+  Write-Host( Format-Line "🛠 Compiler: $CompilerName" )
+  Write-Host "╘══════════════════════════════════════════════════════════════════════╛"
+}
+
+Draw-Header "Compile START"
 
 # Call RSVars to set up Delphi environment and capture environment variables
 Write-Host "Setting up Delphi environment..." -ForegroundColor Cyan
@@ -185,36 +200,17 @@ try {
 
   if ($LASTEXITCODE -eq 0) {
     Write-Host ""
-    Write-Host "++++++++++++++++++++++++++++++++SUCCESS+++++++++++++++++++++++++++++++" -ForegroundColor Green
-    Write-Host -NoNewline "---" -ForegroundColor Green; Write-Host " Delphi Utils - $FileName" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Green; Write-Host " Action: $ActionDescription" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Green; Write-Host " Path: $PathDescription" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Green; Write-Host " Compiler: $CompilerName" -ForegroundColor Yellow
-    Write-Host "++++++++++++++++++++++++++++++++SUCCESS+++++++++++++++++++++++++++++++" -ForegroundColor Green
+    Draw-Header "Compile SUCCESS"
     Write-Host ""
   }
   else {
     Write-Host ""
-    Write-Host "++++++++++++++++++++++++++++++++FAILED++++++++++++++++++++++++++++++++" -ForegroundColor Red
-    Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Delphi Utils - $FileName" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Action: $ActionDescription" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Path: $PathDescription" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Compiler: $CompilerName" -ForegroundColor Yellow
-    Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Exit Code: $LASTEXITCODE" -ForegroundColor Yellow
-    Write-Host "++++++++++++++++++++++++++++++++FAILED++++++++++++++++++++++++++++++++" -ForegroundColor Red
-    Write-Host ""
+    Draw-Header "Compile FAILED"
     exit $LASTEXITCODE
   }
 }
 catch {
   Write-Host ""
-  Write-Host "++++++++++++++++++++++++++++++++ERROR++++++++++++++++++++++++++++++++" -ForegroundColor Red
-  Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Delphi Utils - $FileName" -ForegroundColor Yellow
-  Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Action: $ActionDescription" -ForegroundColor Yellow
-  Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Path: $PathDescription" -ForegroundColor Yellow
-  Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Compiler: $CompilerName" -ForegroundColor Yellow
-  Write-Host -NoNewline "---" -ForegroundColor Red; Write-Host " Error: $($_.Exception.Message)" -ForegroundColor Yellow
-  Write-Host "++++++++++++++++++++++++++++++++ERROR++++++++++++++++++++++++++++++++" -ForegroundColor Red
-  Write-Host ""
+  Draw-Header "Compile FAILED"
   exit 1
 }

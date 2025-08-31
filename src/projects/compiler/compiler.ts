@@ -1,11 +1,12 @@
-import { Uri, workspace, window, Diagnostic, DiagnosticSeverity, Range, languages, OutputChannel, DiagnosticCollection } from 'vscode';
+import { Uri, workspace, window, Diagnostic, DiagnosticSeverity, Range, languages, OutputChannel, DiagnosticCollection, DiagnosticTag } from 'vscode';
 import { basename, dirname, join } from 'path';
 import { spawn } from 'child_process';
 import { Runtime } from '../../runtime';
-import { PROBLEMMATCHER_REGEX } from '.';
 import { ProjectItem } from '../trees/items/project';
 import { assertError, fileExists } from '../../utils';
 import { ProjectLinkType } from '../../types';
+import { CompilerOutputDefinitionProvider, CompilerOutputLanguage } from './language';
+import { PROJECTS } from '../../constants';
 
 export interface CompilerConfiguration {
   name: string;
@@ -15,21 +16,24 @@ export interface CompilerConfiguration {
 }
 
 const DIAGNOSTIC_SEVERITY = {
-  hint: DiagnosticSeverity.Hint,
-  warn: DiagnosticSeverity.Warning,
-  error: DiagnosticSeverity.Error,
-  h: DiagnosticSeverity.Hint,
-  w: DiagnosticSeverity.Warning,
-  e: DiagnosticSeverity.Error,
-  f: DiagnosticSeverity.Error
+  HINT: DiagnosticSeverity.Hint,
+  WARN: DiagnosticSeverity.Warning,
+  ERROR: DiagnosticSeverity.Error
 };
 
 export class Compiler {
-  private outputChannel: OutputChannel = window.createOutputChannel('Delphi Compiler', 'ddk.compilerOutput');
-  private diagnosticCollection: DiagnosticCollection = languages.createDiagnosticCollection('ddk.compiler');
+  private outputChannel: OutputChannel = window.createOutputChannel('Delphi Compiler', PROJECTS.LANGUAGES.COMPILER);
+  private diagnosticCollection: DiagnosticCollection = languages.createDiagnosticCollection(PROJECTS.LANGUAGES.COMPILER);
+  private linkProvider: CompilerOutputDefinitionProvider = new CompilerOutputDefinitionProvider();
 
   constructor() {
-    Runtime.extension.subscriptions.push(...[this.outputChannel, this.diagnosticCollection]);
+    Runtime.extension.subscriptions.push(
+      ...[
+        this.outputChannel,
+        this.diagnosticCollection,
+        languages.registerDocumentLinkProvider({ language: PROJECTS.LANGUAGES.COMPILER }, this.linkProvider)
+      ]
+    );
   }
 
   public async compileWorkspaceItem(project: ProjectItem, recreate: boolean = false): Promise<void> {
@@ -106,6 +110,9 @@ export class Compiler {
         config.name
       ];
 
+      const resetSmartScroll = await Runtime.overrideConfiguration('output.smartScroll', 'enabled', false);
+      await workspace.getConfiguration('output.smartScroll').update('enabled', false);
+      this.linkProvider.compilerIsActive = true;
       window.showInformationMessage(`Starting ${actionDescription} for ${fileName} using ${config.name}...`);
       this.outputChannel.clear();
       this.outputChannel.show(true);
@@ -115,32 +122,32 @@ export class Compiler {
         windowsHide: true // Hide PowerShell window
       });
       let output = '';
-      proc.stdout.on('data', (data: Buffer) => {
+      const handleIO = (data: Buffer) => {
         const text = data.toString('utf8');
         this.outputChannel.append(text);
         output += text;
-      });
-
-      proc.stderr.on('data', (data: Buffer) => {
-        const text = data.toString('utf8');
-        this.outputChannel.append(text);
-        output += text;
-      });
+      };
+      proc.stdout.on('data', handleIO);
+      proc.stderr.on('data', handleIO);
       proc.on('close', async (code: number) => {
+        this.linkProvider.compilerIsActive = false;
+        await resetSmartScroll();
+        this.outputChannel.show(true);
         // Parse and publish diagnostics
-        const problemRegex = PROBLEMMATCHER_REGEX;
         const lines = output.split(/\r?\n/);
         const batch = await Promise.all(
           lines.map(async (line) => {
-            const match = problemRegex.exec(line);
+            const match = CompilerOutputLanguage.PATTERN.exec(line);
             if (match) {
               let filePath: string;
               let diagnostic: Diagnostic;
-              filePath = match[3];
-              const lineNum = parseInt(match[4], 10) - 1;
-              const message = match[5];
-              const severity = DIAGNOSTIC_SEVERITY[match[1].toLowerCase() as keyof typeof DIAGNOSTIC_SEVERITY] || DiagnosticSeverity.Information;
+              filePath = match[CompilerOutputLanguage.FILE];
+              const lineNum = parseInt(match[CompilerOutputLanguage.LINE], 10) - 1;
+              const message = `${match[CompilerOutputLanguage.MESSAGE]} [${match[CompilerOutputLanguage.CODE]}]`;
+              const severity = DIAGNOSTIC_SEVERITY[match[CompilerOutputLanguage.SEVERITY].toUpperCase() as keyof typeof DIAGNOSTIC_SEVERITY];
               diagnostic = new Diagnostic(new Range(lineNum, 0, lineNum, 1000), message, severity);
+              diagnostic.code = match[CompilerOutputLanguage.CODE];
+              if (diagnostic.code === 'W1000') diagnostic.tags = [DiagnosticTag.Deprecated];
               return [filePath, diagnostic] as [string, Diagnostic];
             }
           })
@@ -148,16 +155,13 @@ export class Compiler {
         this.diagnosticCollection.clear();
         const diagnosticsArray: [string, Diagnostic[]][] = batch
           .filter((item): item is [string, Diagnostic] => item !== undefined)
-          .reduce(
-            (acc, [filePath, diagnostic]) => {
-              const existing = acc.find(([path]) => path === filePath);
-              if (existing) existing[1].push(diagnostic);
-              else acc.push([filePath, [diagnostic]]);
+          .reduce((acc, [filePath, diagnostic]) => {
+            const existing = acc.find(([path]) => path === filePath);
+            if (existing) existing[1].push(diagnostic);
+            else acc.push([filePath, [diagnostic]]);
 
-              return acc;
-            },
-            [] as [string, Diagnostic[]][]
-          );
+            return acc;
+          }, [] as [string, Diagnostic[]][]);
         await Promise.all(
           diagnosticsArray.map(async ([filePath, diagnostics]) => {
             this.diagnosticCollection.set(Uri.file(filePath), diagnostics);

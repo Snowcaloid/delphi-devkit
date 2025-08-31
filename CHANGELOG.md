@@ -44,8 +44,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 # Feature Roadmap
 
-- [ ] Linking the compiler output to files.
 - [ ] Fixing Diagnostics to show correct types of issues.
+- [ ] Linking the compiler output to files.
 - [ ] Support for compiling / recreating all projects in a workspace / group project.
 - [ ] Support for commandline execution of unit tests (DUnit).
 - [ ] Integrate Delphi Language Server with background compiler. For now, you can use the [OmniPascal extension](https://marketplace.visualstudio.com/items?itemName=Wosi.omnipascal).

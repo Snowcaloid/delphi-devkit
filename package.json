@@ -304,16 +304,15 @@
         ]
       },
       {
-        "id": "ddk.compilerOutput",
+        "id": "ddk.compiler",
         "aliases": [
-          "Delphi Compiler Output"
-        ],
-        "extensions": []
+          "DDK Compiler Output"
+        ]
       }
     ],
     "grammars": [
       {
-        "language": "ddk.compilerOutput",
+        "language": "ddk.compiler",
         "scopeName": "text.output.delphi-compiler",
         "path": "./config/languages/grammar/compiler-output.json"
       }

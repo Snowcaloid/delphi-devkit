@@ -5,7 +5,7 @@
   "patterns": [
     {
       "name": "meta.compiler-message.delphi",
-      "match": "^(\\[(ERROR|WARN|INFO|HINT)\\])(\\[[A-Z]\\d+\\])\\s+(.+?)\\s+(\\(line\\s+\\d+\\)):\\s+(.*)$",
+      "match": "^(\\[(ERROR|WARN|INFO|HINT)\\])(\\[[A-Z]\\d+\\]) ((?:[A-Za-z]:|/)[^:]+):(\\d+) - (.*)$",
       "captures": {
         "1": {
           "name": "keyword.control.severity.delphi",
@@ -35,16 +35,16 @@
           "name": "string.other.link"
         },
         "5": {
-          "name": "constant.numeric.line-number"
+          "name": "variable.parameter.line-number"
         },
         "6": {
-          "name": "string.unquoted"
+          "name": "comment.message"
         }
       }
     },
     {
       "name": "string.other.link",
-      "match": "\\b[A-Za-z]:\\\\[^\\s\\(\\)]+\\.(pas|dpr|dpk|dproj|targets)\\b"
+      "match": "((?:[A-Za-z]:|/)[^:]+):(\\d+)"
     },
     {
       "name": "constant.numeric.line-number",
@@ -53,6 +53,21 @@
     {
       "name": "constant.numeric",
       "match": "\\[[A-Z]\\d+\\]"
+    },
+    {
+      "name": "keyword.other.header",
+      "begin": "\\u2552",
+      "end": "\\u255B",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.other.header.start"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "keyword.other.header.end"
+        }
+      }
     }
   ]
 }

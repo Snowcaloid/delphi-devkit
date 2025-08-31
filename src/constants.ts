@@ -85,6 +85,10 @@ export namespace PROJECTS {
      */
     export const GROUP_PROJECT_CHILD = 'application/vnd.code.tree.ddk.groupprojchild';
   }
+
+  export namespace LANGUAGES {
+    export const COMPILER = 'ddk.compiler';
+  }
 }
 
 export namespace DFM {
