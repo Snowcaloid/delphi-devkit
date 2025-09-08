@@ -6,6 +6,8 @@ This project is not affiliated, associated, authorized, endorsed by, or in any w
 
 This extension does not include any proprietary Embarcadero code, libraries or binaries. To build Delphi projects, you must have a valid Delphi installation and the necessary environment variables set up.
 
+This extension is currently developed in my free time, and any feedback is welcome on the public [Githib Issues page](https://github.com/Snowcaloid/delphi-devkit-issues).
+
 ## Features
 
 * **Dual Project Views**: Two separate project management approaches:
@@ -21,6 +23,8 @@ This extension does not include any proprietary Embarcadero code, libraries or b
 * **Database-Driven**: Internal database for persistent project and workspace management
 * **File Navigation**: .pas <-> .dfm swapping with Alt+F12 hotkey
 * **Smart Navigation**: .dfm -> .pas jumps with Ctrl+click
+* **Compiler Output Enhancements**: Timestamps and clickable links in compiler output
+* **Formatter Support**: Configurable Delphi code formatter
 
 ## Commands
 
@@ -44,6 +48,7 @@ This extension does not include any proprietary Embarcadero code, libraries or b
 * `Import Configuration` - Import DDK configuration from JSON file
 * `Export Configuration` - Export DDK configuration to JSON file
 * `Edit Default .ini` - Edit the default INI template file
+* `Edit Formatter Config` - Edit the Delphi formatter configuration file
 
 ### Project Actions (Available via context menu and keyboard shortcuts)
 * `Compile Selected Project` - Compile the selected project (Ctrl+F9)

@@ -111,6 +111,42 @@
         "when": "false"
       },
       {
+        "command": "ddk.projects.compileAllFromHere",
+        "title": "Compile all from here",
+        "category": "_ddk_treeview",
+        "when": "false"
+      },
+      {
+        "command": "ddk.projects.recreateAllFromHere",
+        "title": "Recreate all from here",
+        "category": "_ddk_treeview",
+        "when": "false"
+      },
+      {
+        "command": "ddk.projects.compileAllInWorkspace",
+        "title": "Compile all in workspace",
+        "category": "_ddk_treeview",
+        "when": "false"
+      },
+      {
+        "command": "ddk.projects.recreateAllInWorkspace",
+        "title": "Recreate all in workspace",
+        "category": "_ddk_treeview",
+        "when": "false"
+      },
+      {
+        "command": "ddk.projects.compileAllInGroupProject",
+        "title": "Compile all in group project",
+        "icon": "$(sync-ignored)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.recreateAllInGroupProject",
+        "title": "Recreate all in group project",
+        "icon": "$(sync)",
+        "category": "DDK"
+      },
+      {
         "command": "ddk.importConfiguration",
         "title": "Import Configuration",
         "icon": "$(cloud-download)",
@@ -224,14 +260,24 @@
           "group": "navigation"
         },
         {
+          "command": "ddk.projects.compileAllInGroupProject",
+          "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ddk.projects.recreateAllInGroupProject",
+          "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
+          "group": "navigation@2"
+        },
+        {
           "command": "ddk.projects.pickGroupProject",
           "when": "view == ddk.view.projects.groupProject",
-          "group": "navigation@2"
+          "group": "navigation@3"
         },
         {
           "command": "ddk.projects.unloadGroupProject",
           "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
-          "group": "navigation@3"
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
@@ -249,6 +295,26 @@
           "command": "ddk.projects.recreate",
           "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
           "group": "2_compiler@2"
+        },
+        {
+          "command": "ddk.projects.compileAllFromHere",
+          "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
+          "group": "2_compiler@3"
+        },
+        {
+          "command": "ddk.projects.recreateAllFromHere",
+          "when": "view =~ /^ddk\\.view\\.projects.*/ && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
+          "group": "2_compiler@3"
+        },
+        {
+          "command": "ddk.projects.compileAllInWorkspace",
+          "when": "view == ddk.view.projects.workspaces",
+          "group": "2_compiler@4"
+        },
+        {
+          "command": "ddk.projects.recreateAllInWorkspace",
+          "when": "view == ddk.view.projects.workspaces",
+          "group": "2_compiler@5"
         },
         {
           "command": "ddk.projects.showInExplorer",

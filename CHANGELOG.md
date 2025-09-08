@@ -4,6 +4,14 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [1.2.0] - 2025-09-XX
+
+- Added formatter support.
+- Added timestamps to compiler output lines.
+- Added support for compiling / recreating all projects in a workspace / group project.
+- Fixed the issue where the selected project didn't work when the tree was collapsed.
+- Fixed the issue where removing workspaces/projects did not work.
+
 ## [1.1.0] - 2025-08-31
 
 - Fixed the issue where the compiler's diagnostic output was always mapped as information.
@@ -48,13 +56,17 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Initial release
 
-# Feature Roadmap
+# Bug Roadmap
 
 - [x] Fixing Diagnostics to show correct types of issues.
+- [x] Selected Project doesnt work when the tree is collapsed.
+- [x] Removing Workspaces/Projects does not work.
+
+# Feature Roadmap
+
 - [x] Linking the compiler output to files.
-- [ ] Add timestamps to compiler output lines.
-- [ ] Delphi Formatter
-- [ ] selected Project doesnt work when the tree is collapsed.
-- [ ] Support for compiling / recreating all projects in a workspace / group project.
+- [x] Add timestamps to compiler output lines.
+- [x] Delphi Formatter
+- [x] Support for compiling / recreating all projects in a workspace / group project.
 - [ ] Support for commandline execution of unit tests (DUnit).
 - [ ] Integrate Delphi Language Server with background compiler. For now, you can use the [OmniPascal extension](https://marketplace.visualstudio.com/items?itemName=Wosi.omnipascal).
