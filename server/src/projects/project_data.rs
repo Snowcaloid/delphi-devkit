@@ -1,4 +1,5 @@
-use crate::{files::groupproj::parse_groupproj, lexorank::LexoRank, projects::{changes::WorkspaceUpdateData, compilers::{CompilerConfiguration, compiler_exists}}};
+use crate::{lexorank::LexoRank, projects::{changes::WorkspaceUpdateData, compilers::{CompilerConfiguration, compiler_exists}}};
+use crate::files::{parse_groupproj, find_dproj_file, get_main_source, get_exe_path};
 use serde::{Serialize, Deserialize};
 use super::compilers::load_compilers;
 use anyhow::Result;
@@ -91,7 +92,7 @@ impl ProjectsData {
         let (project_id, link_id) = (self.id_counter + 1, self.id_counter + 2);
         let workspace = match self.workspaces.iter_mut().find(|ws| ws.id == workspace_id) {
             Some(ws) => ws,
-            _ => return Err(anyhow::anyhow!("Workspace with id {} not found", workspace_id)),
+            _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
         };
         let file = PathBuf::from(file_path);
         let project = match file.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase()) {
@@ -132,7 +133,7 @@ impl ProjectsData {
                 }
             },
             _ => {
-                return Err(anyhow::anyhow!("Unsupported project file type: {}", file_path));
+                anyhow::bail!("Unsupported project file type: {}", file_path);
             }
         };
         workspace.project_links.push(ProjectLink {
@@ -204,14 +205,14 @@ impl ProjectsData {
     pub fn refresh_project_paths(&mut self, project_id: usize) -> Result<()> {
         let project = match self.get_project_mut(project_id) {
             Some(proj) => proj,
-            _ => return Err(anyhow::anyhow!("Project with id {} not found", project_id)),
+            _ => anyhow::bail!("Project with id {} not found", project_id),
         };
         return project.discover_paths();
     }
 
     pub fn new_workspace(&mut self, name: &String, compiler: &String) -> Result<()> {
         if !compiler_exists(compiler)? {
-           return Err(anyhow::anyhow!("Compiler not found: {}", compiler));
+           anyhow::bail!("Compiler not found: {}", compiler);
         }
         let workspace_id = self.next_id();
         let lexo_rank = if let Some(last_ws) = self.workspaces.last() {
@@ -250,14 +251,14 @@ impl ProjectsData {
     pub fn update_workspace(&mut self, workspace_id: usize, data: &WorkspaceUpdateData) -> Result<()> {
         let workspace = match self.get_workspace_mut(workspace_id) {
             Some(ws) => ws,
-            _ => return Err(anyhow::anyhow!("Workspace with id {} not found", workspace_id)),
+            _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
         };
         if let Some(name) = &data.name {
             workspace.name = name.clone();
         }
         if let Some(compiler_id) = &data.compiler {
             if !compiler_exists(compiler_id)? {
-                return Err(anyhow::anyhow!("Compiler not found: {}", compiler_id));
+                anyhow::bail!("Compiler not found: {}", compiler_id);
             }
             workspace.compiler_id = compiler_id.clone();
         }
@@ -266,11 +267,11 @@ impl ProjectsData {
 
     pub fn set_group_project(&mut self, groupproj_path: &String, compiler: &String) -> Result<()> {
         if !compiler_exists(compiler)? {
-           return Err(anyhow::anyhow!("Compiler not found: {}", compiler));
+           anyhow::bail!("Compiler not found: {}", compiler);
         }
         let path = PathBuf::from(groupproj_path);
         if !path.exists() {
-            return Err(anyhow::anyhow!("Group project file does not exist: {}", groupproj_path));
+            anyhow::bail!("Group project file does not exist: {}", groupproj_path);
         }
         let mut group_project = GroupProject {
             name: path.file_stem().and_then(|s| s.to_str()).unwrap_or("<name error>").to_string(),
@@ -417,7 +418,61 @@ pub struct Project {
 
 impl Project {
     pub fn discover_paths(&mut self) -> Result<()> {
-        todo!("Discovery logic must still be implemented");
+        if self.dproj.is_none() {
+            if let Some(dpr_path) = &self.dpr {
+                let dproj_path = find_dproj_file(&PathBuf::from(dpr_path))?;
+                self.dproj = Some(dproj_path.to_string_lossy().to_string());
+            } else if let Some(dpk_path) = &self.dpk {
+                let dproj_path = find_dproj_file(&PathBuf::from(dpk_path))?;
+                self.dproj = Some(dproj_path.to_string_lossy().to_string());
+            }
+        }
+        if self.dproj.is_none() {
+            anyhow::bail!("Cannot discover paths - no dproj, dpr or dpk available for project id: {}", self.id);
+        }
+        let dproj_path = PathBuf::from(self.dproj.as_ref().unwrap());
+
+        let main_source = get_main_source(&dproj_path)?;
+        match main_source.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase()) {
+            Some(ext) if ext == "dpr" => {
+                self.dpr = Some(main_source.to_string_lossy().to_string());
+                self.dpk = None;
+                if let Ok(exe_path) = get_exe_path(&dproj_path) {
+                    self.exe = Some(exe_path.to_string_lossy().to_string());
+                    self.ini = Some(exe_path.with_extension("ini").to_string_lossy().to_string());
+                } else {
+                    if self.exe.is_some() {
+                        let exe_path = PathBuf::from(self.exe.as_ref().unwrap());
+                        if exe_path.exists() {
+                            self.ini = Some(exe_path.with_extension("ini").to_string_lossy().to_string());
+                        } else if self.ini.is_some() {
+                            let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
+                            self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
+                        } else {
+                            self.exe = None;
+                            self.ini = None;
+                        }
+                    } else if self.ini.is_some() {
+                        let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
+                        self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
+                    } else {
+                        self.exe = None;
+                        self.ini = None;
+                    }
+                }
+            },
+            Some(ext) if ext == "dpk" => {
+                self.dpk = Some(main_source.to_string_lossy().to_string());
+                self.dpr = None;
+                self.exe = None;
+                self.ini = None;
+            },
+            _ => {
+                anyhow::bail!("Cannot discover paths - main source file is not a DPR or DPK for project id: {}", self.id);
+            }
+        }
+
+        return Ok(());
     }
 }
 

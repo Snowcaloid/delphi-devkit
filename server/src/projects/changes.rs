@@ -105,7 +105,7 @@ impl Change {
     fn move_project(&self, project_link_id: usize, previous: &LexoRank, next: &LexoRank) -> Result<()> {
         let mut projects_data = ProjectsData::new();
         if projects_data.move_project_link(project_link_id, previous, next).is_none() {
-            return Err(anyhow::anyhow!("Unable to move project link - lexorank error at link id: {}", project_link_id));
+            anyhow::bail!("Unable to move project link - lexorank error at link id: {}", project_link_id);
         }
         return projects_data.save();
     }
@@ -131,7 +131,7 @@ impl Change {
     fn move_workspace(&self, workspace_id: usize, previous: &LexoRank, next: &LexoRank) -> Result<()> {
         let mut projects_data = ProjectsData::new();
         if projects_data.move_workspace(workspace_id, previous, next).is_none() {
-            return Err(anyhow::anyhow!("Unable to move workspace - lexorank error at workspace id: {}", workspace_id));
+            anyhow::bail!("Unable to move workspace - lexorank error at workspace id: {}", workspace_id);
         }
         return projects_data.save();
     }
@@ -145,7 +145,7 @@ impl Change {
     fn add_compiler(&self, key: &String, config: &CompilerConfiguration) -> Result<()> {
         let mut compilers = load_compilers().map_err(|e| anyhow::anyhow!("Unable to add compiler - unable to load compilers: {}", e))?;
         if compilers.contains_key(key) {
-            return Err(anyhow::anyhow!("Unable to add compiler - compiler already exists: {}", key));
+            anyhow::bail!("Unable to add compiler - compiler already exists: {}", key);
         }
         compilers.insert(key.clone(), config.clone());
         return save_compilers(&compilers).map_err(|e| anyhow::anyhow!("Unable to add compiler - unable to save compilers: {}", e));
@@ -154,7 +154,7 @@ impl Change {
     fn remove_compiler(&self, compiler: &String) -> Result<()> {
         let mut compilers = load_compilers().map_err(|e| anyhow::anyhow!("Unable to remove compiler - unable to load compilers: {}", e))?;
         if compilers.remove(compiler).is_none() {
-            return Err(anyhow::anyhow!("Unable to remove compiler - compiler not found: {}", compiler));
+            anyhow::bail!("Unable to remove compiler - compiler not found: {}", compiler);
         }
         return save_compilers(&compilers).map_err(|e| anyhow::anyhow!("Unable to remove compiler - unable to save compilers: {}", e));
     }
@@ -165,7 +165,7 @@ impl Change {
             compiler.update(data);
             return save_compilers(&compilers).map_err(|e| anyhow::anyhow!("Unable to update compiler - unable to save compilers: {}", e));
         } else {
-            return Err(anyhow::anyhow!("Unable to update compiler - compiler not found: {}", key));
+            anyhow::bail!("Unable to update compiler - compiler not found: {}", key);
         }
     }
 
@@ -183,17 +183,17 @@ impl Change {
 
     fn set_group_project_compiler(&self, compiler: &String) -> Result<()> {
         if !compiler_exists(compiler)? {
-            return Err(anyhow::anyhow!(
+            anyhow::bail!(
                 "Unable to set group project compiler - compiler not found: {}",
                 compiler
-            ));
+            );
         }
         let mut projects_data = ProjectsData::new();
         if let Some(group_project) = &mut projects_data.group_project {
             group_project.compiler_id = compiler.clone();
             return projects_data.save();
         } else {
-            return Err(anyhow::anyhow!("Unable to set group project compiler - no group project is set"));
+            anyhow::bail!("Unable to set group project compiler - no group project is set");
         }
     }
 }
