@@ -9,7 +9,6 @@ export class Formatter implements Feature {
     private readonly fullFileProvider: FullFileFormattingProvider = new FullFileFormattingProvider();
     private readonly rangeProvider: RangeFormattingProvider = new RangeFormattingProvider();
 
-
     public async initialize(): Promise<void> {
         Runtime.extension.subscriptions.push(
             languages.registerDocumentFormattingEditProvider(
