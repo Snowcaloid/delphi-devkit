@@ -1,0 +1,5 @@
+vscode_extension/dist
+vscode_extension/node_modules
+*.vsix
+.history
+server/target
