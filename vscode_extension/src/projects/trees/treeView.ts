@@ -38,7 +38,7 @@ export abstract class DelphiProjectsTreeView implements TreeDataProvider<TreeIte
   private isRelevantFile(file: Uri): boolean {
     for (const item of this.projects)
       if (
-        item.entity.path === file.fsPath ||
+        item.entity.directory === file.fsPath ||
         item.projectDproj?.fsPath === file.fsPath ||
         item.projectDpr?.fsPath === file.fsPath ||
         item.projectDpk?.fsPath === file.fsPath ||
@@ -136,11 +136,11 @@ export class WorkspacesTreeView extends DelphiProjectsTreeView {
   }
 
   protected async loadTreeItemsFromDatabase(): Promise<TreeItem[]> {
-    const config = Runtime.configEntity;
-    Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, !!config.selectedProject);
-    Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!config.selectedProject?.exe);
-    this.workspaceItems = config?.workspaces.map((ws) => new WorkspaceItem(ws)) || [];
-    this.workspaceItems = this.workspaceItems.sort((a, b) => a.workspace.sortValue.localeCompare(b.workspace.sortValue));
+    let data = await Runtime.getProjectsData();
+    Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, !!data?.active_project_id);
+    Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!data?.active_project?.exe);
+    this.workspaceItems = data?.workspaces.map((ws) => new WorkspaceItem(ws)) || [];
+    this.workspaceItems = this.workspaceItems.sort((a, b) => a.workspace.sort_rank.localeCompare(b.workspace.sort_rank));
     this.projects = this.workspaceItems.flatMap((ws) => ws.projects);
     return this.workspaceItems;
   }
@@ -150,7 +150,7 @@ export class WorkspacesTreeView extends DelphiProjectsTreeView {
     await super.refresh();
   }
 
-  public getWorkspaceByTreeItem(item: TreeItem): WorkspaceItem | undefined {
+  public getWorkspaceItemByTreeItem(item: TreeItem): WorkspaceItem | undefined {
     if (item instanceof WorkspaceItem) return item;
     else if (item instanceof BaseFileItem)
       return this.workspaceItems.find((wsItem) => wsItem.projects.some((projItem) => projItem.link.id === item.project.link.id));
@@ -170,10 +170,10 @@ export class GroupProjectTreeView extends DelphiProjectsTreeView {
   }
 
   protected async loadTreeItemsFromDatabase(): Promise<TreeItem[]> {
-    const groupProject = Runtime.configEntity.selectedGroupProject;
+    const groupProject = (await Runtime.getProjectsData())?.group_project;
     Runtime.setContext(PROJECTS.CONTEXT.IS_GROUP_PROJECT_OPENED, !!groupProject);
     if (groupProject)
-      for (const link of groupProject.projects)
+      for (const link of groupProject.project_links)
         if (link.project) {
           const item = ProjectItem.fromData(link);
           this.projects.push(item);

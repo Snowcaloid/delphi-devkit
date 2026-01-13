@@ -1,5 +1,5 @@
 import { TreeItem, TreeItemCollapsibleState } from 'vscode';
-import { Entities } from '../../../db/entities';
+import { Entities } from '../../entities';
 import { ProjectItem } from './project';
 import { PROJECTS } from '../../../constants';
 
@@ -9,10 +9,10 @@ export class WorkspaceItem extends TreeItem {
   constructor(public readonly workspace: Entities.Workspace) {
     super(workspace.name, TreeItemCollapsibleState.Expanded);
     this.contextValue = PROJECTS.CONTEXT.WORKSPACE;
-    for (const link of workspace.projects) {
+    for (const link of workspace.project_links) {
       const treeItem = ProjectItem.fromData(link);
       this.projects.push(treeItem);
     }
-    this.projects = this.projects.sort((a, b) => a.sortValue.localeCompare(b.sortValue));
+    this.projects = this.projects.sort((a, b) => a.link.sort_rank.localeCompare(b.link.sort_rank));
   }
 }

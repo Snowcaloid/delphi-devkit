@@ -43,6 +43,9 @@ const copyAssetsPlugin = {
 
 			const formatterConfig = path.join(__dirname, 'config', 'ddk_formatter.config');
 			copyAsset(formatterConfig);
+
+			const ddkServer = path.join(__dirname, '..', 'server', 'target', 'release', 'deps', 'ddk_server.exe');
+			copyAsset(ddkServer);
 		});
 	},
 };

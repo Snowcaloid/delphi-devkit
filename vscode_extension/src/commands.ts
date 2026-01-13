@@ -1,10 +1,10 @@
-import { commands, ConfigurationTarget, env, Uri, window, workspace, Disposable } from "vscode";
-import { COMMANDS, PROJECTS } from "./constants";
+import { commands, env, Uri, window, Disposable } from "vscode";
+import { COMMANDS } from "./constants";
 import { join } from "path";
 import { promises as fs } from 'fs';
 import { Runtime } from "./runtime";
 import { ExtensionDataExport } from "./types";
-import { Entities } from "./db/entities";
+import { assertError } from "./utils";
 
 export class GeneralCommands {
   public static get registers(): Disposable[] {
@@ -25,23 +25,22 @@ export class GeneralCommands {
       defaultUri: Uri.file(join(env.appRoot, 'configuration.ddk.json'))
     });
     if (!fileUri) return;
+    const data = Runtime.projectsData;
+    if (!assertError(data, 'No configuration data to export.')) return;
+    const compilers = Runtime.compilerConfigurations;
+    if (!assertError(compilers, 'No compiler configuration data to export.')) return;
     try {
-      const config = Runtime.configEntity;
-      const data = new ExtensionDataExport.FileContent(config, Runtime.compilerConfigurations);
-      await fs.writeFile(fileUri.fsPath, JSON.stringify(data, null, 2), 'utf8');
+      const fileData = new ExtensionDataExport.FileContent(data!, compilers!);
+      await fs.writeFile(fileUri.fsPath, JSON.stringify(fileData, null, 2), 'utf8');
       window.showInformationMessage('Configuration exported successfully.');
     } catch (error) {
       window.showErrorMessage(`Failed to export configuration: ${error}`);
     }
   }
 
-  private static async importConfigurationV1_0(data: ExtensionDataExport.FileContent): Promise<void> {
-    await Runtime.db.clear();
-    await Runtime.db.save(Entities.Configuration.clone(data.configuration));
-    if (data.compilers)
-      await workspace
-        .getConfiguration(PROJECTS.CONFIG.KEY)
-        .update(PROJECTS.CONFIG.COMPILER.CONFIGURATIONS, data.compilers || [], ConfigurationTarget.Global);
+  private static async importConfigurationV2_0(data: ExtensionDataExport.FileContent): Promise<void> {
+    await Runtime.client.compilersOverride(data.compilers);
+    await Runtime.client.projectsDataOverride(data.projectsData);
   }
 
   private static async importConfiguration(): Promise<void> {
@@ -64,8 +63,8 @@ export class GeneralCommands {
       const data = JSON.parse(content) as ExtensionDataExport.FileContent;
       if (data) {
         switch (data.version as ExtensionDataExport.Version) {
-          case ExtensionDataExport.Version.V1_0:
-            await this.importConfigurationV1_0(data);
+          case ExtensionDataExport.Version.V2_0:
+            await this.importConfigurationV2_0(data);
             break;
           default:
             window.showErrorMessage(`Unsupported configuration version: ${data.version}`);

@@ -47,6 +47,21 @@ impl LexoRank {
             .between(&rank2.rank)
             .map(|rank| LexoRank::new(self.bucket, rank))
     }
+
+    pub fn apply(list: &mut Vec<&mut dyn HasLexoRank>) {
+        let count = list.len();
+        for i in 0..count {
+            list[i].set_lexorank(Self::new(
+                Bucket::new(1).unwrap(),
+                Rank::from_range(i, count)
+            ));
+        }
+    }
+}
+
+pub trait HasLexoRank {
+    fn get_lexorank(&self) -> &LexoRank;
+    fn set_lexorank(&mut self, lexorank: LexoRank);
 }
 
 lazy_static::lazy_static! {

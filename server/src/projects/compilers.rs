@@ -1,8 +1,9 @@
 use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 
-pub(crate) const DEFAULT_COMPILERS: &str = include_str!("default_compilers.ron");
+pub(crate) const DEFAULT_COMPILERS: &str = include_str!("presets/default_compilers.ron");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PartialCompilerConfiguration {
@@ -80,6 +81,35 @@ pub fn load_compilers() -> Result<CompilerConfigurations> {
 pub fn compiler_exists(key: &str) -> Result<bool> {
     let compilers = load_compilers()?;
     Ok(compilers.contains_key(key))
+}
+
+pub fn validate_compilers(compilers: &CompilerConfigurations) -> Result<()> {
+    for (key, compiler) in compilers {
+        if key.trim().is_empty() {
+            anyhow::bail!("Compiler key cannot be empty.");
+        }
+        if compiler.condition.trim().is_empty() {
+            anyhow::bail!("Compiler condition cannot be empty for key: {}", key);
+        }
+        if compiler.product_name.trim().is_empty() {
+            anyhow::bail!("Compiler product name cannot be empty for key: {}", key);
+        }
+        if compiler.installation_path.trim().is_empty() {
+            anyhow::bail!("Compiler installation path cannot be empty for key: {}", key);
+        }
+        let path = PathBuf::from(&compiler.installation_path);
+        if !path.exists() {
+            anyhow::bail!("Compiler installation path does not exist for key: {}: {}", key, compiler.installation_path);
+        }
+        if !path.is_dir() {
+            anyhow::bail!("Compiler installation path is not a directory for key: {}: {}", key, compiler.installation_path);
+        }
+        let rsvars_path = path.join("bin").join("rsvars.bat");
+        if !rsvars_path.exists() {
+            anyhow::bail!("rsvars.bat not found in compiler installation path for key: {}: {}", key, rsvars_path.display());
+        }
+    }
+    Ok(())
 }
 
 pub fn save_compilers(compilers: &CompilerConfigurations) -> Result<()> {

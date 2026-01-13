@@ -1,16 +1,20 @@
-use crate::{lexorank::LexoRank, projects::{changes::WorkspaceUpdateData, compilers::{CompilerConfiguration, compiler_exists}}};
-use crate::files::{parse_groupproj, find_dproj_file, get_main_source, get_exe_path};
+use super::*;
 use serde::{Serialize, Deserialize};
-use super::compilers::load_compilers;
 use anyhow::Result;
 use std::path::PathBuf;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+
+enum IdObject {
+    Workspace,
+    Project,
+    ProjectLink,
+}
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ProjectsData {
     pub(super) id_counter: usize,
     pub(super) active_project_id: Option<usize>,
-    pub workspaces: Vec<Workspace>,
+    pub workspaces: Vec<workspace::Workspace>,
     pub projects: Vec<Project>,
     pub group_project: Option<GroupProject>,
 }
@@ -40,6 +44,94 @@ impl ProjectsData {
         } else {
             return Self::default();
         }
+    }
+
+    fn validate_compilers(&self) -> Result<()> {
+        for workspace in &self.workspaces {
+            if !compiler_exists(&workspace.compiler_id)? {
+                anyhow::bail!("Workspace '{}' has invalid compiler id: {}", workspace.name, workspace.compiler_id);
+            }
+        }
+        if let Some(group_project) = &self.group_project {
+            if !compiler_exists(&group_project.compiler_id)? {
+                anyhow::bail!("Group project '{}' has invalid compiler id: {}", group_project.name, group_project.compiler_id);
+            }
+        }
+        Ok(())
+    }
+
+    fn get_id_map(&self) -> Result<HashMap<usize, IdObject>> {
+        let mut id_map = HashMap::new();
+        for workspace in &self.workspaces {
+            if id_map.contains_key(&workspace.id) {
+                anyhow::bail!("Duplicate id found: {}", workspace.id);
+            }
+            id_map.insert(workspace.id, IdObject::Workspace);
+            for project_link in &workspace.project_links {
+                if id_map.contains_key(&project_link.id) {
+                    anyhow::bail!("Duplicate id found: {}", project_link.id);
+                }
+                id_map.insert(project_link.id, IdObject::ProjectLink);
+            }
+        }
+        if let Some(group_project) = &self.group_project {
+            for project_link in &group_project.project_links {
+                if id_map.contains_key(&project_link.id) {
+                    anyhow::bail!("Duplicate id found: {}", project_link.id);
+                }
+                id_map.insert(project_link.id, IdObject::ProjectLink);
+            }
+        }
+        for project in &self.projects {
+            if id_map.contains_key(&project.id) {
+                anyhow::bail!("Duplicate id found: {}", project.id);
+            }
+            id_map.insert(project.id, IdObject::Project);
+        }
+        return Ok(id_map)
+    }
+
+    fn validate_project_references(&self, id_map: &HashMap<usize, IdObject>) -> Result<()> {
+        if let Some(active_id) = self.active_project_id {
+            match id_map.get(&active_id) {
+                Some(IdObject::Project) => {},
+                _ => anyhow::bail!("Active project id {} does not refer to a valid project", active_id),
+            }
+        }
+        if let Some(group_project) = &self.group_project {
+            for project_link in &group_project.project_links {
+                match id_map.get(&project_link.project_id) {
+                    Some(IdObject::Project) => {},
+                    _ => anyhow::bail!("Group project link id {} refers to invalid project id {}", project_link.id, project_link.project_id),
+                }
+            }
+        }
+        for workspace in &self.workspaces {
+            for project_link in &workspace.project_links {
+                match id_map.get(&project_link.project_id) {
+                    Some(IdObject::Project) => {},
+                    _ => anyhow::bail!("Workspace '{}' link id {} refers to invalid project id {}", workspace.name, project_link.id, project_link.project_id),
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        self.validate_compilers()?;
+        let id_map = self.get_id_map()?;
+        self.validate_project_references(&id_map)?;
+        let mut workspace_names: HashSet<&String> = HashSet::new();
+        for workspace in &self.workspaces {
+            if workspace_names.contains(&workspace.name) {
+                anyhow::bail!("Duplicate workspace name found: {}", workspace.name);
+            }
+            if workspace.name.trim().is_empty() {
+                anyhow::bail!("Workspace name cannot be empty: {}", workspace.id);
+            }
+            workspace_names.insert(&workspace.name);
+        }
+        Ok(())
     }
 
     pub fn save(&self) -> Result<()> {
@@ -148,6 +240,25 @@ impl ProjectsData {
         return Ok(());
     }
 
+
+    pub fn add_project_link(&mut self, project_id: usize, workspace_id: usize) -> Result<()> {
+        if self.get_project(project_id).is_none() {
+            anyhow::bail!("Project with id {} not found", project_id);
+        }
+        let id = self.id_counter + 1;
+        let workspace = match self.get_workspace_mut(workspace_id) {
+            Some(ws) => ws,
+            _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
+        };
+        workspace.project_links.push(ProjectLink {
+            id,
+            project_id,
+            sort_rank: LexoRank::default(),
+        });
+        self.next_id();
+        return Ok(());
+    }
+
     pub fn remove_project(&mut self, project_id: usize, remove_links: bool) {
         self.projects.retain(|proj| proj.id != project_id);
 
@@ -186,20 +297,57 @@ impl ProjectsData {
         }
     }
 
-    pub fn move_project_link(&mut self, project_link_id: usize, previous: &LexoRank, next: &LexoRank) -> Option<()> {
-        for workspace in &mut self.workspaces {
-            if let Some(project_link) = workspace.project_links.iter_mut().find(|link| link.id == project_link_id) {
-                project_link.sort_rank = previous.between(next)?;
-                return Some(());
+    pub fn move_project_link(&mut self, project_link_id: usize, drop_target: usize) -> Result<()> {
+        let id_map = self.get_id_map()?;
+        if !id_map.contains_key(&drop_target) {
+            anyhow::bail!("Drop target id {} not found", drop_target);
+        }
+        match id_map.get(&project_link_id) {
+            Some(IdObject::ProjectLink) => {},
+            _ => anyhow::bail!("Project link with id {} not found", project_link_id),
+        };
+        let target_link_id: Option<usize> = id_map.get(&drop_target).map(|obj| match obj {
+            IdObject::ProjectLink => Some(drop_target),
+            _ => None,
+        }).flatten();
+        let source_workspace_id = self.get_workspace_id_containing_project_link(project_link_id);
+        let target_workspace_id = match id_map.get(&drop_target) {
+            Some(IdObject::Workspace) => Some(drop_target),
+            Some(IdObject::ProjectLink) => self.get_workspace_id_containing_project_link(drop_target),
+            _ => anyhow::bail!("Invalid drop target with id {}.", drop_target),
+        };
+        drop(id_map);
+        if let Some(source_workspace_id) = source_workspace_id {
+            if let Some(target_workspace_id) = target_workspace_id {
+                let source_workspace = self.get_workspace_mut(source_workspace_id)
+                    .ok_or_else(|| anyhow::anyhow!("Unable to find source workspace"))?;
+                if target_workspace_id == source_workspace_id {
+                    return source_workspace.move_project_link(project_link_id, target_link_id);
+                } else {
+                    let link = source_workspace.export_project_link(project_link_id)?;
+                    let target_workspace = self.get_workspace_mut(target_workspace_id)
+                        .ok_or_else(|| anyhow::anyhow!("Unable to find target workspace"))?;
+                    target_workspace.import_project_link(link, target_link_id)?;
+                    return Ok(());
+                }
+            } else {
+                anyhow::bail!("Cannot move project link from workspace to group project.");
+            }
+        } else if let Some(_) = target_workspace_id {
+            anyhow::bail!("Cannot move project link from group project to workspace.");
+        } else {
+            todo!("Move within group project on top of that element");
+        }
+    }
+
+
+    pub fn get_workspace_id_containing_project_link(&self, project_link_id: usize) -> Option<usize> {
+        for workspace in &self.workspaces {
+            if workspace.project_links.iter().any(|link| link.id == project_link_id) {
+                return Some(workspace.id);
             }
         }
-        if let Some(group_project) = &mut self.group_project {
-            if let Some(project_link) = group_project.project_links.iter_mut().find(|link| link.id == project_link_id) {
-                project_link.sort_rank = previous.between(next)?;
-                return Some(());
-            }
-        }
-        return Some(());
+        return None;
     }
 
     pub fn refresh_project_paths(&mut self, project_id: usize) -> Result<()> {
@@ -208,6 +356,62 @@ impl ProjectsData {
             _ => anyhow::bail!("Project with id {} not found", project_id),
         };
         return project.discover_paths();
+    }
+
+    pub fn update_project(&mut self, project_id: usize, data: ProjectUpdateData) -> Result<()> {
+        let project = match self.get_project_mut(project_id) {
+            Some(proj) => proj,
+            _ => anyhow::bail!("Project with id {} not found", project_id),
+        };
+        if let Some(name) = data.name {
+            project.name = name;
+        }
+        if let Some(directory) = data.directory {
+            if !PathBuf::from(&directory).exists() {
+                anyhow::bail!("Directory does not exist: {}", directory);
+            }
+            project.directory = directory;
+        }
+        if let Some(dproj) = data.dproj {
+            if !PathBuf::from(&dproj).exists() {
+                anyhow::bail!(".dproj file does not exist: {}", dproj);
+            }
+            project.dproj = Some(dproj);
+        }
+        if let Some(dpr) = data.dpr {
+            if !PathBuf::from(&dpr).exists() {
+                anyhow::bail!(".dpr file does not exist: {}", dpr);
+            }
+            project.dpr = Some(dpr);
+        }
+        if let Some(dpk) = data.dpk {
+            if !PathBuf::from(&dpk).exists() {
+                anyhow::bail!(".dpk file does not exist: {}", dpk);
+            }
+            project.dpk = Some(dpk);
+        }
+        if let Some(exe) = data.exe {
+            if !PathBuf::from(&exe).exists() {
+                anyhow::bail!(".exe file does not exist: {}", exe);
+            }
+            project.exe = Some(exe);
+        }
+        if let Some(ini) = data.ini {
+            if !PathBuf::from(&ini).exists() {
+                anyhow::bail!(".ini file does not exist: {}", ini);
+            }
+            project.ini = Some(ini);
+        }
+        return Ok(());
+    }
+
+    pub fn select_project(&mut self, project_id: usize) -> Result<()> {
+        let project = match self.get_project(project_id) {
+            Some(proj) => proj,
+            _ => anyhow::bail!("Project with id {} not found", project_id),
+        };
+        self.active_project_id = Some(project.id);
+        return Ok(());
     }
 
     pub fn new_workspace(&mut self, name: &String, compiler: &String) -> Result<()> {
@@ -220,7 +424,7 @@ impl ProjectsData {
         } else {
             &LexoRank::default()
         };
-        let workspace = Workspace::new(workspace_id, name.clone(), compiler.clone(), lexo_rank.next());
+        let workspace = workspace::Workspace::new(workspace_id, name.clone(), compiler.clone(), lexo_rank.next());
         self.workspaces.push(workspace);
         return Ok(());
     }
@@ -240,12 +444,42 @@ impl ProjectsData {
         }
     }
 
-    pub fn move_workspace(&mut self, workspace_id: usize, previous: &LexoRank, next: &LexoRank) -> Option<()> {
-        if let Some(workspace) = self.workspaces.iter_mut().find(|ws| ws.id == workspace_id) {
-            workspace.sort_rank = previous.between(next)?;
-            return Some(());
+    pub fn move_workspace(&mut self, workspace_id: usize, drop_target_id: usize) -> Result<()> {
+        let id_map = self.get_id_map()?;
+        match id_map.get(&drop_target_id).ok_or_else(|| anyhow::anyhow!("Drop target id {} not found", drop_target_id))? {
+            IdObject::Workspace => {
+                let workspace_index = self.get_workspace_index(workspace_id)
+                    .ok_or_else(|| anyhow::anyhow!("Unable to find workspace to move in list"))?;
+                let drop_index = self.get_workspace_index(drop_target_id);
+                let workspace = self.workspaces.remove(workspace_index);
+                if let Some(drop_index) = drop_index {
+                    self.workspaces.insert(drop_index, workspace);
+                } else {
+                    self.workspaces.push(workspace);
+                }
+            },
+            IdObject::ProjectLink => {
+                let workspace_index = self.get_workspace_index(workspace_id)
+                    .ok_or_else(|| anyhow::anyhow!("Unable to find workspace to move in list"))?;
+                let containing_workspace_id = self.get_workspace_id_containing_project_link(drop_target_id);
+                let drop_index = if let Some(id) = containing_workspace_id {
+                    self.get_workspace_index(id)
+                } else {
+                    None
+                };
+                let workspace = self.workspaces.remove(workspace_index);
+                if let Some(drop_index) = drop_index {
+                    self.workspaces.insert(drop_index, workspace);
+                } else {
+                    self.workspaces.push(workspace);
+                }
+
+            }
+            _ => anyhow::bail!("Invalid drop target with id {}.", drop_target_id),
         }
-        return None;
+        let mut workspaces: Vec<&mut dyn HasLexoRank> = self.workspaces.iter_mut().map(|ws| ws as &mut dyn HasLexoRank).collect();
+        LexoRank::apply(&mut workspaces);
+        return Ok(());
     }
 
     pub fn update_workspace(&mut self, workspace_id: usize, data: &WorkspaceUpdateData) -> Result<()> {
@@ -265,9 +499,16 @@ impl ProjectsData {
         return Ok(());
     }
 
-    pub fn set_group_project(&mut self, groupproj_path: &String, compiler: &String) -> Result<()> {
-        if !compiler_exists(compiler)? {
-           anyhow::bail!("Compiler not found: {}", compiler);
+    pub fn set_group_project(&mut self, groupproj_path: &String, compiler: &Option<String>) -> Result<()> {
+        let mut compiler_id = String::new();
+        if let Some(compiler_id) = compiler {
+            if !compiler_exists(compiler_id)? {
+               anyhow::bail!("Compiler not found: {}", compiler_id);
+            }
+        } else if let Some(existing_group_project) = &self.group_project {
+            compiler_id = existing_group_project.compiler_id.clone();
+        } else {
+            compiler_id = "23.0".to_string();
         }
         let path = PathBuf::from(groupproj_path);
         if !path.exists() {
@@ -277,7 +518,7 @@ impl ProjectsData {
             name: path.file_stem().and_then(|s| s.to_str()).unwrap_or("<name error>").to_string(),
             project_links: Vec::new(),
             path: groupproj_path.clone(),
-            compiler_id: compiler.clone(),
+            compiler_id,
         };
         group_project.fill(self)?;
         self.group_project = Some(group_project);
@@ -308,12 +549,16 @@ impl ProjectsData {
         return self.projects.iter_mut().find(|proj| proj.id == project_id);
     }
 
-    pub fn get_workspace(&self, workspace_id: usize) -> Option<&Workspace> {
+    pub fn get_workspace(&self, workspace_id: usize) -> Option<&workspace::Workspace> {
         return self.workspaces.iter().find(|ws| ws.id == workspace_id);
     }
 
-    pub fn get_workspace_mut(&mut self, workspace_id: usize) -> Option<&mut Workspace> {
+    pub fn get_workspace_mut(&mut self, workspace_id: usize) -> Option<&mut workspace::Workspace> {
         return self.workspaces.iter_mut().find(|ws| ws.id == workspace_id);
+    }
+
+    pub fn get_workspace_index(&self, workspace_id: usize) -> Option<usize> {
+        return self.workspaces.iter().position(|ws| ws.id == workspace_id);
     }
 
     pub fn find_project_by_dproj(&self, dproj: &String) -> Option<&Project> {
@@ -321,7 +566,7 @@ impl ProjectsData {
     }
 
     pub fn sort(&mut self) {
-        self.workspaces.sort_by(|a: &Workspace, b: &Workspace| a.sort_rank.cmp(&b.sort_rank));
+        self.workspaces.sort_by(|a: &workspace::Workspace, b: &workspace::Workspace| a.sort_rank.cmp(&b.sort_rank));
         for workspace in &mut self.workspaces {
             workspace.project_links.sort_by(|a: &ProjectLink, b: &ProjectLink| a.sort_rank.cmp(&b.sort_rank));
         }
@@ -337,7 +582,7 @@ impl ProjectsData {
         return None;
     }
 
-    pub fn projects_of_workspace(&self, workspace: &Workspace) -> Vec<&Project> {
+    pub fn projects_of_workspace(&self, workspace: &workspace::Workspace) -> Vec<&Project> {
         let mut result = Vec::new();
         for project_link in &workspace.project_links {
             if let Some(project) = self.projects.iter().find(|proj| proj.id == project_link.project_id) {
@@ -358,177 +603,32 @@ impl ProjectsData {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Workspace {
-    pub id: usize,
-    pub name: String,
-    pub compiler_id: String,
-    pub project_links: Vec<ProjectLink>,
-    pub sort_rank: LexoRank,
-}
-
-impl Workspace {
-    pub fn new(id: usize, name: String, compiler_id: String, lexo_rank: LexoRank) -> Self {
-        Workspace {
-            id,
-            name,
-            compiler_id,
-            project_links: Vec::new(),
-            sort_rank: lexo_rank,
-        }
-    }
-
-    pub fn compiler(&self) -> Option<CompilerConfiguration> {
-        let mut compilers = load_compilers().ok()?;
-        return compilers.remove(&self.compiler_id.to_string());
-    }
-
-    pub fn new_project_link(&mut self, id: usize, project_id: usize) {
-        let last_rank = if let Some(last_link) = self.project_links.last() {
-            last_link.sort_rank.clone()
-        } else {
-            LexoRank::default()
-        };
-        self.project_links.push(ProjectLink {
-            id,
-            project_id,
-            sort_rank: last_rank.next(),
-        });
+impl Named for workspace::Workspace {
+    fn get_name(&self) -> &String {
+        return &self.name;
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub struct ProjectLink {
-    pub id: usize,
-    pub project_id: usize,
-    pub sort_rank: LexoRank,
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub struct Project {
-    pub id: usize,
-    pub name: String,
-    pub directory: String,
-    pub dproj: Option<String>,
-    pub dpr: Option<String>,
-    pub dpk: Option<String>,
-    pub exe: Option<String>,
-    pub ini: Option<String>,
-}
-
-impl Project {
-    pub fn discover_paths(&mut self) -> Result<()> {
-        if self.dproj.is_none() {
-            if let Some(dpr_path) = &self.dpr {
-                let dproj_path = find_dproj_file(&PathBuf::from(dpr_path))?;
-                self.dproj = Some(dproj_path.to_string_lossy().to_string());
-            } else if let Some(dpk_path) = &self.dpk {
-                let dproj_path = find_dproj_file(&PathBuf::from(dpk_path))?;
-                self.dproj = Some(dproj_path.to_string_lossy().to_string());
-            }
-        }
-        if self.dproj.is_none() {
-            anyhow::bail!("Cannot discover paths - no dproj, dpr or dpk available for project id: {}", self.id);
-        }
-        let dproj_path = PathBuf::from(self.dproj.as_ref().unwrap());
-
-        let main_source = get_main_source(&dproj_path)?;
-        match main_source.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase()) {
-            Some(ext) if ext == "dpr" => {
-                self.dpr = Some(main_source.to_string_lossy().to_string());
-                self.dpk = None;
-                if let Ok(exe_path) = get_exe_path(&dproj_path) {
-                    self.exe = Some(exe_path.to_string_lossy().to_string());
-                    self.ini = Some(exe_path.with_extension("ini").to_string_lossy().to_string());
-                } else {
-                    if self.exe.is_some() {
-                        let exe_path = PathBuf::from(self.exe.as_ref().unwrap());
-                        if exe_path.exists() {
-                            self.ini = Some(exe_path.with_extension("ini").to_string_lossy().to_string());
-                        } else if self.ini.is_some() {
-                            let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
-                            self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
-                        } else {
-                            self.exe = None;
-                            self.ini = None;
-                        }
-                    } else if self.ini.is_some() {
-                        let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
-                        self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
-                    } else {
-                        self.exe = None;
-                        self.ini = None;
-                    }
-                }
-            },
-            Some(ext) if ext == "dpk" => {
-                self.dpk = Some(main_source.to_string_lossy().to_string());
-                self.dpr = None;
-                self.exe = None;
-                self.ini = None;
-            },
-            _ => {
-                anyhow::bail!("Cannot discover paths - main source file is not a DPR or DPK for project id: {}", self.id);
-            }
-        }
-
-        return Ok(());
+impl ProjectLinkContainer for workspace::Workspace {
+    fn get_project_links(&self) -> &Vec<ProjectLink> {
+        return &self.project_links;
+    }
+    fn get_project_links_mut(&mut self) -> &mut Vec<ProjectLink> {
+        return &mut self.project_links;
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
-pub struct GroupProject {
-    pub name: String,
-    pub path: String,
-    pub compiler_id: String,
-    pub project_links: Vec<ProjectLink>,
+impl Named for GroupProject {
+    fn get_name(&self) -> &String {
+        return &self.name;
+    }
 }
 
-
-impl GroupProject {
-    pub fn compiler(&self) -> Option<CompilerConfiguration> {
-        let mut compilers = load_compilers().ok()?;
-        return compilers.remove(&self.compiler_id.to_string());
+impl ProjectLinkContainer for GroupProject {
+    fn get_project_links(&self) -> &Vec<ProjectLink> {
+        return &self.project_links;
     }
-
-    pub fn new_project_link(&mut self, id: usize, project_id: usize) {
-        let last_rank = if let Some(last_link) = self.project_links.last() {
-            last_link.sort_rank.clone()
-        } else {
-            LexoRank::default()
-        };
-        self.project_links.push(ProjectLink {
-            id,
-            project_id,
-            sort_rank: last_rank.next(),
-        });
-    }
-
-    pub fn fill(&mut self, projects_data: &mut ProjectsData) -> Result<()> {
-        let project_paths = parse_groupproj(PathBuf::from(&self.path))?;
-        for project_path in project_paths {
-            let dproj = project_path.to_string_lossy().to_string();
-            let existing_project_id = projects_data.find_project_by_dproj(&dproj).map(|p| p.id);
-            if let Some(existing_id) = existing_project_id {
-                self.new_project_link(projects_data.next_id(), existing_id);
-                continue;
-            } else {
-                let project_id = projects_data.next_id();
-                let mut project = Project {
-                    id: project_id,
-                    name: project_path.file_stem().and_then(|s| s.to_str()).unwrap_or("<name error>").to_string(),
-                    directory: project_path.parent().and_then(|p| p.to_str()).unwrap_or("<directory error>").to_string(),
-                    dproj: Some(dproj.clone()),
-                    dpr: None,
-                    dpk: None,
-                    exe: None,
-                    ini: None,
-                };
-                project.discover_paths()?;
-                projects_data.projects.push(project);
-                self.new_project_link(projects_data.next_id(), project_id);
-            }
-        }
-        return Ok(());
+    fn get_project_links_mut(&mut self) -> &mut Vec<ProjectLink> {
+        return &mut self.project_links;
     }
 }

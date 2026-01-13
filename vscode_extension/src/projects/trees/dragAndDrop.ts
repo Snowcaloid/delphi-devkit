@@ -1,25 +1,25 @@
 import { TreeDragAndDropController, DataTransfer, DataTransferItem, TreeItem, window } from 'vscode';
 import { Runtime } from '../../runtime';
-import { LexoSorter } from '../../utils/lexoSorter';
 import { ProjectItem } from './items/project';
-import { Entities } from '../../db/entities';
+import { Entities } from '../entities';
 import { assertError } from '../../utils';
 import { WorkspaceItem } from './items/workspaceItem';
 import { PROJECTS } from '../../constants';
 import { BaseFileItem, MainProjectItem } from './items/baseFile';
+import { Option } from '../../types';
 
 interface Target {
   isEmpty: boolean;
   isProject: boolean;
   isWorkspace: boolean;
   entity: {
-    project?: Entities.Project;
-    workspace?: Entities.Workspace;
-    workspaceLink?: Entities.WorkspaceLink;
+    project?: Option<Entities.Project>;
+    workspace?: Option<Entities.Workspace>;
+    workspaceLink?: Option<Entities.ProjectLink>;
   };
   item: {
-    project?: MainProjectItem;
-    workspace?: WorkspaceItem;
+    project?: Option<MainProjectItem>;
+    workspace?: Option<WorkspaceItem>;
   };
 }
 
@@ -76,18 +76,18 @@ class ExtendedTransferInfo {
 
     const isProject = target instanceof BaseFileItem;
     const isWorkspace = target instanceof WorkspaceItem;
-    let projectItem: MainProjectItem | undefined = undefined;
-    let workspaceItem: WorkspaceItem | undefined = undefined;
-    let projectEntity: Entities.Project | undefined = undefined;
-    let workspaceEntity: Entities.Workspace | undefined = undefined;
-    let linkEntity: Entities.WorkspaceLink | undefined = undefined;
+    let projectItem: Option<MainProjectItem>;
+    let workspaceItem: Option<WorkspaceItem>;
+    let projectEntity: Option<Entities.Project>;
+    let workspaceEntity: Option<Entities.Workspace> = undefined;
+    let linkEntity: Option<Entities.ProjectLink>;
     if (isProject) {
       projectItem = target.project;
       projectEntity = target.project.entity;
       if (Runtime.projects.workspacesTreeView.projects.find((item) => item.link.id === target.project.link.id)) {
-        workspaceItem = Runtime.projects.workspacesTreeView.getWorkspaceByTreeItem(target);
-        workspaceEntity = target.project.link.workspaceSafe || undefined;
-        linkEntity = target.project.link as Entities.WorkspaceLink;
+        workspaceItem = Runtime.projects.workspacesTreeView.getWorkspaceItemByTreeItem(target);
+        workspaceEntity = target.project.link.workspace;
+        linkEntity = target.project.link as Entities.ProjectLink;
       }
     }
     if (isWorkspace) {
@@ -148,10 +148,10 @@ export class WorkspaceTreeDragDropController implements TreeDragAndDropControlle
           return await this.handleDropProject(target, item, {
             sourceIsGroupProject: true
           });
-        case PROJECTS.MIME_TYPES.FS_FILES: 
+        case PROJECTS.MIME_TYPES.FS_FILES:
           hasFiles = true;
       }
-    } 
+    }
     // if we reach this, it means we haven't handled any other type
     if (hasFiles) await window.showInformationMessage('Drag-Drop of files from file system is coming soon.');
   }
@@ -190,64 +190,33 @@ export class WorkspaceTreeDragDropController implements TreeDragAndDropControlle
     const source = transfer.source;
     const target = transfer.target;
     if (source.isDraggedFromGroupProject)
-      return await this.addProjectToWorkspace(source.entity.project!, target.entity.workspace!, target.entity.workspaceLink);
+      return await Runtime.client.applyChanges([
+        {
+          type: 'AddProject',
+          project_id: source.entity.project!.id,
+          workspace_id: target.entity.workspace!.id
+        }
+      ]);
 
-    if (target.isProject) {
-      const isSameWorkspace = source.entity.workspace!.id === target.entity.workspace!.id;
-      if (isSameWorkspace) {
-        const sorter = new LexoSorter(target.entity.workspace!.projects);
-        target.entity.workspace!.projects = sorter.reorder(source.entity.workspaceLink!, target.entity.workspaceLink!);
-        await Runtime.db.save(target.entity.workspace!);
-      } else {
-        // moving to a different workspace
-        source.entity.workspace!.projects = source.entity.workspace!.projects.filter((link) => link.id !== source.entity.workspaceLink!.id);
-        source.entity.workspaceLink!.workspace = target.entity.workspace!;
-        target.entity.workspace!.projects.push(source.entity.workspaceLink!);
-        const sorter = new LexoSorter(target.entity.workspace!.projects);
-        target.entity.workspace!.projects = sorter.reorder(source.entity.workspaceLink!, target.entity.workspaceLink!);
-        await Runtime.db.save(source.entity.workspaceLink!);
+    await Runtime.client.applyChanges([
+      {
+        type: 'MoveProject',
+        project_link_id: source.entity.workspaceLink!.id,
+        drop_target: target.isProject ? target.entity.workspaceLink!.id : target.entity.workspace!.id
       }
-    } else if (target.isWorkspace) {
-      source.entity.workspace!.projects = source.entity.workspace!.projects.filter((link) => link.id !== source.entity.workspaceLink!.id);
-      source.entity.workspaceLink!.workspace = target.entity.workspace!;
-      target.entity.workspace!.projects.push(source.entity.workspaceLink!);
-      target.entity.workspace!.projects = new LexoSorter(target.entity.workspace!.projects).items;
-      await Runtime.db.save(source.entity.workspaceLink!);
-    }
-  }
-
-  private async addProjectToWorkspace(
-    project: Entities.Project,
-    workspace: Entities.Workspace,
-    beforeLink: Entities.WorkspaceLink | undefined
-  ): Promise<void> {
-    const link = new Entities.WorkspaceLink();
-    link.project = project;
-    link.workspace = workspace;
-    workspace.projects.push(link);
-    const sorter = new LexoSorter(workspace.projects);
-    if (beforeLink) workspace.projects = sorter.reorder(link, beforeLink);
-    else workspace.projects = sorter.items;
-
-    await Runtime.db.save(workspace);
+    ]);
   }
 
   private async dropWorkspace(transfer: ExtendedTransferInfo): Promise<void> {
     const source = transfer.source;
     const target = transfer.target;
-    const config = Runtime.configEntity;
-    if (target.isEmpty) {
-      const length = config.workspaces?.length || 0;
-      if (length < 2) return;
-      // already last?
-      if (config.workspaces.findIndex((ws) => ws.id === source.entity.workspace!.id) === length - 1) return;
-      const lastWorkspace = config.workspaces[length - 1];
-      config.workspaces = new LexoSorter(config.workspaces).reorder(source.entity.workspace!, lastWorkspace);
-    } else {
-      const sorter = new LexoSorter(config.workspaces || []);
-      config.workspaces = sorter.reorder(source.entity.workspace!, target.entity.workspace!);
-    }
-    await Runtime.db.save(config);
+    await Runtime.client.applyChanges([
+      {
+        type: 'MoveWorkspace',
+        workspace_id: source.entity.workspace!.id,
+        drop_target: target.entity.workspace?.id
+      }
+    ]);
   }
 }
 

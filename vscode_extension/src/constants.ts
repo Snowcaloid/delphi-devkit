@@ -17,7 +17,6 @@ export namespace PROJECTS {
     }
   }
   export namespace COMMAND {
-    export const REFRESH = `${PROJECTS.CONFIG.KEY}.refresh`;
     export const ADD_WORKSPACE = `${PROJECTS.CONFIG.KEY}.addWorkspace`;
     export const RENAME_WORKSPACE = `${PROJECTS.CONFIG.KEY}.renameWorkspace`;
     export const REMOVE_WORKSPACE = `${PROJECTS.CONFIG.KEY}.removeWorkspace`;
@@ -25,6 +24,7 @@ export namespace PROJECTS {
     export const REMOVE_PROJECT = `${PROJECTS.CONFIG.KEY}.removeProject`;
     export const COMPILE = `${PROJECTS.CONFIG.KEY}.compile`;
     export const RECREATE = `${PROJECTS.CONFIG.KEY}.recreate`;
+    export const SET_MANUAL_PATH = `${PROJECTS.CONFIG.KEY}.setManualPath`;
     export const COMPILE_ALL_IN_GROUP_PROJECT = `${PROJECTS.CONFIG.KEY}.compileAllInGroupProject`;
     export const RECREATE_ALL_IN_GROUP_PROJECT = `${PROJECTS.CONFIG.KEY}.recreateAllInGroupProject`;
     export const COMPILE_ALL_IN_WORKSPACE = `${PROJECTS.CONFIG.KEY}.compileAllInWorkspace`;

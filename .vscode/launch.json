@@ -14,7 +14,7 @@
 				"--disable-extensions"
 			],
 			"outFiles": [
-				"${workspaceFolder}/dist/**/*.js"
+				"${workspaceFolder}/vscode_extension/dist/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		}

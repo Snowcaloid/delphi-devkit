@@ -1,7 +1,7 @@
 {
     "13.0": (
         condition: "VER370",
-        product_name: "Delphi 13.0 Florence / C++ Builder 13.0 Florence",
+        product_name: "Delphi 13.0 Florence",
         product_version: 37.0,
         package_version: 370,
         compiler_version: 37.0,
@@ -15,7 +15,7 @@
     ),
     "12.0": (
         condition: "VER360",
-        product_name: "Delphi 12.0 Athens / C++ Builder 12.0 Athens",
+        product_name: "Delphi 12.0 Athens",
         product_version: 23.0,
         package_version: 290,
         compiler_version: 36.0,
@@ -29,7 +29,7 @@
     ),
     "11.0": (
         condition: "VER350",
-        product_name: "Delphi 11.0 Alexandria / C++ Builder 11.0 Alexandria",
+        product_name: "Delphi 11.0 Alexandria",
         product_version: 22.0,
         package_version: 280,
         compiler_version: 35.0,
@@ -43,7 +43,7 @@
     ),
     "10.4": (
         condition: "VER340",
-        product_name: "Delphi 10.4 Sydney / C++ Builder 10.4 Sydney",
+        product_name: "Delphi 10.4 Sydney",
         product_version: 21.0,
         package_version: 270,
         compiler_version: 34.0,
@@ -57,7 +57,7 @@
     ),
     "10.3": (
         condition: "VER330",
-        product_name: "Delphi 10.3 Rio / C++ Builder 10.3 Rio",
+        product_name: "Delphi 10.3 Rio",
         product_version: 20.0,
         package_version: 260,
         compiler_version: 33.0,
@@ -71,7 +71,7 @@
     ),
     "10.2": (
         condition: "VER320",
-        product_name: "Delphi 10.2 Tokyo / C++ Builder 10.2 Tokyo",
+        product_name: "Delphi 10.2 Tokyo",
         build_arguments: [
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
@@ -91,7 +91,7 @@
     ),
     "10.1": (
         condition: "VER310",
-        product_name: "Delphi 10.1 Berlin / C++ Builder 10.1 Berlin",
+        product_name: "Delphi 10.1 Berlin",
         product_version: 18.0,
         package_version: 240,
         compiler_version: 31.0,
@@ -105,7 +105,7 @@
     ),
     "10": (
         condition: "VER300",
-        product_name: "Delphi 10 Seattle / C++ Builder 10 Seattle",
+        product_name: "Delphi 10 Seattle",
         product_version: 17.0,
         package_version: 230,
         compiler_version: 30.0,
@@ -119,7 +119,7 @@
     ),
     "XE8": (
         condition: "VER290",
-        product_name: "Delphi XE8 / C++ Builder XE8",
+        product_name: "Delphi XE8",
         product_version: 16.0,
         package_version: 220,
         compiler_version: 29.0,
@@ -133,7 +133,7 @@
     ),
     "XE7": (
         condition: "VER280",
-        product_name: "Delphi XE7 / C++ Builder XE7",
+        product_name: "Delphi XE7",
         product_version: 15.0,
         package_version: 210,
         compiler_version: 28.0,
@@ -147,7 +147,7 @@
     ),
     "XE6": (
         condition: "VER270",
-        product_name: "Delphi XE6 / C++ Builder XE6",
+        product_name: "Delphi XE6",
         product_version: 14.0,
         package_version: 200,
         compiler_version: 27.0,
@@ -161,7 +161,7 @@
     ),
     "XE5": (
         condition: "VER260",
-        product_name: "Delphi XE5 / C++ Builder XE5",
+        product_name: "Delphi XE5",
         product_version: 12.0,
         package_version: 190,
         compiler_version: 26.0,
@@ -175,7 +175,7 @@
     ),
     "XE4": (
         condition: "VER250",
-        product_name: "Delphi XE4 / C++ Builder XE4",
+        product_name: "Delphi XE4",
         product_version: 11.0,
         package_version: 180,
         compiler_version: 25.0,
@@ -189,7 +189,7 @@
     ),
     "XE3": (
         condition: "VER240",
-        product_name: "Delphi XE3 / C++ Builder XE3",
+        product_name: "Delphi XE3",
         product_version: 10.0,
         package_version: 170,
         compiler_version: 24.0,
@@ -203,7 +203,7 @@
     ),
     "XE2": (
         condition: "VER230",
-        product_name: "Delphi XE2 / C++ Builder XE2",
+        product_name: "Delphi XE2",
         product_version: 9.0,
         package_version: 160,
         compiler_version: 23.0,
@@ -217,7 +217,7 @@
     ),
     "XE": (
         condition: "VER220",
-        product_name: "Delphi XE / C++ Builder XE",
+        product_name: "Delphi XE",
         product_version: 8.0,
         package_version: 150,
         compiler_version: 22.0,
@@ -231,7 +231,7 @@
     ),
     "2010": (
         condition: "VER210",
-        product_name: "Delphi 2010 / C++ Builder 2010",
+        product_name: "Delphi 2010",
         product_version: 7.0,
         package_version: 140,
         compiler_version: 21.0,
@@ -245,7 +245,7 @@
     ),
     "2009": (
         condition: "VER200",
-        product_name: "Delphi 2009 / C++ Builder 2009",
+        product_name: "Delphi 2009",
         product_version: 6.0,
         package_version: 120,
         compiler_version: 20.0,

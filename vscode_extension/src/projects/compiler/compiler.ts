@@ -3,17 +3,9 @@ import { basename, dirname, join } from 'path';
 import { spawn } from 'child_process';
 import { Runtime } from '../../runtime';
 import { assertError, fileExists } from '../../utils';
-import { ProjectLinkType } from '../../types';
 import { CompilerOutputDefinitionProvider } from './language';
 import { PROJECTS } from '../../constants';
-import { Entities } from '../../db/entities';
-
-export interface CompilerConfiguration {
-  name: string;
-  rsVarsPath: string;
-  msBuildPath: string;
-  buildArguments: string[];
-}
+import { Entities } from '../entities';
 
 export class Compiler {
   private outputChannel: OutputChannel = window.createOutputChannel('Delphi Compiler', PROJECTS.LANGUAGES.COMPILER);
@@ -30,48 +22,52 @@ export class Compiler {
   }
 
   public async compileWorkspaceItem(link: Entities.ProjectLink, recreate: boolean = false): Promise<boolean> {
-    const path = link.project.dproj || link.project.dpr || link.project.dpk;
+    const project = link.project;
+    if (!assertError(project, 'Cannot determine project for project link.')) return false;
+    const path = project!.dproj || project!.dpr || project!.dpk;
     if (!assertError(path, 'No suitable project file (DPROJ, DPR, DPK) found to compile.')) return false;
-    if (!assertError(link.linkType === ProjectLinkType.Workspace, 'Project does not belong to a workspace.')) return false;
 
     const fileUri = Uri.file(path!);
-    const ws = link.workspaceSafe;
+    const ws = link.workspace;
     if (!assertError(ws, 'Cannot determine workspace for project.')) return false;
-
-    return await this.compile(link, fileUri, ws!.compiler, recreate);
+    const compiler = ws!.compiler;
+    if (!assertError(compiler, 'Unable to determine compiler configuration for workspace.')) return false;
+    return await this.compile(link, fileUri, compiler!, recreate);
   }
 
   public async compileGroupProjectItem(link: Entities.ProjectLink, recreate: boolean = false): Promise<boolean> {
-    const path = link.project.dproj || link.project.dpr || link.project.dpk;
+    const project = link.project;
+    if (!assertError(project, 'Cannot determine project for project link.')) return false;
+    const path = project!.dproj || project!.dpr || project!.dpk;
     if (!assertError(path, 'No suitable project file (DPROJ, DPR, DPK) found to compile.')) return false;
-    if (!assertError(link.linkType === ProjectLinkType.GroupProject, 'Project does not belong to a group project.')) return false;
-    const config = Runtime.configEntity;
     const fileUri = Uri.file(path!);
-    if (!assertError(config.groupProjectsCompiler, 'No compiler configuration set for group projects. Please select one.')) return false;
+    const groupProject = link.groupProject;
+    if (!assertError(groupProject, 'Cannot determine group project for project.')) return false;
+    const compiler = groupProject!.compiler;
+    if (!assertError(compiler, 'Unable to determine compiler configuration for group project.')) return false;
 
-    return await this.compile(link, fileUri, config.groupProjectsCompiler!, recreate);
+    return await this.compile(link, fileUri, compiler!, recreate);
   }
 
   private async compile(
     link: Entities.ProjectLink,
     file: Uri,
-    configName: string,
+    compilerConfiguration: Entities.CompilerConfiguration,
     recreate: boolean = false
   ): Promise<boolean> {
     // Use OutputChannel and diagnostics
-    this.currentlyCompilingProjectId = link.project.id;
+    const project = link.project;
+    if (!assertError(project, 'Cannot determine project for project link.')) return false;
+    this.currentlyCompilingProjectId = project!.id;
     try {
       if (!assertError(fileExists(file), `Project file not found: ${file.fsPath}`)) return false;
-      const cfg = Runtime.compilerConfigurations.find((cfg) => cfg.name === configName);
-      if (assertError(cfg !== undefined, `Compiler configuration not found: ${configName}`)) return false;
-      const config: CompilerConfiguration = cfg!;
       const fileName = basename(file.fsPath);
       const projectDir = dirname(file.fsPath);
       const relativePath = workspace.asRelativePath(projectDir);
       const pathDescription = relativePath === projectDir ? projectDir : relativePath;
       const actionDescription = recreate ? 'recreate (clean + build)' : 'compile (clean + make)';
       const buildTarget = recreate ? 'Build' : 'Make';
-      const buildArguments = [`/t:Clean,${buildTarget}`, ...config.buildArguments];
+      const buildArguments = [`/t:Clean,${buildTarget}`, ...compilerConfiguration.build_arguments];
       // Use extension path to find the script
       const scriptPath = Runtime.extension.asAbsolutePath(join('dist', 'compile.ps1'));
       const buildArgumentsString = buildArguments.join(' ');
@@ -83,9 +79,9 @@ export class Compiler {
         '-ProjectPath',
         file.fsPath,
         '-RSVarsPath',
-        config.rsVarsPath,
+        '<TODO>',
         '-MSBuildPath',
-        config.msBuildPath,
+        '<TODO>',
         '-FileName',
         fileName,
         '-ActionDescription',
@@ -95,13 +91,12 @@ export class Compiler {
         '-BuildArguments',
         buildArgumentsString,
         '-CompilerName',
-        config.name
+        '<TODO>'
       ];
 
-      const resetSmartScroll = await Runtime.overrideConfiguration('output.smartScroll', 'enabled', false);
       await workspace.getConfiguration('output.smartScroll').update('enabled', false);
       this.linkProvider.compilerIsActive = true;
-      window.showInformationMessage(`Starting ${actionDescription} for ${fileName} using ${config.name}...`);
+      window.showInformationMessage(`Starting ${actionDescription} for ${fileName} using <TODO>...`);
       this.outputChannel.clear();
       this.outputChannel.show(true);
       // Run PowerShell script and capture output
@@ -120,7 +115,6 @@ export class Compiler {
       proc.on('close', async (code: number) => {
         this.linkProvider.compilerIsActive = false;
         this.outputChannel.show(true);
-        await resetSmartScroll();
         if (code === 0) window.showInformationMessage('Build succeeded');
         else window.showErrorMessage('Build failed');
         return code === 0;

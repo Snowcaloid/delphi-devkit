@@ -6,6 +6,8 @@
 		{
             "label": "watch",
             "dependsOn": [
+                "cargoBuild",
+                "npm: compile",
                 "npm: watch:tsc",
                 "npm: watch:esbuild"
             ],
@@ -48,17 +50,27 @@
 			"isBackground": true,
 			"presentation": {
 				"reveal": "never",
-				"group": "watchers"
+				"group": "watchers",
 			},
 			"group": "build"
 		},
 		{
 			"label": "tasks: watch-tests",
 			"dependsOn": [
+                "cargoBuild",
+                "npm: compile",
 				"npm: watch",
-				"npm: watch-tests"
+				"npm: watch-tests",
 			],
 			"problemMatcher": []
-		}
+		},
+        {
+            "label": "cargoBuild",
+            "type": "shell",
+            "command": "cargo build --release",
+            "options": {
+                "cwd": "${workspaceFolder}/server"
+            }
+        }
 	]
 }

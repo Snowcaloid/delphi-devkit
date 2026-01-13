@@ -7,13 +7,12 @@ import { IniFileItem } from './iniFile';
 import { ExeFileItem } from './exeFile';
 import { DpkFileItem } from './dpkFile';
 import { basename } from 'path';
-import { Entities } from '../../../db/entities';
+import { Entities } from '../../entities';
 import { Runtime } from '../../../runtime';
-import { SortedItem } from '../../../utils/lexoSorter';
 import { fileExists } from '../../../utils';
 import { PROJECTS } from '../../../constants';
 
-export class ProjectItem extends BaseFileItem implements SortedItem, MainProjectItem {
+export class ProjectItem extends BaseFileItem implements MainProjectItem {
   public entity: Entities.Project;
   public children: BaseFileItem[] = [];
 
@@ -21,40 +20,34 @@ export class ProjectItem extends BaseFileItem implements SortedItem, MainProject
     public link: Entities.ProjectLink,
     selected: boolean = false
   ) {
-    const entity = link.project;
-    const path = entity.dproj || entity.dpr || entity.dpk || entity.exe || entity.ini;
+    const projectEntity = link.project;
+    if (!projectEntity) throw new Error('Project link does not have an associated project.');
+    const path = projectEntity.dproj || projectEntity.dpr || projectEntity.dpk || projectEntity.exe || projectEntity.ini;
     if (!path) throw new Error('At least one project file must be provided.');
-    const uriPath = path.replace(basename(path), entity.name);
+    const uriPath = path.replace(basename(path), projectEntity.name);
     if (selected) {
       Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, true);
-      Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!entity.exe);
+      Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!projectEntity.exe);
     }
     let resourceUri: Uri;
-    if (Runtime.projects.isCurrentlyCompiling(entity))
+    if (Runtime.projects.isCurrentlyCompiling(projectEntity))
       resourceUri = Uri.from({ scheme: PROJECTS.SCHEME.COMPILING, path: uriPath });
     else
       resourceUri = selected
         ? Uri.from({ scheme: PROJECTS.SCHEME.SELECTED, path: uriPath })
         : Uri.from({ scheme: PROJECTS.SCHEME.DEFAULT, path: uriPath });
-    super(DelphiProjectTreeItemType.Project, entity.name, resourceUri);
-    this.entity = entity;
+    super(DelphiProjectTreeItemType.Project, projectEntity.name, resourceUri);
+    this.entity = projectEntity;
     this.project = this;
     this.contextValue = PROJECTS.CONTEXT.PROJECT;
     this.setIcon();
     this.updateCollapsibleState();
   }
 
-  public set sortValue(value: string) {
-    this.link.sortValue = value;
-  }
-
-  public get sortValue(): string {
-    return this.link.sortValue;
-  }
-
   public static fromData(link: Entities.ProjectLink): ProjectItem {
-    const config = Runtime.configEntity;
-    const project = new ProjectItem(link, config.selectedProject?.id === link.project.id);
+    const data = Runtime.projectsData;
+    if (!data) throw new Error('Projects data is not loaded.');
+    const project = new ProjectItem(link, (data.active_project?.id || -1) === (link.project?.id || -2));
     return project;
   }
 
@@ -68,31 +61,6 @@ export class ProjectItem extends BaseFileItem implements SortedItem, MainProject
   updateCollapsibleState(): void {
     const hasChildren = !!(this.projectDproj || this.projectDpr || this.projectDpk || this.projectExe || this.projectIni);
     this.collapsibleState = hasChildren ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
-  }
-
-  async setDproj(value: string): Promise<void> {
-    this.entity.dproj = value;
-    await Runtime.db.save(this.entity);
-  }
-
-  async setDpr(value: string): Promise<void> {
-    this.entity.dpr = value;
-    await Runtime.db.save(this.entity);
-  }
-
-  async setDpk(value: string): Promise<void> {
-    this.entity.dpk = value;
-    await Runtime.db.save(this.entity);
-  }
-
-  async setExecutable(value: string): Promise<void> {
-    this.entity.exe = value;
-    await Runtime.db.save(this.entity);
-  }
-
-  async setIni(value: string): Promise<void> {
-    this.entity.ini = value;
-    await Runtime.db.save(this.entity);
   }
 
   createChild(type: DelphiProjectTreeItemType, children: BaseFileItem[]): void {

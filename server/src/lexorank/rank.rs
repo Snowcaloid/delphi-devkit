@@ -20,8 +20,28 @@ impl Rank {
                 value,
             )))
         } else {
-            Ok(Rank(value.to_owned()))
+            Ok(Self(value.to_owned()))
         }
+    }
+
+    pub fn from_range(index: usize, total: usize) -> Self {
+        // we need to generate the string between "0" and "z" that is evenly spaced based on total
+        let max_value = 36_usize.pow(4); // using 4 characters for
+        let step = max_value / (total + 1);
+        let value = step * (index + 1);
+        let mut rank_str = String::new();
+        let mut remainder = value;
+        for _ in 0..4 {
+            let digit = remainder % 36;
+            let c = if digit < 10 {
+                (b'0' + digit as u8) as char
+            } else {
+                (b'a' + (digit - 10) as u8) as char
+            };
+            rank_str.insert(0, c);
+            remainder /= 36;
+        }
+        Self(rank_str)
     }
 
     pub fn value(&self) -> &str {

@@ -1,7 +1,7 @@
 import { TreeItem, TreeItemCollapsibleState, Uri } from 'vscode';
 import { DelphiProjectTreeItemType, ProjectType } from '../../../types';
 import { PROJECTS } from '../../../constants';
-import { Entities } from '../../../db/entities';
+import { Entities } from '../../entities';
 
 export interface MainProjectItem {
   entity: Entities.Project;
@@ -30,10 +30,6 @@ export abstract class BaseFileItem extends TreeItem {
 
   public get projectUri(): Uri {
     return this.project.resourceUri;
-  }
-
-  public get projectSortValue(): string {
-    return this.project.link.sortValue;
   }
 
   public get projectDproj(): Uri | undefined {

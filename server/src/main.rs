@@ -13,8 +13,6 @@ use tower_lsp::{LanguageServer, LspService, Server};
 
 pub(crate) use lsp_types::*;
 
-use crate::projects::project_data::ProjectsData;
-
 struct DelphiLsp {
     client: Client,
 }
@@ -23,37 +21,12 @@ impl DelphiLsp {
     pub fn new(client: Client) -> Self {
         return DelphiLsp { client }
     }
-
-    async fn send_error_notification(&self, message: String) {
-        self.client.send_notification::<NotifyError>(
-            NotifyErrorParams {
-                message,
-            }
-        ).await;
-    }
-
-    async fn send_projects_update_notification(&self) {
-        let projects_data = ProjectsData::new();
-        self.client.send_notification::<ProjectsUpdate>(
-            ProjectsUpdateParams {
-                projects: projects_data,
-            }
-        ).await;
-    }
 }
 
 #[async_trait]
 impl LanguageServer for DelphiLsp {
     async fn initialize(&self, params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
-        if let Some(init_options) = params.initialization_options {
-            let migration_data: Option<&Value> = init_options.get("migration_v1");
-            if migration_data.is_some() {
-                projects::migrate_from_v1(migration_data.unwrap()).map_err(|e| {
-                    let mut error = jsonrpc::Error::internal_error();
-                    error.message = format!("Migration from v1 failed: {}", e).into();
-                    error
-                })?;
-            }
+        if let Some(_init_options) = params.initialization_options {
             return Ok(InitializeResult {
                 capabilities: ServerCapabilities::default(), // none
                 server_info: Some(ServerInfo {
@@ -63,7 +36,7 @@ impl LanguageServer for DelphiLsp {
             });
         }
 
-        return Err(jsonrpc::Error::invalid_params("Initialization parameters are mandatory."));
+        return Ok(InitializeResult::default());
     }
 
     async fn initialized(&self, _params: InitializedParams) {
@@ -312,10 +285,11 @@ impl LanguageServer for DelphiLsp {
     }
 
     async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
-        if let Err(e) = projects::update(params.settings) {
-            self.send_error_notification(e.to_string()).await;
+        let client = self.client.clone();
+        let settings = params.settings.clone();
+        if let Err(error) = projects::update(settings.clone(), client).await {
+            NotifyError::notify_json(&self.client, format!("Failed to apply configuration changes: {}", error), &settings).await;
         }
-        self.send_projects_update_notification().await;
     }
 
     async fn did_change_workspace_folders(&self, _params: DidChangeWorkspaceFoldersParams) {
