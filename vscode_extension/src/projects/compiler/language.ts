@@ -1,7 +1,5 @@
-import { CancellationToken, DocumentLink, DocumentLinkProvider, TextDocument, Range, Position, Uri, workspace, DiagnosticCollection, languages, Diagnostic, DiagnosticSeverity, DiagnosticTag } from "vscode";
+import { CancellationToken, DocumentLink, DocumentLinkProvider, TextDocument, Range, Position, Uri, workspace, DiagnosticSeverity } from "vscode";
 import { fileExists } from "../../utils";
-import { PROJECTS } from "../../constants";
-import { Runtime } from "../../runtime";
 
 export namespace CompilerOutputLanguage {
   //   1_______    2____  3_____  4_________________        5_   5_______________________
@@ -40,12 +38,6 @@ export function getColumnInLine(lineText: string, message: string): number {
 export class CompilerOutputDefinitionProvider implements DocumentLinkProvider {
   public compilerIsActive: boolean = false;
 
-  constructor(
-    private readonly diagnosticCollection: DiagnosticCollection = languages.createDiagnosticCollection(PROJECTS.LANGUAGES.COMPILER)
-  ) {
-    Runtime.extension.subscriptions.push(this.diagnosticCollection);
-  }
-
   // Called by outputChannel.Show()
   public async provideDocumentLinks(
     document: TextDocument,
@@ -70,8 +62,6 @@ export class CompilerOutputDefinitionProvider implements DocumentLinkProvider {
       return acc;
     }, [] as { file: string, matches: RegExpMatchArray[] }[]);
 
-    this.diagnosticCollection.clear();
-
     return (await Promise.all(
       matchesByFile.map(async (o) => {
         const fileName = o.file;
@@ -80,7 +70,6 @@ export class CompilerOutputDefinitionProvider implements DocumentLinkProvider {
         const fileContent = await workspace.fs.readFile(Uri.file(fileName));
         const fileText = Buffer.from(fileContent).toString('utf8');
         const fileLines = fileText.split(/\r?\n/g);
-        const diagnostics: Diagnostic[] = [];
         const links = o.matches.map((match) => {
           const line = match[0];
           const lineIndex = lines.indexOf(line);
@@ -105,17 +94,8 @@ export class CompilerOutputDefinitionProvider implements DocumentLinkProvider {
               new Position(lineIndex, fileIndex + file.length + lineNumText.length + 1)),
             Uri.file(file).with({ fragment: `L${lineNum},${column}` })
           );
-
-          const severity = DIAGNOSTIC_SEVERITY[match[CompilerOutputLanguage.SEVERITY].toUpperCase() as keyof typeof DIAGNOSTIC_SEVERITY];
-          const diagnostic = new Diagnostic(codeLink.range, message, severity);
-          diagnostic.code = code;
-          diagnostic.source = 'MSBuild (DDK)';
-          if (diagnostic.code === 'W1000') diagnostic.tags = [DiagnosticTag.Deprecated];
-          diagnostics.push(diagnostic);
-
           return [fileLink, codeLink];
         });
-        this.diagnosticCollection.set(Uri.file(fileName), diagnostics);
         return links;
       })
     )).flat(2);

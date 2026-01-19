@@ -15,6 +15,7 @@ use tower_lsp::{LanguageServer, LspService, Server};
 pub(crate) use lsp_types::*;
 use projects::*;
 
+#[derive(Debug, Clone)]
 struct DelphiLsp {
     client: Client,
 }
@@ -22,6 +23,15 @@ struct DelphiLsp {
 impl DelphiLsp {
     pub fn new(client: Client) -> Self {
         return DelphiLsp { client }
+    }
+
+    pub async fn projects_compile(
+        &self,
+        params: CompileProjectParams,
+    ) {
+        if let Err(e) = Compiler::new(self.client.clone(), params).compile().await {
+            NotifyError::notify(&self.client, format!("Failed to compile project: {}", e), None).await;
+        }
     }
 }
 
@@ -362,7 +372,7 @@ async fn main() -> Result<()> {
                 }
             });
             DelphiLsp::new(client)
-    }).finish();
+    }).custom_method("projects/compile", DelphiLsp::projects_compile).finish();
 
     Server::new(stdin(), stdout(), socket).serve(service).await;
 

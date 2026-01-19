@@ -29,11 +29,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
       Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, true);
       Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!projectEntity.exe);
     }
-    let resourceUri: Uri;
-    if (Runtime.projects.isCurrentlyCompiling(projectEntity))
-      resourceUri = Uri.from({ scheme: PROJECTS.SCHEME.COMPILING, path: uriPath });
-    else
-      resourceUri = selected
+    const resourceUri = selected
         ? Uri.from({ scheme: PROJECTS.SCHEME.SELECTED, path: uriPath })
         : Uri.from({ scheme: PROJECTS.SCHEME.DEFAULT, path: uriPath });
     super(DelphiProjectTreeItemType.Project, projectEntity.name, resourceUri);

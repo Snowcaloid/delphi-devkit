@@ -175,57 +175,21 @@ export namespace ProjectsCommands {
     private static async compileAllInWorkspace(item: TreeItem): Promise<void> {
       const wsItem = Runtime.projects.workspacesTreeView.getWorkspaceItemByTreeItem(item);
       if (!assertError(wsItem?.workspace, 'Could not determine workspace from the selected item.')) return;
-      for (const link of wsItem!.workspace.project_links) {
-        if (!assertError(link.project, 'Project not found in link.')) return;
-        if (!(await Runtime.projects.compiler.compileWorkspaceItem(link, false))) return;
-      }
+      await Runtime.client.compileAllInWorkspace(false, wsItem!.workspace.id);
     }
 
     private static async recreateAllInWorkspace(item: TreeItem): Promise<void> {
       const wsItem = Runtime.projects.workspacesTreeView.getWorkspaceItemByTreeItem(item);
       if (!assertError(wsItem?.workspace, 'Could not determine workspace from the selected item.')) return;
-      for (const link of wsItem!.workspace.project_links) {
-        if (!assertError(link.project, 'Project not found in link.')) return;
-        if (!(await Runtime.projects.compiler.compileWorkspaceItem(link, true))) return;
-      }
+      await Runtime.client.compileAllInWorkspace(true, wsItem!.workspace.id);
     }
 
     private static async compileAllFromHere(item: BaseFileItem): Promise<void> {
-      let startIndex = -1;
-      const ws = item.project.link.workspace;
-      const gp = item.project.link.groupProject;
-      if (!assertError(ws || gp, 'Could not determine workspace or group project from the selected item.')) return;
-      if (ws) {
-        startIndex = ws.project_links.findIndex((link) => link.id === item.project.link.id);
-        if (startIndex === -1) return;
-        for (let i = startIndex; i < ws.project_links.length; i++)
-          await ws.project_links[i].compile(false);
-      }
-      if (gp) {
-        startIndex = gp.project_links.findIndex((link) => link.id === item.project.link.id);
-        if (startIndex === -1) return;
-        for (let i = startIndex; i < gp.project_links.length; i++)
-          await gp.project_links[i].compile(false);
-      }
+      await Runtime.client.compileFromLink(false, item.project.link.id);
     }
 
     private static async recreateAllFromHere(item: BaseFileItem): Promise<void> {
-      let startIndex = -1;
-      const ws = item.project.link.workspace;
-      const gp = item.project.link.groupProject;
-      if (!assertError(ws || gp, 'Could not determine workspace or group project from the selected item.')) return;
-      if (ws) {
-        startIndex = ws.project_links.findIndex((link) => link.id === item.project.link.id);
-        if (startIndex === -1) return;
-        for (let i = startIndex; i < ws.project_links.length; i++)
-          await ws.project_links[i].compile(true);
-      }
-      if (gp) {
-        startIndex = gp.project_links.findIndex((link) => link.id === item.project.link.id);
-        if (startIndex === -1) return;
-        for (let i = startIndex; i < gp.project_links.length; i++)
-          await gp.project_links[i].compile(true);
-      }
+      await Runtime.client.compileFromLink(true, item.project.link.id);
     }
 
     private static async setManualPath(item: BaseFileItem): Promise<void> {
@@ -347,21 +311,11 @@ export namespace ProjectsCommands {
     }
 
     private static async compileAllInGroupProject(item: TreeItem): Promise<void> {
-      const projects = Runtime.projects.groupProjectTreeView.projects;
-      for (const proj of projects) {
-        const link = proj.link;
-        if (!assertError(link.project, 'Project not found in link.')) return;
-        if (!(await Runtime.projects.compiler.compileGroupProjectItem(link, false))) return;
-      }
+      await Runtime.client.compileAllInGroupProject(false);
     }
 
     private static async recreateAllInGroupProject(item: TreeItem): Promise<void> {
-      const projects = Runtime.projects.groupProjectTreeView.projects;
-      for (const proj of projects) {
-        const link = proj.link;
-        if (!assertError(link.project, 'Project not found in link.')) return;
-        if (!(await Runtime.projects.compiler.compileGroupProjectItem(link, true))) return;
-      }
+      await Runtime.client.compileAllInGroupProject(true);
     }
   }
 

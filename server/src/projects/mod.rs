@@ -1,22 +1,26 @@
-pub mod compilers;
-pub mod project_data;
-pub mod changes;
-pub mod workspace;
-pub mod project;
-pub mod group_project;
-pub mod file_watch;
+mod compiler_config;
+mod project_data;
+mod changes;
+mod workspace;
+mod project;
+mod group_project;
+mod file_watch;
+mod diag;
+mod compiler;
 
 use anyhow::Result;
 use serde_json::Value;
 use crate::{EventDone, lexorank::{HasLexoRank, LexoRank}, utils::FileLock};
 
-pub use compilers::*;
+pub use compiler_config::*;
 pub use project_data::*;
 pub use changes::*;
 pub use workspace::*;
 pub use project::*;
 pub use group_project::*;
 pub use file_watch::*;
+pub use diag::*;
+pub use compiler::*;
 
 pub trait Named {
     fn get_name(&self) -> &String;

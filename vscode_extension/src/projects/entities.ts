@@ -1,4 +1,3 @@
-import { window } from 'vscode';
 import { Runtime } from '../runtime';
 import { Option } from '../types';
 
@@ -86,13 +85,8 @@ export namespace Entities {
       return undefined;
     }
 
-    public async compile(recreate: boolean = false): Promise<boolean> {
-      if (this.workspace)
-        return await Runtime.projects.compiler.compileWorkspaceItem(this, recreate);
-      else if (this.groupProject)
-        return await Runtime.projects.compiler.compileGroupProjectItem(this, recreate);
-      window.showErrorMessage('Cannot compile project link: no associated workspace or group project found.');
-      return false;
+    public async compile(recreate: boolean = false): Promise<void> {
+      return await Runtime.client.compileProject(recreate, this.project_id, this.id);
     }
   }
 

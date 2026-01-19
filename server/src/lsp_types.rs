@@ -1,7 +1,7 @@
 use tower_lsp::lsp_types::notification::Notification;
 use serde::{Deserialize, Serialize};
 
-use crate::{projects::{CompilerConfigurations, project_data::ProjectsData}};
+use crate::projects::*;
 
 pub enum EventDone {}
 
@@ -99,4 +99,94 @@ pub struct CompilersUpdateParams {
 impl Notification for CompilersUpdate {
     type Params = CompilersUpdateParams;
     const METHOD: &'static str = "$/notifications/compilers/update";
+}
+
+pub enum CompilerProgress {}
+
+#[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
+#[serde(tag = "kind")]
+pub enum CompilerProgressParams {
+    Start {
+        lines: Vec<String>,
+    },
+    Stdout {
+        line: String,
+    },
+    Stderr {
+        line: String,
+    },
+    Completed {
+        success: bool,
+        code: isize,
+        lines: Vec<String>,
+    },
+    SingleProjectCompleted {
+        project_id: usize,
+        success: bool,
+        code: isize,
+        lines: Vec<String>,
+    },
+}
+
+impl Notification for CompilerProgress {
+    type Params = CompilerProgressParams;
+    const METHOD: &'static str = "$/notifications/compiler/progress";
+}
+
+impl CompilerProgress {
+    pub async fn notify_start(client: &tower_lsp::Client, lines: Vec<String>) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::Start {
+            lines,
+        }).await;
+    }
+
+    pub async fn notify_stdout(client: &tower_lsp::Client, line: String) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::Stdout {
+            line,
+        }).await;
+    }
+
+    pub async fn notify_stderr(client: &tower_lsp::Client, line: String) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::Stderr {
+            line,
+        }).await;
+    }
+
+    pub async fn notify_completed(client: &tower_lsp::Client, success: bool, code: isize, lines: Vec<String>) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::Completed {
+            success,
+            code,
+            lines,
+        }).await;
+    }
+
+    pub async fn notify_single_project_completed(client: &tower_lsp::Client, project_id: usize, success: bool, code: isize, lines: Vec<String>) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::SingleProjectCompleted {
+            project_id,
+            success,
+            code,
+            lines,
+        }).await;
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
+#[serde(tag = "type")]
+pub enum CompileProjectParams {
+    Project {
+        project_id: usize,
+        project_link_id: Option<usize>,
+        rebuild: bool,
+    },
+    AllInWorkspace {
+        workspace_id: usize,
+        rebuild: bool,
+    },
+    AllInGroupProject {
+        rebuild: bool,
+    },
+    FromLink {
+        project_link_id: usize,
+        rebuild: bool,
+    }
 }

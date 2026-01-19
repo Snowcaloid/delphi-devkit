@@ -1,4 +1,4 @@
-import { commands, ExtensionContext, window } from 'vscode';
+import { commands, ExtensionContext, OutputChannel, window } from 'vscode';
 import { ProjectsFeature } from './projects/feature';
 import { DfmFeature } from './dfm/feature';
 import { Entities } from './projects/entities';
@@ -13,16 +13,19 @@ import { randomUUID, UUID } from 'crypto';
  * Properties must be synchronously accessible.
  */
 export abstract class Runtime {
-  public static projects: ProjectsFeature;
-  public static dfm: DfmFeature;
   private static _projectsData?: Entities.ProjectsData;
   private static _compilerConfigurations?: Entities.CompilerConfigurations;
   private static _events: string[] = [];
+
+  public static projects: ProjectsFeature;
+  public static dfm: DfmFeature;
   public static extension: ExtensionContext;
   public static client: DDK_Client;
+  public static compilerOutputChannel: OutputChannel;
 
   static async initialize(context: ExtensionContext) {
     this.extension = context;
+    this.compilerOutputChannel = window.createOutputChannel('DDK Compiler');
     this.client = new DDK_Client();
     await this.client.initialize();
     this.projects = new ProjectsFeature();
@@ -30,7 +33,8 @@ export abstract class Runtime {
     this.dfm = new DfmFeature();
     await this.dfm.initialize();
     context.subscriptions.push(
-      ...GeneralCommands.registers
+      ...GeneralCommands.registers,
+      this.compilerOutputChannel
     );
   }
 

@@ -16,7 +16,7 @@ enum IdObject {
 pub struct ProjectsData {
     pub(super) id_counter: usize,
     pub(super) active_project_id: Option<usize>,
-    pub workspaces: Vec<workspace::Workspace>,
+    pub workspaces: Vec<Workspace>,
     pub projects: Vec<Project>,
     pub group_project: Option<GroupProject>,
 }
@@ -332,7 +332,6 @@ impl ProjectsData {
         }
     }
 
-
     pub fn get_workspace_id_containing_project_link(&self, project_link_id: usize) -> Option<usize> {
         for workspace in &self.workspaces {
             if workspace.project_links.iter().any(|link| link.id == project_link_id) {
@@ -340,6 +339,15 @@ impl ProjectsData {
             }
         }
         return None;
+    }
+
+    pub fn is_project_link_in_group_project(&self, project_link_id: usize) -> bool {
+        if let Some(group_project) = &self.group_project {
+            if group_project.project_links.iter().any(|link| link.id == project_link_id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn refresh_project_paths(&mut self, project_id: usize) -> Result<()> {
@@ -416,7 +424,7 @@ impl ProjectsData {
         } else {
             &LexoRank::default()
         };
-        let workspace = workspace::Workspace::new(workspace_id, name.clone(), compiler.clone(), lexo_rank.next());
+        let workspace = Workspace::new(workspace_id, name.clone(), compiler.clone(), lexo_rank.next());
         self.workspaces.push(workspace);
         return Ok(());
     }
@@ -500,7 +508,7 @@ impl ProjectsData {
         } else if let Some(existing_group_project) = &self.group_project {
             compiler_id = existing_group_project.compiler_id.clone();
         } else {
-            compiler_id = "23.0".to_string();
+            compiler_id = "12.0".to_string();
         }
         let path = PathBuf::from(groupproj_path);
         if !path.exists() {
@@ -541,11 +549,11 @@ impl ProjectsData {
         return self.projects.iter_mut().find(|proj| proj.id == project_id);
     }
 
-    pub fn get_workspace(&self, workspace_id: usize) -> Option<&workspace::Workspace> {
+    pub fn get_workspace(&self, workspace_id: usize) -> Option<&Workspace> {
         return self.workspaces.iter().find(|ws| ws.id == workspace_id);
     }
 
-    pub fn get_workspace_mut(&mut self, workspace_id: usize) -> Option<&mut workspace::Workspace> {
+    pub fn get_workspace_mut(&mut self, workspace_id: usize) -> Option<&mut Workspace> {
         return self.workspaces.iter_mut().find(|ws| ws.id == workspace_id);
     }
 
@@ -558,7 +566,7 @@ impl ProjectsData {
     }
 
     pub fn sort(&mut self) {
-        self.workspaces.sort_by(|a: &workspace::Workspace, b: &workspace::Workspace| a.sort_rank.cmp(&b.sort_rank));
+        self.workspaces.sort_by(|a: &Workspace, b: &Workspace| a.sort_rank.cmp(&b.sort_rank));
         for workspace in &mut self.workspaces {
             workspace.project_links.sort_by(|a: &ProjectLink, b: &ProjectLink| a.sort_rank.cmp(&b.sort_rank));
         }
@@ -574,7 +582,7 @@ impl ProjectsData {
         return None;
     }
 
-    pub fn projects_of_workspace(&self, workspace: &workspace::Workspace) -> Vec<&Project> {
+    pub fn projects_of_workspace(&self, workspace: &Workspace) -> Vec<&Project> {
         let mut result = Vec::new();
         for project_link in &workspace.project_links {
             if let Some(project) = self.projects.iter().find(|proj| proj.id == project_link.project_id) {

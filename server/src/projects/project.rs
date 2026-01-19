@@ -117,4 +117,26 @@ impl Project {
 
         return Ok(());
     }
+
+    pub fn get_project_file(&self) -> Result<PathBuf> {
+        if let Some(dproj_path) = &self.dproj {
+            let path = PathBuf::from(dproj_path);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+        if let Some(dpr_path) = &self.dpr {
+            let path = PathBuf::from(dpr_path);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+        if let Some(dpk_path) = &self.dpk {
+            let path = PathBuf::from(dpk_path);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+        anyhow::bail!("Cannot get project file - no dproj, dpr or dpk available for project id: {}", self.id);
+    }
 }

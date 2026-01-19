@@ -1,7 +1,7 @@
 import {
     LanguageClient, LanguageClientOptions, ServerOptions, TransportKind
 } from 'vscode-languageclient/node';
-import { window } from 'vscode';
+import { window, workspace } from 'vscode';
 import * as path from 'path';
 import { Runtime } from './runtime';
 import { Entities } from './projects/entities';
@@ -22,6 +22,19 @@ export interface Changes {
 export function newChanges(changes: Change[], timeout: number = 5000): Changes {
     const id = Runtime.addEvent(timeout);
     return { changes: changes, event_id: id };
+}
+
+export type CompilerProgressParams = {
+    type: 'Start',
+    lines: string[],
+} | {
+    type: 'Stdout' | 'Stderr',
+    line: string,
+} | {
+    type: 'Completed',
+    success: boolean,
+    code: number,
+    lines: string[],
 }
 
 export class DDK_Client {
@@ -69,6 +82,10 @@ export class DDK_Client {
                 Runtime.finishEvent(it.event_id);
             }
         );
+        this.client.onNotification(
+            'notifications/compiler/progress',
+            this.onCompilerProgress.bind(this)
+        );
         await this.client.start();
     }
 
@@ -104,5 +121,61 @@ export class DDK_Client {
             }
         });
         await Runtime.waitForEvent(changes.event_id);
+    }
+
+    public async compileProject(rebuild: boolean, projectId: number, projectLinkId?: number): Promise<void> {
+        await this.client.sendNotification('projects/compile', {
+            type: 'Project',
+            project_id: projectId,
+            project_link_id: projectLinkId,
+            rebuild: rebuild,
+        });
+    }
+
+    public async compileAllInWorkspace(rebuild: boolean, workspaceId: number): Promise<void> {
+        await this.client.sendNotification('projects/compile', {
+            type: 'AllInWorkspace',
+            workspace_id: workspaceId,
+            rebuild: rebuild,
+        });
+    }
+
+    public async compileAllInGroupProject(rebuild: boolean): Promise<void> {
+        await this.client.sendNotification('projects/compile', {
+            type: 'AllInGroupProject',
+            rebuild: rebuild,
+        });
+    }
+
+    public async compileFromLink(rebuild: boolean, linkId: number): Promise<void> {
+        await this.client.sendNotification('projects/compile', {
+            type: 'FromLink',
+            link_id: linkId,
+            rebuild: rebuild,
+        });
+    }
+
+    public async onCompilerProgress(params: CompilerProgressParams): Promise<void> {
+        switch (params.type) {
+            case 'Start':
+                await workspace.getConfiguration('output.smartScroll').update('enabled', false);
+                Runtime.compilerOutputChannel.clear();
+                Runtime.compilerOutputChannel.show(true);
+                for (const line of params.lines)
+                    Runtime.compilerOutputChannel.appendLine(line);
+                break;
+            case 'Stdout':
+            case 'Stderr':
+                Runtime.compilerOutputChannel.appendLine(params.line);
+                break;
+            case 'Completed':
+                for (const line of params.lines)
+                    Runtime.compilerOutputChannel.appendLine(line);
+                if (params.success)
+                    window.showInformationMessage('Compilation completed successfully.');
+                else
+                    window.showErrorMessage(`Compilation failed with exit code ${params.code}.`);
+                break;
+        }
     }
 }

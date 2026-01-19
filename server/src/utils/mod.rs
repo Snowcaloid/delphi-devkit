@@ -3,6 +3,17 @@ use std::path::PathBuf;
 use fslock::LockFile;
 use anyhow::Result;
 
+#[macro_export]
+macro_rules! defer_async {
+    ($inner:expr) => {
+        defer! {
+            tokio::spawn(async move {
+                $inner
+            });
+        }
+    };
+}
+
 pub trait FilePath {
     fn get_file_path() -> PathBuf;
 }
@@ -50,5 +61,15 @@ impl<T> FileLock<T> {
             }
         }
         anyhow::bail!("Failed to acquire lock for file {:?}", path);
+    }
+
+    pub fn read_only_copy() -> T
+    where
+        T: Serialize + FilePath + Load + Default + for<'de> Deserialize<'de>,
+    {
+        if let Ok(lock) = Self::new() {
+            return lock.file;
+        }
+        return T::default()
     }
 }
