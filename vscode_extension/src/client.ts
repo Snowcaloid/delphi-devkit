@@ -35,7 +35,13 @@ export type CompilerProgressParams = {
     success: boolean,
     code: number,
     lines: string[],
-}
+} | {
+    type: 'SingleProjectCompleted',
+    project_id: number,
+    success: boolean,
+    code: number,
+    lines: string[],
+} | never;
 
 export class DDK_Client {
     private client: LanguageClient;
@@ -175,6 +181,15 @@ export class DDK_Client {
                     window.showInformationMessage('Compilation completed successfully.');
                 else
                     window.showErrorMessage(`Compilation failed with exit code ${params.code}.`);
+                break;
+            case 'SingleProjectCompleted':
+                for (const line of params.lines)
+                    Runtime.compilerOutputChannel.appendLine(line);
+                const project = (await Runtime.getProjectsData())?.projects.find((p) => p.id === params.project_id);
+                if (params.success && project)
+                    window.showInformationMessage(`Compilation of project ${project.name} completed successfully.`);
+                else if (project)
+                    window.showErrorMessage(`Compilation of project ${project.name} failed with exit code ${params.code}.`);
                 break;
         }
     }

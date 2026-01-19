@@ -372,6 +372,9 @@ struct CompilationParameters<'compiler> {
     footer: CompFooter,
 }
 
+unsafe impl Send for CompilationParameters<'_> {}
+unsafe impl Sync for CompilationParameters<'_> {}
+
 struct CompHeader {
     entity_type: String,
     entity_name: String,
@@ -379,6 +382,9 @@ struct CompHeader {
     compiler_name: String,
     rebuild: bool,
 }
+
+unsafe impl Send for CompHeader {}
+unsafe impl Sync for CompHeader {}
 
 impl CompHeader {
     fn new(entity_type: String, entity_name: String, target: String, compiler_name: String, rebuild: bool) -> Self {
@@ -416,6 +422,9 @@ struct CompFooter {
     rebuild: bool,
     success: Box<dyn Fn() -> bool>,
 }
+
+unsafe impl Send for CompFooter {}
+unsafe impl Sync for CompFooter {}
 
 impl CompFooter {
     fn new(entity_type: String, entity_name: String, target: String, compiler_name: String, rebuild: bool, success: Box<dyn Fn() -> bool>) -> Self {
