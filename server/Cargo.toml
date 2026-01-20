@@ -1,7 +1,15 @@
 [package]
 name = "ddk-server"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2024"
+authors = ["Valentin Baron"]
+license-file = "../LICENSE"
+description = "DDK - Language Server"
+homepage = "https://www.github.com/valentin-baron"
+repository = "https://www.github.com/valentin-baron/delphi-devkit"
+keywords = ["delphi", "lsp", "language-server", "development", "ide", "tools"]
+categories = ["development-tools", "language-servers"]
+readme = "../README.md"
 
 [dependencies]
 anyhow = "1.0.100"

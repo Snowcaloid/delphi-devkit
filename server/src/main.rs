@@ -26,7 +26,6 @@ impl DelphiLsp {
         return DelphiLsp { client }
     }
 
-
     async fn projects_compile(
         &self,
         params: CompileProjectParams,

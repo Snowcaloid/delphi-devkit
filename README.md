@@ -6,7 +6,7 @@ This project is not affiliated, associated, authorized, endorsed by, or in any w
 
 This extension does not include any proprietary Embarcadero code, libraries or binaries. To build Delphi projects, you must have a valid Delphi installation and the necessary environment variables set up.
 
-This extension is currently developed in my free time, and any feedback is welcome on the public [Githib Issues page](https://github.com/Snowcaloid/delphi-devkit-issues).
+This extension is currently developed in my free time, and any feedback is welcome.
 
 ## Features
 

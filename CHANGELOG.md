@@ -4,11 +4,30 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [1.2.0] - 2025-09-XX
+## [2.0.0] - 2026-01-XX
 
+### Breaking Changes
+
+- Removed sqlite database in favor of direct file system storage.
+- This will remove all previously stored workspaces and projects. You will need to re-add them.
+
+### Changes
+
+- Major overhaul of the whole extension.
+- Added DDK Server
+- Moved Projects logic to the server.
+- Moved compilation logic to the server.
+
+### Added
+
+- Compiler configurations are more detailed and show compiler version details.
+- More default compiler configurations have been added (All between Delphi 2007 and Delphi 13)
 - Added formatter support.
 - Added timestamps to compiler output lines.
 - Added support for compiling / recreating all projects in a workspace / group project.
+
+### Fixed
+
 - Fixed the issue where the selected project didn't work when the tree was collapsed.
 - Fixed the issue where removing workspaces/projects did not work.
 

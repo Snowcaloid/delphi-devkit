@@ -2,10 +2,10 @@
   "name": "delphi-devkit",
   "displayName": "DDK - Delphi Development Kit",
   "description": "Utilities for developing in Delphi using VS Code",
-  "version": "1.1.0",
-  "publisher": "Snowcaloid",
+  "version": "2.0.0",
+  "publisher": "Valentin Baron",
   "license": "SEE LICENSE IN LICENSE",
-  "homepage": "https://www.github.com/Snowcaloid",
+  "homepage": "https://www.github.com/valentin-baron",
   "icon": "assets/DelphiHelmet.png",
   "engines": {
     "vscode": "^1.101.0"
@@ -523,17 +523,10 @@
           "scope": "resource"
         }
       }
-    },
-    "iconThemes": [
-      {
-        "id": "ddk-file-icons",
-        "label": "DDK Delphi File Icons",
-        "path": "./config/iconThemes/ddk-file-icons.json"
-      }
-    ]
+    }
   },
   "repository": {
-    "url": "https://github.com/Snowcaloid/delphi-devkit.git",
+    "url": "https://github.com/valentin-baron/delphi-devkit.git",
     "type": "git"
   },
   "prettier": {
@@ -555,7 +548,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "cd ../server && cargo build --release && cd ../vscode_extension && npm run check-types && npm run lint && node esbuild.js",
+    "compile": "cd ../server && cargo build && cargo build --release && cd ../vscode_extension && npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

@@ -22,26 +22,19 @@ const copyAssetsPlugin = {
 	name: 'copy-assets',
 	setup(build) {
 		build.onEnd(() => {
-			// Copy PowerShell script to dist folder
-			const sourceScript = path.join(__dirname, 'src', 'projects', 'compiler', 'compile.ps1');
-			copyAsset(sourceScript);
-
-			const sourceWasm = path.join(__dirname, 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
-			copyAsset(sourceWasm);
-
-			const sourceLicense = path.join(__dirname, 'LICENSE');
+			const sourceLicense = path.join(__dirname, '..', 'LICENSE');
 			copyAsset(sourceLicense);
 
-			const sourceNotice = path.join(__dirname, 'NOTICE.txt');
+			const sourceNotice = path.join(__dirname, '..', 'NOTICE.txt');
 			copyAsset(sourceNotice);
 
-			const readmeFile = path.join(__dirname, 'README.md');
+			const readmeFile = path.join(__dirname, '..', 'README.md');
 			copyAsset(readmeFile);
 
-			const changelog = path.join(__dirname, 'CHANGELOG.md');
+			const changelog = path.join(__dirname, '..', 'CHANGELOG.md');
 			copyAsset(changelog);
 
-			const formatterConfig = path.join(__dirname, 'config', 'ddk_formatter.config');
+			const formatterConfig = path.join(__dirname, '..', 'server', 'src', 'format', 'presets', 'ddk_formatter.config');
 			copyAsset(formatterConfig);
 
 			const ddkServer = path.join(__dirname, '..', 'server', 'target', 'debug', 'deps', 'ddk_server.exe');
