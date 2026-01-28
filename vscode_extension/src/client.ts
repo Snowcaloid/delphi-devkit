@@ -277,10 +277,18 @@ class DelphiFormattingProvider implements DocumentFormattingEditProvider, Docume
     async provideDocumentFormattingEdits(
         document: TextDocument,
     ): Promise<TextEdit[]> {
-        return [
+        const content = document.getText();
+        const range = new Range(
+            document.positionAt(0),
+            document.positionAt(content.length)
+        );
+        const textEdit: TextEdit =
             await this.client.sendRequest('custom/document/format', {
-                content: document.getText(),
-            }) as TextEdit
+                content: content,
+                range: range
+            });
+        return [
+            new TextEdit(range, textEdit.newText)
         ];
     }
 }

@@ -1,6 +1,7 @@
 use crate::utils::{FilePath, Load};
 
 use super::*;
+use ron::ser::PrettyConfig;
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
 use std::path::PathBuf;
@@ -158,7 +159,7 @@ impl ProjectsData {
                 .map_err(|e| anyhow::anyhow!("Failed to create config directory: {}", e))?;
         }
 
-        let content = ron::to_string(self)
+        let content = ron::ser::to_string_pretty(&self, PrettyConfig::default())
             .map_err(|e| anyhow::anyhow!("Failed to serialize projects data: {}", e))?;
         std::fs::write(&path, content)
             .map_err(|e| anyhow::anyhow!("Failed to write projects data file: {}", e))?;

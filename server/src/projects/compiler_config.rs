@@ -1,4 +1,5 @@
 use anyhow::Result;
+use ron::ser::PrettyConfig;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -171,7 +172,7 @@ impl CompilerConfigurations {
                 .map_err(|e| anyhow::anyhow!("Failed to create config directory: {}", e))?;
         }
 
-        let content = ron::to_string(&self)
+        let content = ron::ser::to_string_pretty(&self, PrettyConfig::default())
             .map_err(|e| anyhow::anyhow!("Failed to serialize compilers: {}", e))?;
         std::fs::write(&path, content)
             .map_err(|e| anyhow::anyhow!("Failed to write compilers file: {}", e))?;
