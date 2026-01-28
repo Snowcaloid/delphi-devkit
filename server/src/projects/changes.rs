@@ -1,20 +1,18 @@
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
 
-use crate::{EventDone, projects::*};
+use crate::projects::*;
 
 #[derive(Serialize, Deserialize)]
 pub struct ChangeSet {
     pub changes: Vec<Change>,
-    pub event_id: String,
 }
 
 impl ChangeSet {
-    pub async fn execute(self, client: &tower_lsp::Client) -> Result<()> {
+    pub async fn execute(self) -> Result<()> {
         for change in self.changes {
             change.execute()?;
         }
-        EventDone::notify(client, self.event_id).await;
         Ok(())
     }
 }

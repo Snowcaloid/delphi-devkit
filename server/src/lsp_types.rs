@@ -1,4 +1,4 @@
-use tower_lsp::lsp_types::{MessageType, notification::Notification};
+use tower_lsp::lsp_types::{MessageType, Range, notification::Notification};
 use serde::{Deserialize, Serialize};
 
 use crate::projects::*;
@@ -12,7 +12,7 @@ pub struct EventDoneParams {
 
 impl Notification for EventDone {
     type Params = EventDoneParams;
-    const METHOD: &'static str = "$/notifications/event/done";
+    const METHOD: &'static str = "notifications/event/done";
 }
 
 impl EventDone {
@@ -30,6 +30,22 @@ impl EventDone {
             }
         }
     }
+    pub async fn notify_serde<T: Serialize>(client: &tower_lsp::Client, serializable: T) {
+        let json = serde_json::to_value(serializable).unwrap_or(serde_json::Value::Null);
+        Self::notify_json(client, &json).await;
+    }
+}
+
+#[macro_export]
+macro_rules! try_finish_event {
+    ($client:expr, $serializable:expr) => {
+        EventDone::notify_serde(&$client, $serializable).await;
+        return Ok(());
+    };
+    ($client:expr, $serializable:expr, $ret:expr) => {
+        EventDone::notify_serde(&$client, $serializable).await;
+        return $ret;
+    };
 }
 
 pub enum NotifyError {}
@@ -42,7 +58,7 @@ pub struct NotifyErrorParams {
 
 impl Notification for NotifyError {
     type Params = NotifyErrorParams;
-    const METHOD: &'static str = "$/notifications/error";
+    const METHOD: &'static str = "notifications/error";
 }
 
 impl NotifyError {
@@ -79,7 +95,7 @@ pub struct ProjectsUpdateParams {
 
 impl Notification for ProjectsUpdate {
     type Params = ProjectsUpdateParams;
-    const METHOD: &'static str = "$/notifications/projects/update";
+    const METHOD: &'static str = "notifications/projects/update";
 }
 
 pub enum CompilersUpdate {}
@@ -100,7 +116,7 @@ pub struct CompilersUpdateParams {
 
 impl Notification for CompilersUpdate {
     type Params = CompilersUpdateParams;
-    const METHOD: &'static str = "$/notifications/compilers/update";
+    const METHOD: &'static str = "notifications/compilers/update";
 }
 
 pub enum CompilerProgress {}
@@ -132,7 +148,7 @@ pub enum CompilerProgressParams {
 
 impl Notification for CompilerProgress {
     type Params = CompilerProgressParams;
-    const METHOD: &'static str = "$/notifications/compiler/progress";
+    const METHOD: &'static str = "notifications/compiler/progress";
 }
 
 impl CompilerProgress {
@@ -179,17 +195,21 @@ pub enum CompileProjectParams {
         project_id: usize,
         project_link_id: Option<usize>,
         rebuild: bool,
+        event_id: String,
     },
     AllInWorkspace {
         workspace_id: usize,
         rebuild: bool,
+        event_id: String,
     },
     AllInGroupProject {
         rebuild: bool,
+        event_id: String,
     },
     FromLink {
         project_link_id: usize,
         rebuild: bool,
+        event_id: String,
     }
 }
 
@@ -201,3 +221,9 @@ pub struct ConfigurationFetchResponse {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CancelCompilationParams {}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CustomDocumentFormat {
+    pub content: String,
+    pub range: Option<Range>,
+}

@@ -1,19 +1,18 @@
 use std::path::PathBuf;
 use anyhow::{Result, Context};
 use scopeguard::defer;
-use tower_lsp::lsp_types::{Range, Url};
 
-use crate::{projects::CompilerConfigurations, utils::Document};
+use crate::{projects::CompilerConfigurations};
 
 const DEFAULT_FORMATTER_CONFIG: &str = include_str!("presets/ddk_formatter.config");
 
 pub struct Formatter {
     config_path: PathBuf,
-    file_path: PathBuf,
+    content: String,
 }
 
 impl Formatter {
-    pub fn new(url: Url) -> Result<Self> {
+    pub fn new(content: String) -> Result<Self> {
         let config_path = dirs::config_dir().ok_or_else(|| anyhow::anyhow!("Failed to get config dir"))?
             .join("ddk")
             .join("ddk_formatter.config");
@@ -23,23 +22,13 @@ impl Formatter {
             }
             std::fs::write(&config_path, DEFAULT_FORMATTER_CONFIG).ok();
         }
-        let file_path = url.to_file_path().map_err(|_| anyhow::anyhow!("Invalid file URL"))?;
-        if !file_path.exists() {
-            anyhow::bail!("File does not exist: {}", file_path.display());
-        }
 
-        Ok(Formatter { config_path, file_path })
+        Ok(Formatter { config_path, content })
     }
 
-    pub fn execute(&self, range: Option<Range>) -> Result<String> {
-        let mut code = std::fs::read_to_string(&self.file_path)
-            .context("Failed to read file content")?;
-        if let Some(range) = range {
-            let document = Document::new(&code);
-            code = document.range(range).to_string();
-        }
+    pub fn execute(self) -> Result<String> {
         let temp_file = tempfile::NamedTempFile::new()?;
-        std::fs::write(temp_file.path(), code)?;
+        std::fs::write(temp_file.path(), &self.content)?;
         let temp_file_path = temp_file.path();
         defer! {
             std::fs::remove_file(temp_file_path).ok();
@@ -49,6 +38,8 @@ impl Formatter {
             .arg("-config")
             .arg(&self.config_path)
             .arg(temp_file_path)
+            .arg("-encoding")
+            .arg("utf-8")
             .status()
             .context("Failed to execute formatter")?;
         if !status.success() {

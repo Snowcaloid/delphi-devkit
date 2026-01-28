@@ -20,7 +20,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
     public link: Entities.ProjectLink,
     selected: boolean = false
   ) {
-    const projectEntity = link.project;
+    const projectEntity = Runtime.getProjectOfLink(link);
     if (!projectEntity) throw new Error('Project link does not have an associated project.');
     const path = projectEntity.dproj || projectEntity.dpr || projectEntity.dpk || projectEntity.exe || projectEntity.ini;
     if (!path) throw new Error('At least one project file must be provided.');
@@ -43,7 +43,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
   public static fromData(link: Entities.ProjectLink): ProjectItem {
     const data = Runtime.projectsData;
     if (!data) throw new Error('Projects data is not loaded.');
-    const project = new ProjectItem(link, (data.active_project?.id || -1) === (link.project?.id || -2));
+    const project = new ProjectItem(link, (Runtime.activeProject?.id || -1) === (Runtime.getProjectOfLink(link)?.id || -2));
     return project;
   }
 

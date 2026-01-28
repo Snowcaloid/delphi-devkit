@@ -7,10 +7,7 @@ export namespace Entities {
     projects: Project[];
     group_project?: Option<GroupProject>;
     active_project_id?: Option<number>;
-
-    public get active_project(): Option<Project> {
-      return this.projects.find((p) => p.id === this.active_project_id);
-    }
+    group_project_compiler_id?: Option<string>;
   }
 
   export class Workspace {
@@ -19,29 +16,12 @@ export namespace Entities {
     compiler_id: string;
     project_links: ProjectLink[];
     sort_rank: string;
-
-    public get compiler(): Option<CompilerConfiguration> {
-      try {
-        return Runtime.compilerConfigurations?.[this.compiler_id];
-      } catch {
-        return undefined;
-      }
-    }
   }
 
   export class GroupProject {
     name: string;
     path: string;
-    compiler_id: string;
     project_links: ProjectLink[];
-
-    public get compiler(): Option<CompilerConfiguration> {
-      try {
-        return Runtime.compilerConfigurations?.[this.compiler_id];
-      } catch {
-        return undefined;
-      }
-    }
   }
 
   export class Project {
@@ -69,25 +49,6 @@ export namespace Entities {
     id: number;
     project_id: number;
     sort_rank: string;
-
-    get project(): Option<Project> {
-      return Runtime.projectsData?.projects.find((p) => p.id === this.project_id);
-    }
-
-    get workspace(): Option<Workspace> {
-      return Runtime.projectsData?.workspaces.find((ws) => ws.project_links.some((link) => link.id === this.id));
-    }
-
-    get groupProject(): Option<GroupProject> {
-      if (Runtime.projectsData?.group_project?.project_links.some((link) => link.id === this.id))
-        return Runtime.projectsData?.group_project;
-
-      return undefined;
-    }
-
-    public async compile(recreate: boolean = false): Promise<void> {
-      return await Runtime.client.compileProject(recreate, this.project_id, this.id);
-    }
   }
 
   export class CompilerConfiguration {

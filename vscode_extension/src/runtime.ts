@@ -4,8 +4,8 @@ import { DfmFeature } from './dfm/feature';
 import { Entities } from './projects/entities';
 import { GeneralCommands } from './commands';
 import { DDK_Client } from './client';
-import { Option } from './types';
 import { randomUUID, UUID } from 'crypto';
+import { Option } from './types';
 
 /**
  * Runtime class to manage workspace state and global variables.
@@ -13,10 +13,11 @@ import { randomUUID, UUID } from 'crypto';
  * Properties must be synchronously accessible.
  */
 export abstract class Runtime {
-  private static _projectsData?: Entities.ProjectsData;
-  private static _compilerConfigurations?: Entities.CompilerConfigurations;
   private static _events: string[] = [];
+  private static _failedEvents: string[] = [];
 
+  public static projectsData: Entities.ProjectsData;
+  public static compilerConfigurations: Entities.CompilerConfigurations;
   public static projects: ProjectsFeature;
   public static dfm: DfmFeature;
   public static extension: ExtensionContext;
@@ -38,40 +39,37 @@ export abstract class Runtime {
     );
   }
 
-  public static get projectsData(): Option<Entities.ProjectsData> {
-    return this._projectsData;
+  public static get activeProject(): Option<Entities.Project> {
+    return this.projectsData.projects.find((p) => p.id === this.projectsData.active_project_id);
   }
 
-  public static async getProjectsData(): Promise<Entities.ProjectsData> {
-    let data = this._projectsData;
-    let counter = 10;
-    while (!data && counter > 0) {
-      counter--;
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      data = this._projectsData;
+  public static get groupProjectsCompiler(): Option<Entities.CompilerConfiguration> {
+    if (!this.projectsData.group_project_compiler_id) return undefined;
+    return this.compilerConfigurations?.[this.projectsData.group_project_compiler_id];
+  }
+
+  public static getProjectOfLink(link: Entities.ProjectLink): Option<Entities.Project> {
+    return this.projectsData?.projects.find((p) => p.id === link.project_id);
+  }
+
+  public static getWorkspaceOfLink(link: Entities.ProjectLink): Option<Entities.Workspace> {
+    return this.projectsData?.workspaces.find((ws) => ws.project_links.some((l) => link.id === l.id));
+  }
+
+  public static getGroupProjectOfLink(link: Entities.ProjectLink): Option<Entities.GroupProject> {
+    if (this.projectsData?.group_project?.project_links.some((l) => l.id === link.id))
+      return this.projectsData?.group_project;
+
+    return undefined;
+  }
+
+  public static getCompilerOfWorkspace(workspace: Entities.Workspace): Option<Entities.CompilerConfiguration> {
+      if (!workspace.compiler_id) return undefined;
+      return this.compilerConfigurations?.[workspace.compiler_id];
     }
-    return data!;
-  }
 
-  public static set projectsData(value: Entities.ProjectsData) {
-    this._projectsData = value;
-  }
-
-  public static get compilerConfigurations(): Option<Entities.CompilerConfigurations> {
-    return this._compilerConfigurations;
-  }
-
-  public static async getCompilerConfigurations(): Promise<Entities.CompilerConfigurations> {
-    let data = this._compilerConfigurations;
-    while (!data) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      data = this._compilerConfigurations;
-    }
-    return data;
-  }
-
-  public static set compilerConfigurations(value: Entities.CompilerConfigurations) {
-    this._compilerConfigurations = value;
+  public static async compileProjectLink(link: Entities.ProjectLink, recreate: boolean = false): Promise<boolean> {
+    return await this.client.compileProject(recreate, link.project_id, link.id);
   }
 
   public static setContext(name: string, value: any): Thenable<void> {
@@ -82,17 +80,22 @@ export abstract class Runtime {
     const id = randomUUID();
     this._events.push(id);
     setTimeout(() => {
+      if (!this._events.includes(id)) return;
+      setTimeout(() => this._failedEvents = this._failedEvents.filter((it) => it !== id), 60000);
+      this._failedEvents.push(id);
       this.finishEvent(id);
-      window.showErrorMessage(`Server Operation timed out (event id: ${id})`);
+      window.showErrorMessage(`Server Operation timed out.`);
     }, timeout);
     return id;
   }
 
   public static finishEvent(id: string): void {
     this._events = this._events.filter((it) => it !== id);
+    this._failedEvents = this._failedEvents.filter((it) => it !== id);
   }
 
-  public static async waitForEvent(id: string): Promise<void> {
-    while (this._events.includes(id)) await new Promise((resolve) => setTimeout(resolve, 300));
+  public static async waitForEvent(id: string): Promise<boolean> {
+    while (this._events.includes(id)) await new Promise((resolve) => setTimeout(resolve, 100));
+    return !this._failedEvents.includes(id);
   }
 }

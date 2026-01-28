@@ -21,10 +21,10 @@ static CODE: AtomicIsize = AtomicIsize::new(-1);
 pub static CANCEL_COMPILATION: AtomicBool = AtomicBool::new(false);
 
 impl Compiler {
-    pub fn new(client: tower_lsp::Client, params: CompileProjectParams) -> Self {
+    pub fn new(client: tower_lsp::Client, params: &CompileProjectParams) -> Self {
         Compiler {
             client,
-            params,
+            params: params.clone(),
             projects_data: FileLock::<ProjectsData>::read_only_copy(),
         }
     }
@@ -347,17 +347,20 @@ impl Compiler {
                 project_id,
                 project_link_id,
                 rebuild,
+                event_id: _
             } => self.get_project_parameters(project_id, project_link_id, rebuild)?,
             CompileProjectParams::AllInWorkspace {
                 workspace_id,
                 rebuild,
+                event_id: _
             } => self.get_all_workspace_parameters(workspace_id, rebuild)?,
-            CompileProjectParams::AllInGroupProject { rebuild } => {
+            CompileProjectParams::AllInGroupProject { rebuild, event_id: _ } => {
                 self.get_all_group_project_parameters(rebuild)?
             }
             CompileProjectParams::FromLink {
                 project_link_id,
                 rebuild,
+                event_id: _,
             } => self.get_from_link_parameters(project_link_id, rebuild)?,
         };
         self.start(&parameters).await?;

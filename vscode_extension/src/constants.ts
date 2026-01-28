@@ -24,6 +24,8 @@ export namespace PROJECTS {
     export const REMOVE_PROJECT = `${PROJECTS.CONFIG.KEY}.removeProject`;
     export const COMPILE = `${PROJECTS.CONFIG.KEY}.compile`;
     export const RECREATE = `${PROJECTS.CONFIG.KEY}.recreate`;
+    export const REFRESH = `${PROJECTS.CONFIG.KEY}.refresh`;
+    export const DISCOVER_PROJECT_PATHS = `${PROJECTS.CONFIG.KEY}.discoverProjectPaths`;
     export const SET_MANUAL_PATH = `${PROJECTS.CONFIG.KEY}.setManualPath`;
     export const COMPILE_ALL_IN_GROUP_PROJECT = `${PROJECTS.CONFIG.KEY}.compileAllInGroupProject`;
     export const RECREATE_ALL_IN_GROUP_PROJECT = `${PROJECTS.CONFIG.KEY}.recreateAllInGroupProject`;

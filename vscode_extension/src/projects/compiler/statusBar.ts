@@ -15,12 +15,7 @@ export class CompilerPicker {
   }
 
   public async updateDisplay(): Promise<void> {
-    try {
-      const data = await Runtime.getProjectsData();
-      const currentConfigName = data.group_project?.compiler?.product_name || 'No Compiler';
-      this.statusBarItem.text = `$(tools) .groupproj Compiler: ${currentConfigName}`;
-    } catch (error) {
-      this.statusBarItem.text = '$(tools) No .groupproj Compiler';
-    }
+    const currentConfigName = Runtime.groupProjectsCompiler?.product_name || 'No Compiler';
+    this.statusBarItem.text = `$(tools) .groupproj Compiler: ${currentConfigName}`;
   }
 }

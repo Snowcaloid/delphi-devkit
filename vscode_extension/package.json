@@ -21,8 +21,15 @@
     "commands": [
       {
         "command": "ddk.projects.refresh",
-        "title": "Discover File Paths",
+        "title": "Reload from configuration",
         "icon": "$(refresh)",
+        "category": "_ddk_treeview",
+        "when": "false"
+      },
+      {
+        "command": "ddk.projects.discoverProjectPaths",
+        "title": "Discover Project Paths",
+        "icon": "$(search)",
         "category": "_ddk_treeview",
         "when": "false"
       },
@@ -367,6 +374,16 @@
           "command": "ddk.projects.removeProject",
           "when": "view == ddk.view.projects.workspaces && (viewItem == ddk.context.projects.project || viewItem == ddk.context.projects.projectFile)",
           "group": "6_project@2"
+        },
+        {
+          "command": "ddk.projects.discoverProjectPaths",
+          "when": "viewItem == ddk.context.projects.project",
+          "group": "7_paths@1"
+        },
+        {
+          "command": "ddk.projects.setManualPath",
+          "when": "viewItem == ddk.context.projects.projectFile",
+          "group": "7_paths@2"
         }
       ]
     },
@@ -417,113 +434,7 @@
         "key": "f9",
         "when": "ddk:doesSelectedProjectHaveExe == true"
       }
-    ],
-    "configuration": {
-      "title": "Delphi Development Kit",
-      "properties": {
-        "ddk.formatter.enable": {
-          "type": "boolean",
-          "title": "Enable Delphi Formatter",
-          "default": true,
-          "description": "Enable the Delphi Formatter integration (requires Formatter.exe)."
-        },
-        "ddk.formatter.path": {
-          "type": "string",
-          "title": "Formatter.exe Path",
-          "default": "C:\\Program Files (x86)\\Embarcadero\\Studio\\23.0\\bin\\Formatter.exe",
-          "description": "Path to the Formatter.exe.",
-          "scope": "resource"
-        },
-        "ddk.formatter.args": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "-silent"
-          ],
-          "description": "Arguments to pass to Formatter.exe. The default uses the provided ddk_formatter.config.",
-          "scope": "resource"
-        },
-        "ddk.formatter.formatOnSave": {
-          "type": "boolean",
-          "title": "Format On Save",
-          "default": false,
-          "description": "Automatically format the file when saving.",
-          "scope": "resource"
-        },
-        "ddk.projects.compiler.configurations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "Display name for the Delphi version"
-              },
-              "rsVarsPath": {
-                "type": "string",
-                "description": "Path to the RSVars.bat file for this Delphi version"
-              },
-              "msBuildPath": {
-                "type": "string",
-                "description": "Path to MSBuild.exe for this Delphi version"
-              },
-              "buildArguments": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Default build arguments for this Delphi version"
-              }
-            },
-            "required": [
-              "name",
-              "rsVarsPath",
-              "msBuildPath",
-              "buildArguments"
-            ]
-          },
-          "default": [
-            {
-              "name": "Delphi 12",
-              "rsVarsPath": "C:\\Program Files (x86)\\Embarcadero\\Studio\\23.0\\bin\\rsvars.bat",
-              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
-              "buildArguments": [
-                "/verbosity:minimal",
-                "/p:DCC_DebugInformation=1",
-                "/p:RuntimeIdentifiers=3.5",
-                "/p:Configuration=Debug"
-              ]
-            },
-            {
-              "name": "Delphi 11",
-              "rsVarsPath": "C:\\Program Files (x86)\\Embarcadero\\Studio\\22.0\\bin\\rsvars.bat",
-              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
-              "buildArguments": [
-                "/verbosity:minimal",
-                "/p:DCC_DebugInformation=1",
-                "/p:RuntimeIdentifiers=3.5",
-                "/p:Configuration=Debug"
-              ]
-            },
-            {
-              "name": "Delphi 2007",
-              "rsVarsPath": "C:\\Program Files (x86)\\CodeGear\\RAD Studio\\5.0\\bin\\rsvars.bat",
-              "msBuildPath": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
-              "buildArguments": [
-                "/verbosity:minimal",
-                "/p:DCC_DebugInformation=True",
-                "/p:RuntimeIdentifiers=3.5",
-                "/p:Configuration=Debug"
-              ]
-            }
-          ],
-          "description": "Delphi compiler configurations with paths and build arguments",
-          "scope": "resource"
-        }
-      }
-    }
+    ]
   },
   "repository": {
     "url": "https://github.com/valentin-baron/delphi-devkit.git",

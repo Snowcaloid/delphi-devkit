@@ -86,7 +86,7 @@ class ExtendedTransferInfo {
       projectEntity = target.project.entity;
       if (Runtime.projects.workspacesTreeView.projects.find((item) => item.link.id === target.project.link.id)) {
         workspaceItem = Runtime.projects.workspacesTreeView.getWorkspaceItemByTreeItem(target);
-        workspaceEntity = target.project.link.workspace;
+        workspaceEntity = Runtime.getWorkspaceOfLink(target.project.link);
         linkEntity = target.project.link as Entities.ProjectLink;
       }
     }
@@ -184,9 +184,9 @@ export class WorkspaceTreeDragDropController implements TreeDragAndDropControlle
     await Runtime.projects.workspacesTreeView.refresh();
   }
 
-  private async dropProject(transfer: ExtendedTransferInfo): Promise<void> {
+  private async dropProject(transfer: ExtendedTransferInfo): Promise<boolean> {
     // validate all required combinations
-    if (!transfer.validate()) return;
+    if (!transfer.validate()) return false;
     const source = transfer.source;
     const target = transfer.target;
     if (source.isDraggedFromGroupProject)
@@ -198,7 +198,7 @@ export class WorkspaceTreeDragDropController implements TreeDragAndDropControlle
         }
       ]);
 
-    await Runtime.client.applyChanges([
+    return await Runtime.client.applyChanges([
       {
         type: 'MoveProject',
         project_link_id: source.entity.workspaceLink!.id,

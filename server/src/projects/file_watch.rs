@@ -97,7 +97,7 @@ async fn handle_projects_data_change(event: Event, client: &Client) {
         }
         _ => { return; }
     }
-    CompilersUpdate::notify(client).await;
+    ProjectsUpdate::notify(client).await;
 }
 
 async fn handle_compiler_config_change(event: Event, client: &Client) {
@@ -124,5 +124,5 @@ async fn handle_compiler_config_change(event: Event, client: &Client) {
         }
         _ => { return; }
     }
-    ProjectsUpdate::notify(client).await;
+    CompilersUpdate::notify(client).await;
 }

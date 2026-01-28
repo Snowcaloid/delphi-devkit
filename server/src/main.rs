@@ -5,6 +5,7 @@ pub mod files;
 pub mod utils;
 pub mod format;
 
+use std::sync::atomic::Ordering;
 use anyhow::Result;
 use tokio::io::{stdin, stdout};
 use tower_lsp::{Client, async_trait, jsonrpc};
@@ -13,7 +14,6 @@ use tower_lsp::lsp_types::*;
 
 pub(crate) use lsp_types::*;
 use projects::*;
-
 use crate::format::Formatter;
 
 #[derive(Debug, Clone)]
@@ -30,10 +30,10 @@ impl DelphiLsp {
         &self,
         params: CompileProjectParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
-        if let Err(e) = Compiler::new(self.client.clone(), params).compile().await {
+        if let Err(e) = Compiler::new(self.client.clone(), &params).compile().await {
             NotifyError::notify(&self.client, format!("Failed to compile project: {}", e), None).await;
         }
-        Ok(())
+        try_finish_event!(self.client, params);
     }
 
     async fn projects_compile_cancel(
@@ -41,7 +41,7 @@ impl DelphiLsp {
         _params: CancelCompilationParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
         CANCEL_COMPILATION.store(true, std::sync::atomic::Ordering::SeqCst);
-        Ok(())
+        try_finish_event!(self.client, "compilation cancelled");
     }
 
     async fn configuration_fetch(
@@ -53,100 +53,96 @@ impl DelphiLsp {
             compilers: CompilerConfigurations::new(),
         })
     }
+
+    async fn custom_document_format(
+        &self,
+        params: CustomDocumentFormat,
+    ) -> tower_lsp::jsonrpc::Result<TextEdit> {
+        let formatter = Formatter::new(params.content)
+            .map_err(|error| {
+                lsp_error!(self.client, "Failed to initialize formatter: {}", error);
+                jsonrpc::Error::invalid_params(format!(
+                    "Failed to initialize formatter: {}",
+                    error
+                ))
+            })?;
+        let new_text = formatter.execute().map_err(|error| {
+            lsp_error!(self.client, "Failed to format document: {}", error);
+            jsonrpc::Error::invalid_params(format!(
+                "Failed to format document: {}",
+                error
+            ))
+        })?;
+        let range = params.range.unwrap_or(Range::new(Position::new(0,0), Position::new(u32::MAX, u32::MAX)));
+        return Ok(TextEdit {
+            range,
+            new_text,
+        });
+    }
+}
+
+#[macro_export]
+macro_rules! lsp_debug {
+    ($client:expr, $($arg:tt)*) => {
+        let inner = $client.clone();
+        let inner_message = format!($($arg)*);
+        tokio::spawn(async move {
+            inner.log_message(tower_lsp::lsp_types::MessageType::LOG, inner_message).await;
+        });
+    };
+}
+
+#[macro_export]
+macro_rules! lsp_info {
+    ($client:expr, $($arg:tt)*) => {
+        let inner = $client.clone();
+        let inner_message = format!($($arg)*);
+        tokio::spawn(async move {
+            inner.log_message(tower_lsp::lsp_types::MessageType::INFO, inner_message).await;
+        });
+    };
+}
+
+#[macro_export]
+macro_rules! lsp_error {
+    ($client:expr, $($arg:tt)*) => {
+        let inner = $client.clone();
+        let inner_message = format!($($arg)*);
+        tokio::spawn(async move {
+            inner.log_message(tower_lsp::lsp_types::MessageType::ERROR, inner_message).await;
+        });
+    };
 }
 
 #[async_trait]
 impl LanguageServer for DelphiLsp {
-    async fn initialize(&self, params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
-        ProjectsUpdate::notify(&self.client).await;
-        CompilersUpdate::notify(&self.client).await;
-        if let Some(_init_options) = params.initialization_options {
-            return Ok(InitializeResult {
-                capabilities: ServerCapabilities::default(), // none
-                server_info: Some(ServerInfo {
-                    name: "DDK - Delphi Server".to_string(),
-                    version: Some("0.1.0".to_string()),
-                }),
-            });
-        }
-
-        return Ok(InitializeResult::default());
+    async fn initialize(&self, _params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
+        return Ok(InitializeResult {
+            capabilities: ServerCapabilities::default(), // none
+            server_info: Some(ServerInfo {
+                name: "DDK - Delphi Server".to_string(),
+                version: Some("0.1.0".to_string()),
+            }),
+        });
     }
 
     async fn initialized(&self, _params: InitializedParams) {
-        self.client.log_message(MessageType::INFO, "Delphi LSP Relay server initialized").await;
+        lsp_info!(self.client, "Delphi LSP Relay server initialized");
     }
 
     async fn shutdown(&self) -> jsonrpc::Result<()> {
+        CANCEL_COMPILATION.store(true, Ordering::SeqCst);
         return Ok(())
-    }
-
-    async fn formatting(
-        &self,
-        params: DocumentFormattingParams,
-    ) -> jsonrpc::Result<Option<Vec<TextEdit>>> {
-        let url = params.text_document.uri.clone();
-        let formatter = Formatter::new(url).map_err(|e| {
-            jsonrpc::Error::invalid_params(format!(
-                "Failed to initialize formatter for file {}: {}",
-                params.text_document.uri,
-                e
-            ))
-        })?;
-        let formatted_content = formatter.execute(None).map_err(|e| {
-            jsonrpc::Error::invalid_params(format!(
-                "Failed to format file {}: {}",
-                params.text_document.uri,
-                e
-            ))
-        })?;
-
-        return Ok(Some(vec![TextEdit {
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0,
-                },
-                end: Position {
-                    line: u32::MAX,
-                    character: u32::MAX,
-                },
-            },
-            new_text: formatted_content,
-        }]));
-    }
-
-    async fn range_formatting(
-        &self,
-        params: DocumentRangeFormattingParams,
-    ) -> jsonrpc::Result<Option<Vec<TextEdit>>> {
-        let url = params.text_document.uri.clone();
-        let formatter = Formatter::new(url).map_err(|e| {
-            jsonrpc::Error::invalid_params(format!(
-                "Failed to initialize formatter for file {}: {}",
-                params.text_document.uri,
-                e
-            ))
-        })?;
-        let formatted_content = formatter.execute(Some(params.range)).map_err(|e| {
-            jsonrpc::Error::invalid_params(format!(
-                "Failed to format file {}: {}",
-                params.text_document.uri,
-                e
-            ))
-        })?;
-        return Ok(Some(vec![TextEdit {
-            range: params.range,
-            new_text: formatted_content,
-        }]));
     }
 
     async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
         let client = self.client.clone();
         let settings = params.settings.clone();
         if let Err(error) = projects::update(settings.clone(), client).await {
+            lsp_error!(self.client, "Failed to apply configuration changes: {}", error);
             NotifyError::notify_json(&self.client, format!("Failed to apply configuration changes: {}", error), &settings).await;
         }
+        try_finish_event!(self.client, settings, ());
     }
 }
 
@@ -164,9 +160,11 @@ async fn main() -> Result<()> {
             }
         });
         DelphiLsp::new(client)
-    }).custom_method("projects/compile", DelphiLsp::projects_compile)
-    .custom_method("configuration/fetch", DelphiLsp::configuration_fetch)
-    .custom_method("projects/compile-cancel", DelphiLsp::projects_compile_cancel)
+    })
+        .custom_method("projects/compile", DelphiLsp::projects_compile)
+        .custom_method("configuration/fetch", DelphiLsp::configuration_fetch)
+        .custom_method("projects/compile-cancel", DelphiLsp::projects_compile_cancel)
+        .custom_method("custom/document/format", DelphiLsp::custom_document_format)
         .finish();
 
     Server::new(stdin(), stdout(), socket).serve(service).await;

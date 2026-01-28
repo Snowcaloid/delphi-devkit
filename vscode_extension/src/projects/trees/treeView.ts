@@ -136,9 +136,9 @@ export class WorkspacesTreeView extends DelphiProjectsTreeView {
   }
 
   protected async loadTreeItemsFromDatabase(): Promise<TreeItem[]> {
-    let data = await Runtime.getProjectsData();
+    let data = Runtime.projectsData;
     Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, !!data?.active_project_id);
-    Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!data?.active_project?.exe);
+    Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!Runtime.activeProject?.exe);
     this.workspaceItems = data?.workspaces.map((ws) => new WorkspaceItem(ws)) || [];
     this.workspaceItems = this.workspaceItems.sort((a, b) => a.workspace.sort_rank.localeCompare(b.workspace.sort_rank));
     this.projects = this.workspaceItems.flatMap((ws) => ws.projects);
@@ -170,11 +170,11 @@ export class GroupProjectTreeView extends DelphiProjectsTreeView {
   }
 
   protected async loadTreeItemsFromDatabase(): Promise<TreeItem[]> {
-    const groupProject = (await Runtime.getProjectsData())?.group_project;
+    const groupProject = Runtime.projectsData?.group_project;
     Runtime.setContext(PROJECTS.CONTEXT.IS_GROUP_PROJECT_OPENED, !!groupProject);
     if (groupProject)
       for (const link of groupProject.project_links)
-        if (link.project) {
+        if (Runtime.getProjectOfLink(link)) {
           const item = ProjectItem.fromData(link);
           this.projects.push(item);
         }

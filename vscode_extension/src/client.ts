@@ -1,8 +1,7 @@
 import {
     LanguageClient, LanguageClientOptions, ServerOptions, TransportKind
 } from 'vscode-languageclient/node';
-import { window, workspace } from 'vscode';
-import * as path from 'path';
+import { Disposable, DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider, languages, Range, TextDocument, TextEdit, window, workspace } from 'vscode';
 import { Runtime } from './runtime';
 import { Entities } from './projects/entities';
 import { UUID } from 'crypto';
@@ -29,12 +28,16 @@ export type Change =
 
 export interface Changes {
     changes: Change[];
+}
+
+export interface ChangeSet {
+    changeSet: Changes;
     event_id: UUID;
 }
 
-export function newChanges(changes: Change[], timeout: number = 5000): Changes {
+export function newChanges(changes: Change[], timeout: number = 5000): ChangeSet {
     const id = Runtime.addEvent(timeout);
-    return { changes: changes, event_id: id };
+    return { changeSet: { changes: changes }, event_id: id };
 }
 
 export type CompilerProgressParams = {
@@ -71,6 +74,7 @@ export class DDK_Client {
             debug: { command: serverPath, transport: TransportKind.stdio }
         };
         const clientOptions: LanguageClientOptions = {};
+        // we can't set the documentSelector until we implement the actual LSP
         clientOptions.outputChannelName = 'DDK Server';
         this.client = new LanguageClient(
             'ddk_server',
@@ -84,6 +88,7 @@ export class DDK_Client {
                 Runtime.projectsData = it.projects;
                 await Runtime.projects.workspacesTreeView.refresh();
                 await Runtime.projects.groupProjectTreeView.refresh();
+                await Runtime.projects.compilerStatusBarItem.updateDisplay();
             }
         );
         this.client.onNotification(
@@ -111,16 +116,40 @@ export class DDK_Client {
             this.onCompilerProgress.bind(this)
         );
         await this.client.start();
+        await this.refresh();
+        Runtime.extension.subscriptions.push(...this.createFormattingProvider());
+    }
+
+    public async refresh(): Promise<void> {
         try {
             const data: ConfigurationData = await this.client.sendRequest('configuration/fetch', {});
             Runtime.projectsData = data.projects;
             Runtime.compilerConfigurations = data.compilers;
         } catch (e) {
-            window.showErrorMessage(`Failed to fetch initial configuration from DDK Server: ${e}`);
+            window.showErrorMessage(`Failed to fetch configuration from DDK Server: ${e}`);
         }
     }
 
-    public async projectsDataOverride(data: Entities.ProjectsData): Promise<void> {
+    private createFormattingProvider(): Disposable[] {
+        return [
+            languages.registerDocumentFormattingEditProvider(
+                {
+                    scheme: 'file',
+                    pattern: '**/*.{dpr,dpk,pas,inc}',
+                },
+                new DelphiFormattingProvider(this.client)
+            ),
+            languages.registerDocumentRangeFormattingEditProvider(
+                {
+                    scheme: 'file',
+                    pattern: '**/*.{dpr,dpk,pas,inc}',
+                },
+                new DelphiFormattingProvider(this.client)
+            )
+        ];
+    }
+
+    public async projectsDataOverride(data: Entities.ProjectsData): Promise<boolean> {
         const id = Runtime.addEvent();
         Runtime.projectsData = data;
         await this.client.sendNotification('workspace/didChangeConfiguration', {
@@ -129,10 +158,10 @@ export class DDK_Client {
                 event_id: id
             }
         });
-        await Runtime.waitForEvent(id);
+        return await Runtime.waitForEvent(id);
     }
 
-    public async compilersOverride(data: Entities.CompilerConfigurations): Promise<void> {
+    public async compilersOverride(data: Entities.CompilerConfigurations): Promise<boolean> {
         const id = Runtime.addEvent();
         Runtime.compilerConfigurations = data;
         await this.client.sendNotification('workspace/didChangeConfiguration', {
@@ -141,49 +170,59 @@ export class DDK_Client {
                 event_id: id
             }
         });
-        await Runtime.waitForEvent(id);
+        return await Runtime.waitForEvent(id);
     }
 
-    public async applyChanges(changesArray: Change[]): Promise<void> {
+    public async applyChanges(changesArray: Change[]): Promise<boolean> {
         const changes = newChanges(changesArray);
         await this.client.sendNotification('workspace/didChangeConfiguration', {
-            settings: {
-                changeSet: changes
-            }
+            settings: changes
         });
-        await Runtime.waitForEvent(changes.event_id);
+        return await Runtime.waitForEvent(changes.event_id);
     }
 
-    public async compileProject(rebuild: boolean, projectId: number, projectLinkId?: number): Promise<void> {
+    public async compileProject(rebuild: boolean, projectId: number, projectLinkId?: number): Promise<boolean> {
+        const event = Runtime.addEvent();
         await this.client.sendNotification('projects/compile', {
             type: 'Project',
             project_id: projectId,
             project_link_id: projectLinkId,
             rebuild: rebuild,
+            event_id: event,
         });
+        return await Runtime.waitForEvent(event);
     }
 
-    public async compileAllInWorkspace(rebuild: boolean, workspaceId: number): Promise<void> {
+    public async compileAllInWorkspace(rebuild: boolean, workspaceId: number): Promise<boolean> {
+        const event = Runtime.addEvent();
         await this.client.sendNotification('projects/compile', {
             type: 'AllInWorkspace',
             workspace_id: workspaceId,
             rebuild: rebuild,
+            event_id: event,
         });
+        return await Runtime.waitForEvent(event);
     }
 
-    public async compileAllInGroupProject(rebuild: boolean): Promise<void> {
+    public async compileAllInGroupProject(rebuild: boolean): Promise<boolean> {
+        const event = Runtime.addEvent();
         await this.client.sendNotification('projects/compile', {
             type: 'AllInGroupProject',
             rebuild: rebuild,
+            event_id: event,
         });
+        return await Runtime.waitForEvent(event);
     }
 
-    public async compileFromLink(rebuild: boolean, linkId: number): Promise<void> {
+    public async compileFromLink(rebuild: boolean, linkId: number): Promise<boolean> {
+        const event = Runtime.addEvent();
         await this.client.sendNotification('projects/compile', {
             type: 'FromLink',
             link_id: linkId,
             rebuild: rebuild,
+            event_id: event
         });
+        return await Runtime.waitForEvent(event);
     }
 
     public async onCompilerProgress(params: CompilerProgressParams): Promise<void> {
@@ -210,12 +249,38 @@ export class DDK_Client {
             case 'SingleProjectCompleted':
                 for (const line of params.lines)
                     Runtime.compilerOutputChannel.appendLine(line);
-                const project = (await Runtime.getProjectsData())?.projects.find((p) => p.id === params.project_id);
+                const project = Runtime.projectsData?.projects.find((p) => p.id === params.project_id);
                 if (params.success && project)
                     window.showInformationMessage(`Compilation of project ${project.name} completed successfully.`);
                 else if (project)
                     window.showErrorMessage(`Compilation of project ${project.name} failed with exit code ${params.code}.`);
                 break;
         }
+    }
+}
+
+class DelphiFormattingProvider implements DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider {
+    constructor(private readonly client: LanguageClient) { }
+
+    async provideDocumentRangeFormattingEdits(
+        document: TextDocument,
+        range: Range,
+    ): Promise<TextEdit[]> {
+        return [
+            await this.client.sendRequest('custom/document/format', {
+                content: document.getText(range),
+                range: range,
+            }) as TextEdit
+        ];
+    }
+
+    async provideDocumentFormattingEdits(
+        document: TextDocument,
+    ): Promise<TextEdit[]> {
+        return [
+            await this.client.sendRequest('custom/document/format', {
+                content: document.getText(),
+            }) as TextEdit
+        ];
     }
 }

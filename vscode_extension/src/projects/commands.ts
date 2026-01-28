@@ -29,8 +29,7 @@ export namespace ProjectsCommands {
     }
 
     private static async selectedProjectAction(callback: Coroutine<void, [Entities.ProjectLink]>): Promise<void> {
-      const data = await Runtime.getProjectsData();
-      const project = data.active_project;
+      const project = Runtime.activeProject;
       if (!assertError(project, 'Could not evaluate selected project.')) return;
       const links = project!.links;
       if (!assertError(links.length > 0, 'Selected project has no associated project links.')) return;
@@ -41,25 +40,26 @@ export namespace ProjectsCommands {
 
     private static async compileSelectedProject() {
       await this.selectedProjectAction(async (link) => {
-        await link.compile(false);
+        await Runtime.compileProjectLink(link, false);
       });
     }
 
     private static async recreateSelectedProject() {
       await this.selectedProjectAction(async (link) => {
-        await link.compile(true);
+        await Runtime.compileProjectLink(link, true);
       });
     }
 
     private static async runSelectedProject() {
       await this.selectedProjectAction(async (link) => {
-        if (!link.project?.exe) {
+        const project = Runtime.getProjectOfLink(link);
+        if (!project?.exe) {
           window.showWarningMessage('Selected project has no associated executable to run.');
           return;
         }
         try {
           // Use the system's default application handler to launch the executable
-          await env.openExternal(Uri.file(link.project.exe));
+          await env.openExternal(Uri.file(project.exe));
         } catch (error) {
           window.showErrorMessage(`Failed to launch executable: ${error}`);
         }
@@ -82,15 +82,16 @@ export namespace ProjectsCommands {
         commands.registerCommand(PROJECTS.COMMAND.COMPILE_ALL_FROM_HERE, this.compileAllFromHere.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RECREATE_ALL_FROM_HERE, this.recreateAllFromHere.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.SET_MANUAL_PATH, this.setManualPath.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.DISCOVER_PROJECT_PATHS, this.discoverProjectPaths.bind(this)),
       ];
     }
 
     private static async compile(item: BaseFileItem): Promise<void> {
-      await item.project.link.compile(false);
+      await Runtime.compileProjectLink(item.project.link, false);
     }
 
     private static async recreate(item: BaseFileItem): Promise<void> {
-      await item.project.link.compile(true);
+      await Runtime.compileProjectLink(item.project.link, true);
     }
 
     private static async showInExplorer(item: BaseFileItem): Promise<void> {
@@ -220,6 +221,9 @@ export namespace ProjectsCommands {
       const uri = await window.showOpenDialog({
         canSelectMany: false,
         title: `Select new path for ${item.project.entity.name}.${fileType} file`,
+        filters: {
+          [`${fileType.toUpperCase()} files`]: [fileType],
+        }
       });
       if (!uri) return;
       await Runtime.client.applyChanges([
@@ -232,6 +236,17 @@ export namespace ProjectsCommands {
         }
       ]);
     }
+
+    private static async discoverProjectPaths(item: BaseFileItem): Promise<void> {
+      const project = item.project;
+      if (!assertError(project, 'Could not determine project for the selected item.')) return;
+      await Runtime.client.applyChanges([
+        {
+          type: 'RefreshProject',
+          project_id: project.entity.id
+        }
+      ]);
+    }
   }
 
   export class Compiler {
@@ -240,7 +255,7 @@ export namespace ProjectsCommands {
     }
 
     public static async selectCompilerConfiguration(): Promise<void> {
-      const configurations = await Runtime.getCompilerConfigurations();
+      const configurations = Runtime.compilerConfigurations;
 
       if (Object.keys(configurations).length <= 0) {
         window.showErrorMessage('No compiler configurations found.');
@@ -264,13 +279,13 @@ export namespace ProjectsCommands {
 
       if (!selected) return;
 
-      await Runtime.client.applyChanges([
+      const success = await Runtime.client.applyChanges([
         {
           type: 'SetGroupProjectCompiler',
           compiler: selected.detail
         }
       ]);
-      window.showInformationMessage(`Compiler configuration set to: ${selected?.label}`);
+      if (success) window.showInformationMessage(`Compiler configuration set to: ${selected?.label}`);
     }
   }
 
@@ -282,6 +297,7 @@ export namespace ProjectsCommands {
         commands.registerCommand(PROJECTS.COMMAND.EDIT_DEFAULT_INI, this.editDefaultIni.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.COMPILE_ALL_IN_GROUP_PROJECT, this.compileAllInGroupProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RECREATE_ALL_IN_GROUP_PROJECT, this.recreateAllInGroupProject.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.REFRESH, this.refresh.bind(this)),
       ];
     }
 
@@ -322,6 +338,13 @@ export namespace ProjectsCommands {
     private static async recreateAllInGroupProject(item: TreeItem): Promise<void> {
       await Runtime.client.compileAllInGroupProject(true);
     }
+
+    private static async refresh(): Promise<void> {
+      await Runtime.client.refresh();
+      await Runtime.projects.workspacesTreeView.refresh();
+      await Runtime.projects.groupProjectTreeView.refresh();
+      await Runtime.projects.compilerStatusBarItem.updateDisplay();
+    }
   }
 
   export class Configuration {
@@ -337,11 +360,11 @@ export namespace ProjectsCommands {
 
     private static async addProject(item: TreeItem): Promise<void> {
       const itemInWorkspaceContext = (i: TreeItem) => {
-        return i instanceof WorkspaceItem || (i instanceof BaseFileItem && !!i.project.link.workspace);
+        return i instanceof WorkspaceItem || (i instanceof BaseFileItem && !!Runtime.getWorkspaceOfLink(i.project.link));
       };
       if (!assertError(itemInWorkspaceContext(item), 'This command only works when invoked inside the context of a workspace tree item.')) return;
 
-      const ws = item instanceof WorkspaceItem ? item.workspace : (item as BaseFileItem).project.link.workspace;
+      const ws = item instanceof WorkspaceItem ? item.workspace : Runtime.getWorkspaceOfLink((item as BaseFileItem).project.link);
 
       if (!assertError(ws, 'Selected workspace not found.')) return;
 
@@ -369,7 +392,7 @@ export namespace ProjectsCommands {
     private static async removeProject(item: BaseFileItem): Promise<void> {
       const project = item.project.entity;
       const link = item.project.link;
-      if (!assertError(!!link.workspace, 'Only workspace projects can be removed.')) return;
+      if (!assertError(!!Runtime.getWorkspaceOfLink(link), 'Only workspace projects can be removed.')) return;
 
       const confirm = await window.showWarningMessage(
         `Are you sure you want to remove project ${project.name}? This will not delete any files.`,
@@ -400,7 +423,7 @@ export namespace ProjectsCommands {
         validateInput: (value) => this.checkWorkspaceName(value, data)
       });
       if (!assertError(name, 'Cannot create Workspace without name.')) return;
-      const items = Object.entries(await Runtime.getCompilerConfigurations()).map(([key, cfg]) => ({
+      const items = Object.entries(Runtime.compilerConfigurations).map(([key, cfg]) => ({
         label: cfg.product_name,
         description: cfg.installation_path,
         detail: key
@@ -442,7 +465,7 @@ export namespace ProjectsCommands {
       if (!assertError(item instanceof WorkspaceItem, 'This command can only be invoked on a workspace tree item.')) return;
 
       const ws = item.workspace;
-      const data = await Runtime.getProjectsData();
+      const data = Runtime.projectsData;
       const newName = await window.showInputBox({
         prompt: 'Enter a new name for the workspace',
         placeHolder: 'Workspace Name',
