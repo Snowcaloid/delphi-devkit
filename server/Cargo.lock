@@ -134,6 +134,7 @@ name = "ddk-server"
 version = "2.0.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "dirs",
  "fslock",

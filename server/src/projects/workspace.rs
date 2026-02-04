@@ -23,19 +23,17 @@ impl Workspace {
         }
     }
 
-    pub fn compiler(&self) -> CompilerConfiguration {
-        let mut compilers = {
-            // lock the file only while reading it
-            if let Ok(file_lock) = FileLock::<CompilerConfigurations>::new() {
-                file_lock.file.clone()
-            } else {
-                CompilerConfigurations::default()
-            }
-        };
-        if let Some(compiler) = compilers.remove(&self.compiler_id.to_string()) {
-            return compiler;
+    pub async fn compiler(&self) -> CompilerConfiguration {
+        let compilers = COMPILER_CONFIGURATIONS.read().await;
+        if let Some(compiler) = compilers.get(&self.compiler_id.to_string()) {
+            return compiler.clone();
         }
-        return compilers.remove("12.0").expect(format!("Compiler with id {} not found; should not be possible.", self.compiler_id).as_str());
+        return compilers
+            .get("12.0")
+            .expect(format!(
+                "Compiler with id {} not found; should not be possible.",
+                self.compiler_id).as_str())
+            .clone();
     }
 }
 

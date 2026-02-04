@@ -1,10 +1,13 @@
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use anyhow::Result;
-use ron::ser::PrettyConfig;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::utils::{FileLock, FilePath, Load};
+use crate::state::{COMPILER_CONFIGURATIONS, COMPILER_CONFIGURATIONS_CHANGED, Stateful};
+use crate::utils::{FilePath, Load};
 
 pub(crate) const DEFAULT_COMPILERS: &str = include_str!("presets/default_compilers.ron");
 
@@ -63,6 +66,15 @@ pub struct CompilerConfigurations {
     _compilers: CompilerMap,
 }
 
+impl Stateful for CompilerConfigurations {
+    fn internal_change_flag() -> &'static AtomicBool {
+        &COMPILER_CONFIGURATIONS_CHANGED
+    }
+    fn get_state() -> &'static Arc<RwLock<Self>> {
+        &COMPILER_CONFIGURATIONS
+    }
+}
+
 impl Serialize for CompilerConfigurations {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
@@ -89,18 +101,9 @@ impl CompilerConfigurations {
         Self::load_from_file(&Self::get_file_path())
     }
 
-    pub fn initialize() -> Result<()> {
-        if !Self::get_file_path().exists() {
-            let file_lock: FileLock<Self> = FileLock::new()?;
-            let data = &file_lock.file;
-            data.save()?;
-        }
-        Ok(())
-    }
-
-    pub fn first_available_formatter() -> Option<PathBuf> {
-        let file_lock: FileLock<CompilerConfigurations> = FileLock::new().ok()?;
-        for compiler in file_lock.file._compilers.values() {
+    pub async fn first_available_formatter() -> Option<PathBuf> {
+        let guard = Self::get_state().read().await;
+        for compiler in guard._compilers.values() {
             let path = PathBuf::from(&compiler.installation_path)
                 .join("bin")
                 .join("Formatter.exe");
@@ -163,23 +166,6 @@ impl CompilerConfigurations {
         }
         Ok(())
     }
-
-    pub fn save(&self) -> Result<()> {
-        let path = Self::get_file_path();
-
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| anyhow::anyhow!("Failed to create config directory: {}", e))?;
-        }
-
-        let content = ron::ser::to_string_pretty(&self, PrettyConfig::default()
-            .struct_names(true)
-            .escape_strings(false))
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compilers: {}", e))?;
-        std::fs::write(&path, content)
-            .map_err(|e| anyhow::anyhow!("Failed to write compilers file: {}", e))?;
-        Ok(())
-    }
 }
 
 impl Default for CompilerConfigurations {
@@ -198,15 +184,19 @@ impl Default for CompilerConfigurations {
 impl Load for CompilerConfigurations {}
 
 impl FilePath for CompilerConfigurations {
-    fn get_file_path() -> PathBuf {
-        let path = dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("ddk")
-            .join("compilers.ron");
-        return path;
+    fn get_file_path() -> &'static PathBuf {
+        lazy_static::lazy_static! {
+            static ref PATH: PathBuf = {
+                dirs::config_dir()
+                    .expect("Could not determine config directory")
+                .join("ddk")
+                .join("compilers.ron")
+            };
+        }
+        return &PATH;
     }
 }
 
-pub fn compiler_exists(key: &str) -> bool {
-    CompilerConfigurations::new().contains_key(key)
+pub async fn compiler_exists(key: &str) -> bool {
+    CompilerConfigurations::get_state().read().await._compilers.contains_key(key)
 }

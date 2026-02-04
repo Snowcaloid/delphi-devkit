@@ -1,4 +1,5 @@
 use super::*;
+use crate::state::PROJECTS_DATA;
 use crate::{CompileProjectParams, CompilerProgress, defer_async};
 use anyhow::Result;
 use scopeguard::defer;
@@ -21,15 +22,15 @@ static CODE: AtomicIsize = AtomicIsize::new(-1);
 pub static CANCEL_COMPILATION: AtomicBool = AtomicBool::new(false);
 
 impl Compiler {
-    pub fn new(client: tower_lsp::Client, params: &CompileProjectParams) -> Self {
+    pub async fn new(client: tower_lsp::Client, params: &CompileProjectParams) -> Self {
         Compiler {
             client,
             params: params.clone(),
-            projects_data: FileLock::<ProjectsData>::read_only_copy(),
+            projects_data: PROJECTS_DATA.read().await.clone(),
         }
     }
 
-    fn get_project_parameters<'a>(
+    async fn get_project_parameters<'a>(
         &'a self,
         project_id: usize,
         project_link_id: Option<usize>,
@@ -42,7 +43,7 @@ impl Compiler {
             .ok_or_else(|| anyhow::anyhow!("Project with id {} not found", project_id))?;
         if let Some(link_id) = project_link_id {
             if self.projects_data.is_project_link_in_group_project(link_id) {
-                configuration = self.projects_data.group_projects_compiler();
+                configuration = self.projects_data.group_projects_compiler().await;
             } else if let Some(workspace_id) = self
                 .projects_data
                 .get_workspace_id_containing_project_link(link_id)
@@ -53,7 +54,7 @@ impl Compiler {
                         .ok_or_else(|| {
                             anyhow::anyhow!("Workspace with id {} not found", workspace_id)
                         })?;
-                configuration = workspace.compiler();
+                configuration = workspace.compiler().await;
             } else {
                 anyhow::bail!(
                     "No workspace or group project contains project link with id {}",
@@ -86,7 +87,7 @@ impl Compiler {
                 .projects_data
                 .get_workspace(workspace_id)
                 .ok_or_else(|| anyhow::anyhow!("Workspace with id {} not found", workspace_id))?
-                .compiler();
+                .compiler().await;
         }
         let target = project.get_project_file()?;
         let compiler_name = configuration.product_name.clone();
@@ -116,7 +117,7 @@ impl Compiler {
         });
     }
 
-    fn get_all_workspace_parameters<'a>(
+    async fn get_all_workspace_parameters<'a>(
         &'a self,
         workspace_id: usize,
         rebuild: bool,
@@ -125,7 +126,7 @@ impl Compiler {
             Some(ws) => ws,
             _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
         };
-        let configuration = workspace.compiler();
+        let configuration = workspace.compiler().await;
         let projects = workspace
             .project_links
             .iter()
@@ -162,7 +163,7 @@ impl Compiler {
         });
     }
 
-    fn get_all_group_project_parameters<'a>(
+    async fn get_all_group_project_parameters<'a>(
         &'a self,
         rebuild: bool,
     ) -> Result<CompilationParameters<'a>> {
@@ -170,7 +171,7 @@ impl Compiler {
             Some(gp) => gp,
             _ => anyhow::bail!("No group project defined"),
         };
-        let configuration = self.projects_data.group_projects_compiler();
+        let configuration = self.projects_data.group_projects_compiler().await;
         let projects = group_project
             .project_links
             .iter()
@@ -207,7 +208,7 @@ impl Compiler {
         });
     }
 
-    fn get_from_link_parameters<'a>(
+    async fn get_from_link_parameters<'a>(
         &'a self,
         project_link_id: usize,
         rebuild: bool,
@@ -232,7 +233,7 @@ impl Compiler {
                             })
                     })
                     .collect::<Result<Vec<_>>>()?;
-                configuration = workspace.compiler();
+                configuration = workspace.compiler().await;
                 let project_name = projects
                     .first()
                     .map(|p| p.name.clone())
@@ -280,7 +281,7 @@ impl Compiler {
                             })
                     })
                     .collect::<Result<Vec<_>>>()?;
-                configuration = self.projects_data.group_projects_compiler();
+                configuration = self.projects_data.group_projects_compiler().await;
                 let project_name = projects
                     .first()
                     .map(|p| p.name.clone())
@@ -348,20 +349,20 @@ impl Compiler {
                 project_link_id,
                 rebuild,
                 event_id: _
-            } => self.get_project_parameters(project_id, project_link_id, rebuild)?,
+            } => self.get_project_parameters(project_id, project_link_id, rebuild).await?,
             CompileProjectParams::AllInWorkspace {
                 workspace_id,
                 rebuild,
                 event_id: _
-            } => self.get_all_workspace_parameters(workspace_id, rebuild)?,
+            } => self.get_all_workspace_parameters(workspace_id, rebuild).await?,
             CompileProjectParams::AllInGroupProject { rebuild, event_id: _ } => {
-                self.get_all_group_project_parameters(rebuild)?
+                self.get_all_group_project_parameters(rebuild).await?
             }
             CompileProjectParams::FromLink {
                 project_link_id,
                 rebuild,
                 event_id: _,
-            } => self.get_from_link_parameters(project_link_id, rebuild)?,
+            } => self.get_from_link_parameters(project_link_id, rebuild).await?,
         };
         self.start(&parameters).await?;
         self.do_compile(&parameters).await?;

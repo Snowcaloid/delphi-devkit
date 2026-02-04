@@ -1,7 +1,5 @@
 use serde::{Serialize, Deserialize};
 use std::path::PathBuf;
-use fslock::LockFile;
-use anyhow::Result;
 
 mod document;
 pub use document::*;
@@ -18,7 +16,7 @@ macro_rules! defer_async {
 }
 
 pub trait FilePath {
-    fn get_file_path() -> PathBuf;
+    fn get_file_path() -> &'static PathBuf;
 }
 
 pub trait Load {
@@ -32,48 +30,5 @@ pub trait Load {
             }
         }
         return Self::default();
-    }
-}
-
-pub struct FileLock<T> {
-    pub file: T,
-    _lock: LockFile,
-}
-
-impl<T> FileLock<T> {
-    pub fn new() -> Result<Self>
-    where
-        T: Serialize + FilePath + Load + Default + for<'de> Deserialize<'de>,
-    {
-        let path = T::get_file_path();
-        std::fs::create_dir_all(path.parent().unwrap())?;
-        let mut tries = 100;
-
-        while tries > 0 {
-            tries -= 1;
-            match LockFile::open(&path) {
-                Ok(_lock) => {
-                    let file = T::load_from_file(&path);
-                    return Ok(FileLock {
-                        file,
-                        _lock,
-                    });
-                }
-                Err(_) => {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
-                }
-            }
-        }
-        anyhow::bail!("Failed to acquire lock for file {:?}", path);
-    }
-
-    pub fn read_only_copy() -> T
-    where
-        T: Serialize + FilePath + Load + Default + for<'de> Deserialize<'de>,
-    {
-        if let Ok(lock) = Self::new() {
-            return lock.file;
-        }
-        return T::default()
     }
 }

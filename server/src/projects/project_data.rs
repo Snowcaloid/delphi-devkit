@@ -1,11 +1,13 @@
+use crate::state::{PROJECTS_DATA, PROJECTS_DATA_CHANGED, Stateful};
 use crate::utils::{FilePath, Load};
-
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use super::*;
-use ron::ser::PrettyConfig;
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
 use std::path::PathBuf;
 use std::collections::{HashSet, HashMap};
+use std::sync::atomic::AtomicBool;
 
 enum IdObject {
     Workspace,
@@ -21,6 +23,15 @@ pub struct ProjectsData {
     pub projects: Vec<Project>,
     pub group_project: Option<GroupProject>,
     pub group_project_compiler_id: String,
+}
+
+impl Stateful for ProjectsData {
+    fn internal_change_flag() -> &'static AtomicBool {
+        &PROJECTS_DATA_CHANGED
+    }
+    fn get_state() -> &'static Arc<RwLock<Self>> {
+        &PROJECTS_DATA
+    }
 }
 
 impl Default for ProjectsData {
@@ -41,37 +52,26 @@ impl ProjectsData {
         return Self::load_from_file(&Self::get_file_path());
     }
 
-    pub fn initialize() -> Result<()> {
-        if !Self::get_file_path().exists() {
-            let file_lock: FileLock<Self> = FileLock::new()?;
-            let data = &file_lock.file;
-            data.save()?;
+    pub async fn group_projects_compiler(&self) -> CompilerConfiguration {
+        let compilers = COMPILER_CONFIGURATIONS.read().await;
+        if let Some(compiler) = compilers.get(&self.group_project_compiler_id.to_string()) {
+            return compiler.clone();
         }
-        Ok(())
+        return compilers
+            .get("12.0")
+            .expect(format!(
+                "Compiler with id {} not found; should not be possible.",
+                self.group_project_compiler_id).as_str())
+            .clone();
     }
 
-    pub fn group_projects_compiler(&self) -> CompilerConfiguration {
-        let mut compilers = {
-            // lock the file only while reading it
-            if let Ok(file_lock) = FileLock::<CompilerConfigurations>::new() {
-                file_lock.file.clone()
-            } else {
-                CompilerConfigurations::default()
-            }
-        };
-        if let Some(compiler) = compilers.remove(&self.group_project_compiler_id.to_string()) {
-            return compiler;
-        }
-        return compilers.remove("12.0").expect(format!("Compiler with id {} not found; should not be possible.", self.group_project_compiler_id).as_str());
-    }
-
-    fn validate_compilers(&self) -> Result<()> {
+    async fn validate_compilers(&self) -> Result<()> {
         for workspace in &self.workspaces {
-            if !compiler_exists(&workspace.compiler_id) {
+            if !compiler_exists(&workspace.compiler_id).await {
                 anyhow::bail!("Workspace '{}' has invalid compiler id: {}", workspace.name, workspace.compiler_id);
             }
         }
-        if !compiler_exists(&self.group_project_compiler_id) {
+        if !compiler_exists(&self.group_project_compiler_id).await {
             anyhow::bail!("Group project compiler has invalid id: {}", self.group_project_compiler_id);
         }
         Ok(())
@@ -134,8 +134,8 @@ impl ProjectsData {
         Ok(())
     }
 
-    pub fn validate(&self) -> Result<()> {
-        self.validate_compilers()?;
+    pub async fn validate(&self) -> Result<()> {
+        self.validate_compilers().await?;
         let id_map = self.get_id_map()?;
         self.validate_project_references(&id_map)?;
         let mut workspace_names: HashSet<&String> = HashSet::new();
@@ -149,31 +149,6 @@ impl ProjectsData {
             workspace_names.insert(&workspace.name);
         }
         Ok(())
-    }
-
-    pub fn save(&self) -> Result<()> {
-        let path = Self::projects_data_file_path()?;
-
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| anyhow::anyhow!("Failed to create config directory: {}", e))?;
-        }
-
-        let content = ron::ser::to_string_pretty(&self, PrettyConfig::default()
-            .struct_names(true)
-            .escape_strings(false))
-            .map_err(|e| anyhow::anyhow!("Failed to serialize projects data: {}", e))?;
-        std::fs::write(&path, content)
-            .map_err(|e| anyhow::anyhow!("Failed to write projects data file: {}", e))?;
-        Ok(())
-    }
-
-    fn projects_data_file_path() -> Result<std::path::PathBuf> {
-        let path = dirs::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not determine config directory"))?
-            .join("ddk")
-            .join("projects.ron");
-        return Ok(path)
     }
 
     pub fn next_id(&mut self) -> usize {
@@ -441,8 +416,8 @@ impl ProjectsData {
         return Ok(());
     }
 
-    pub fn new_workspace(&mut self, name: &String, compiler: &String) -> Result<()> {
-        if !compiler_exists(compiler) {
+    pub async fn new_workspace(&mut self, name: &String, compiler: &String) -> Result<()> {
+        if !compiler_exists(compiler).await {
            anyhow::bail!("Compiler not found: {}", compiler);
         }
         let workspace_id = self.next_id();
@@ -509,7 +484,7 @@ impl ProjectsData {
         return Ok(());
     }
 
-    pub fn update_workspace(&mut self, workspace_id: usize, data: &WorkspaceUpdateData) -> Result<()> {
+    pub async fn update_workspace(&mut self, workspace_id: usize, data: &WorkspaceUpdateData) -> Result<()> {
         let workspace = match self.get_workspace_mut(workspace_id) {
             Some(ws) => ws,
             _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
@@ -518,7 +493,7 @@ impl ProjectsData {
             workspace.name = name.clone();
         }
         if let Some(compiler_id) = &data.compiler {
-            if !compiler_exists(compiler_id) {
+            if !compiler_exists(compiler_id).await {
                 anyhow::bail!("Compiler not found: {}", compiler_id);
             }
             workspace.compiler_id = compiler_id.clone();
@@ -620,8 +595,16 @@ impl ProjectsData {
 }
 
 impl FilePath for ProjectsData {
-    fn get_file_path() -> PathBuf {
-        return Self::projects_data_file_path().unwrap();
+    fn get_file_path() -> &'static PathBuf {
+        lazy_static::lazy_static! {
+            static ref PATH: PathBuf = {
+                dirs::config_dir()
+                    .expect("Could not determine config directory")
+                    .join("ddk")
+                    .join("projects.ron")
+            };
+        }
+        return &PATH;
     }
 }
 

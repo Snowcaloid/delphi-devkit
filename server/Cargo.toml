@@ -13,6 +13,7 @@ readme = "../README.md"
 
 [dependencies]
 anyhow = "1.0.100"
+async-trait = "0.1.89"
 chrono = "0.4.43"
 dirs = "6.0.0"
 fslock = "0.2.1"
@@ -27,5 +28,5 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 substring = "1.4.5"
 tempfile = "3.24.0"
-tokio = { version = "1.49.0", features = ["io-std", "io-util", "macros", "process", "rt-multi-thread", "tokio-macros"] }
+tokio = { version = "1.49.0", features = ["io-std", "io-util", "macros", "process", "rt-multi-thread", "time", "tokio-macros"] }
 tower-lsp = { version = "0.20.0" }

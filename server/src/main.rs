@@ -4,6 +4,7 @@ pub mod lsp_types;
 pub mod files;
 pub mod utils;
 pub mod format;
+pub mod state;
 
 use std::sync::atomic::Ordering;
 use anyhow::Result;
@@ -14,6 +15,7 @@ use tower_lsp::lsp_types::*;
 
 pub(crate) use lsp_types::*;
 use projects::*;
+use state::*;
 use crate::format::Formatter;
 
 #[derive(Debug, Clone)]
@@ -30,7 +32,7 @@ impl DelphiLsp {
         &self,
         params: CompileProjectParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
-        if let Err(e) = Compiler::new(self.client.clone(), &params).compile().await {
+        if let Err(e) = Compiler::new(self.client.clone(), &params).await.compile().await {
             NotifyError::notify(&self.client, format!("Failed to compile project: {}", e), None).await;
         }
         try_finish_event!(self.client, params);
@@ -66,7 +68,7 @@ impl DelphiLsp {
                     error
                 ))
             })?;
-        let new_text = formatter.execute().map_err(|error| {
+        let new_text = formatter.execute().await.map_err(|error| {
             lsp_error!(self.client, "Failed to format document: {}", error);
             jsonrpc::Error::invalid_params(format!(
                 "Failed to format document: {}",

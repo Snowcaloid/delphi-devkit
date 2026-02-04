@@ -1,6 +1,8 @@
+use crate::state::Stateful;
 use anyhow::Result;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
+use std::sync::atomic::Ordering;
 use tokio::sync::mpsc;
 use tower_lsp::lsp_types::MessageType;
 use tower_lsp::Client;
@@ -10,7 +12,7 @@ use crate::utils::FilePath;
 use super::*;
 
 fn create_watcher<F>(
-    path: PathBuf,
+    path: &PathBuf,
     mut on_event: F,
 ) -> Result<RecommendedWatcher>
 where
@@ -76,6 +78,10 @@ pub fn start_file_watchers(client: Client) -> Result<()> {
 async fn handle_projects_data_change(event: Event, client: &Client) {
     use notify::EventKind;
 
+    if ProjectsData::internal_change_flag().swap(false, Ordering::SeqCst) {
+        return;
+    }
+
     match event.kind {
         EventKind::Modify(_) => {
             client.log_message(
@@ -102,6 +108,10 @@ async fn handle_projects_data_change(event: Event, client: &Client) {
 
 async fn handle_compiler_config_change(event: Event, client: &Client) {
     use notify::EventKind;
+
+    if CompilerConfigurations::internal_change_flag().swap(false, Ordering::SeqCst) {
+        return;
+    }
 
     match event.kind {
         EventKind::Modify(_) => {

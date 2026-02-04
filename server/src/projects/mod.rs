@@ -10,7 +10,8 @@ mod compiler;
 
 use anyhow::Result;
 use serde_json::Value;
-use crate::{EventDone, lexorank::{HasLexoRank, LexoRank}, utils::FileLock};
+use crate::{EventDone, lexorank::{HasLexoRank, LexoRank}, state::{COMPILER_CONFIGURATIONS, PROJECTS_DATA}};
+use crate::state::*;
 
 pub use compiler_config::*;
 pub use project_data::*;
@@ -96,10 +97,10 @@ pub trait ProjectLinkContainer: Named {
 
 pub async fn update(json: Value, client: tower_lsp::Client) -> Result<()> {
     if let Some(inner) = json.get("projectsData") {
-        let mut file_lock: FileLock<ProjectsData> = FileLock::new()?;
-        file_lock.file = serde_json::from_value(inner.clone())?;
-        file_lock.file.validate()?;
-        file_lock.file.save()?;
+        let mut projects_data = PROJECTS_DATA.write().await;
+        *projects_data = serde_json::from_value(inner.clone())?;
+        projects_data.validate().await?;
+        projects_data.save().await?;
         EventDone::notify_json(&client, &json).await;
         return Ok(());
     }
@@ -112,13 +113,12 @@ pub async fn update(json: Value, client: tower_lsp::Client) -> Result<()> {
         return Ok(());
     }
     if let Some(inner) = json.get("compilerConfigurations") {
-        let file_lock: FileLock<CompilerConfigurations> = FileLock::new()?;
-        let mut compilers = file_lock.file;
+        let mut compilers = COMPILER_CONFIGURATIONS.write().await;
         let compiler_configurations: CompilerConfigurations =
             serde_json::from_value(inner.clone())?;
         compilers.overwrite(compiler_configurations);
         compilers.validate()?;
-        compilers.save()?;
+        compilers.save().await?;
         EventDone::notify_json(&client, &json).await;
         return Ok(());
     }

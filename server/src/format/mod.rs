@@ -26,7 +26,7 @@ impl Formatter {
         Ok(Formatter { config_path, content })
     }
 
-    pub fn execute(self) -> Result<String> {
+    pub async fn execute(self) -> Result<String> {
         let temp_file = tempfile::NamedTempFile::with_suffix(".pas")?;
         std::fs::write(temp_file.path(), &self.content)?;
         let temp_file_path = temp_file.into_temp_path();
@@ -34,6 +34,7 @@ impl Formatter {
             std::fs::remove_file(&temp_file_path).ok();
         }
         let formatter = CompilerConfigurations::first_available_formatter()
+            .await
             .context("No formatters found (all compiler paths have been searched)")?;
         let status = std::process::Command::new(&formatter)
             .args(&["-e", "utf-8", "-config"])
