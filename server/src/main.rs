@@ -33,6 +33,7 @@ impl DelphiLsp {
         params: CompileProjectParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
         if let Err(e) = Compiler::new(self.client.clone(), &params).await.compile().await {
+            lsp_error!(self.client, "Failed to compile project: {}", e);
             NotifyError::notify(&self.client, format!("Failed to compile project: {}", e), None).await;
         }
         try_finish_event!(self.client, params);

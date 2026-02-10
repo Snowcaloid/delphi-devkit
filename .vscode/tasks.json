@@ -22,6 +22,7 @@
         {
             "type": "npm",
             "script": "watch:esbuild",
+            "path": "vscode_extension",
             "group": "build",
             "problemMatcher": "$esbuild-watch",
             "isBackground": true,
@@ -34,6 +35,7 @@
 		{
             "type": "npm",
             "script": "watch:tsc",
+            "path": "vscode_extension",
             "group": "build",
             "problemMatcher": "$tsc-watch",
             "isBackground": true,
@@ -44,13 +46,20 @@
             }
         },
 		{
+            "type": "npm",
+            "script": "compile",
+            "path": "vscode_extension",
+            "group": "build"
+        },
+		{
 			"type": "npm",
 			"script": "watch-tests",
+			"path": "vscode_extension",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"presentation": {
 				"reveal": "never",
-				"group": "watchers",
+				"group": "watchers"
 			},
 			"group": "build"
 		},
@@ -67,7 +76,7 @@
         {
             "label": "cargoBuild",
             "type": "shell",
-            "command": "cargo build --release",
+            "command": "cargo build",
             "options": {
                 "cwd": "${workspaceFolder}/server"
             }

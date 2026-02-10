@@ -2,13 +2,17 @@ use super::*;
 use crate::state::PROJECTS_DATA;
 use crate::{CompileProjectParams, CompilerProgress, defer_async};
 use anyhow::Result;
+use rust_search::SearchBuilder;
 use scopeguard::defer;
+use tempfile::env::temp_dir;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tower_lsp::lsp_types::{Diagnostic, Url};
+use std::collections::HashMap;
+use tokio::fs::File;
 
 pub struct Compiler {
     client: tower_lsp::Client,
@@ -409,7 +413,7 @@ impl Compiler {
             );
 
             defer_async! {
-                if single_project {
+                if !single_project {
                     CompilerProgress::notify_single_project_completed(
                         &client_deferred,
                         project_id,
@@ -429,22 +433,34 @@ impl Compiler {
                     rsvars_path.to_string_lossy()
                 );
             }
-            let rsvars_path = rsvars_path.to_string_lossy();
             let project_file = project.get_project_file()?;
-            let args = format!(
-                "/t:Clean,{} {}",
-                if parameters.rebuild { "Build" } else { "Make" },
-                parameters.configuration.build_arguments.join(" ")
-            );
-            let mut child_process = Command::new("cmd")
-                .args([
-                    "/C",
-                    format!(
-                        "call {rsvars_path} && msbuild \"{}\" {args}",
-                        project_file.to_string_lossy()
-                    )
-                    .as_str(),
-                ])
+            let args = parameters.configuration.build_arguments.join(" ");
+            //let msbuild_path = find_msbuild()?;
+            let temp_script_path = temp_dir().join("compiler.ps1");
+            let temp_script_path2 = temp_script_path.clone();
+            defer_async! {
+                tokio::fs::remove_file(&temp_script_path2).await
+            }
+            {
+                let mut script_file = File::create(&temp_script_path).await?;
+                script_file
+                    .write_all(include_str!("../../assets/compiler.ps1").as_bytes())
+                    .await?;
+                script_file.flush().await?;
+            }
+            let mut command = Command::new("powershell.exe");
+            command
+                .arg("&")
+                .arg(&temp_script_path)
+                .arg("-ProjectPath")
+                .arg(format!("\"{}\"", project_file.display()))
+                .arg("-RSVarsPath")
+                .arg(format!("\"{}\"", rsvars_path.display()))
+                .arg("-BuildArguments")
+                .arg(format!("\"{}\"", args));
+
+            dbg!(&command);
+            let mut child_process = command
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?;
@@ -519,6 +535,37 @@ impl Compiler {
     }
 }
 
+fn find_msbuild() -> Result<String> {
+    let mut search: Vec<String> = SearchBuilder::default()
+        .location(r"C:\Windows\Microsoft.NET\Framework\")
+        .search_input("msbuild.exe")
+        .depth(2)
+        .ignore_case()
+        .build()
+        .collect();
+    search.retain(|path| path.to_lowercase().ends_with("msbuild.exe"));
+    search.sort_by(
+        |left, right| {
+            let left_version = left
+                .split('\\')
+                .rev()
+                .nth(1)
+                .unwrap_or("v0");
+            let right_version = right
+                .split('\\')
+                .rev()
+                .nth(1)
+                .unwrap_or("v0");
+            right_version.cmp(left_version)
+        });
+    if let Some(msbuild_path) = search.first() {
+        return Ok(msbuild_path.clone());
+    }
+    anyhow::bail!(
+        "Cannot find msbuild.exe in C:\\Windows\\Microsoft.NET\\Framework\\. Please ensure that MSBuild is installed and try again."
+    );
+}
+
 async fn publish_diagnostics(
     client: &tower_lsp::Client,
     file: &str,
@@ -587,9 +634,9 @@ impl CompHeader {
         let target = format_line(format!("→ {} ←", self.target.as_str()).as_str(), 70);
         let compiler = format_line(format!("🛠️ Compiler: {}", self.compiler_name).as_str(), 70);
         let action_str = if self.rebuild {
-            "Rebuild (Clean,Build)"
+            "Rebuild (Clean;Build)"
         } else {
-            "Compile (Clean,Make)"
+            "Compile (Clean;Make)"
         };
         let action = format_line(format!("🗲 Action: {}", action_str).as_str(), 70);
         vec![
@@ -642,9 +689,9 @@ impl CompFooter {
         let target = format_line(format!("→ {} ←", self.target.as_str()).as_str(), 70);
         let compiler = format_line(format!("🛠️ Compiler: {}", self.compiler_name).as_str(), 70);
         let action_str = if self.rebuild {
-            "Rebuild (Clean,Build)"
+            "Rebuild (Clean;Build)"
         } else {
-            "Compile (Clean,Make)"
+            "Compile (Clean;Make)"
         };
         let action = format_line(format!("🗲 Action: {}", action_str).as_str(), 70);
         let status_str = if (self.success)() {
@@ -701,9 +748,9 @@ impl SingleProjectCompFooter {
         let target = format_line(&format!("→ {} ←", self.target), 70);
         let compiler = format_line(&format!("🛠️ Compiler: {}", self.compiler_name), 70);
         let action_str = if self.rebuild {
-            "Rebuild (Clean,Build)"
+            "Rebuild (Clean;Build)"
         } else {
-            "Compile (Clean,Make)"
+            "Compile (Clean;Make)"
         };
         let action = format_line(&format!("🗲 Action: {}", action_str), 70);
         let status_str = if (self.success)() {

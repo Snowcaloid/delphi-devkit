@@ -41,18 +41,18 @@ export function newChanges(changes: Change[], timeout: number = 5000): ChangeSet
 }
 
 export type CompilerProgressParams = {
-    type: 'Start',
+    kind: 'Start',
     lines: string[],
 } | {
-    type: 'Stdout' | 'Stderr',
+    kind: 'Stdout' | 'Stderr',
     line: string,
 } | {
-    type: 'Completed',
+    kind: 'Completed',
     success: boolean,
     code: number,
     lines: string[],
 } | {
-    type: 'SingleProjectCompleted',
+    kind: 'SingleProjectCompleted',
     project_id: number,
     success: boolean,
     code: number,
@@ -225,10 +225,10 @@ export class DDK_Client {
         return await Runtime.waitForEvent(event);
     }
 
-    public async onCompilerProgress(params: CompilerProgressParams): Promise<void> {
-        switch (params.type) {
+    public onCompilerProgress(params: CompilerProgressParams) {
+        switch (params.kind) {
             case 'Start':
-                await workspace.getConfiguration('output.smartScroll').update('enabled', false);
+                workspace.getConfiguration('output.smartScroll').update('enabled', false);
                 Runtime.compilerOutputChannel.clear();
                 Runtime.compilerOutputChannel.show(true);
                 for (const line of params.lines)
