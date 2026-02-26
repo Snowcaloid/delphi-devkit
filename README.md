@@ -1,4 +1,4 @@
-# Delphi DevKit README
+# Delphi DevKit
 
 [![GitHub Release](https://img.shields.io/github/v/release/valentin-baron/delphi-devkit?include_prereleases&label=latest)](https://github.com/valentin-baron/delphi-devkit/releases)
 
