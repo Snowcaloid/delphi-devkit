@@ -638,8 +638,12 @@ struct CompilationParameters<'compiler> {
 unsafe impl Send for CompilationParameters<'_> {}
 unsafe impl Sync for CompilationParameters<'_> {}
 
-const BANNER_TOP: &str    = "╒══════════════════════════════════════════════════════════════════════╕";
-const BANNER_BOTTOM: &str = "╘══════════════════════════════════════════════════════════════════════╛";
+const BANNER_TOP: &str          = "╒══════════════════════════════════════════════════════════════════════╕";
+const BANNER_BOTTOM: &str       = "╘══════════════════════════════════════════════════════════════════════╛";
+const BANNER_ERROR_TOP: &str     = "╔══════════════════════════════════════════════════════════════════════╗";
+const BANNER_ERROR_BOTTOM: &str  = "╚══════════════════════════════════════════════════════════════════════╝";
+const BANNER_SUCCESS_TOP: &str   = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓";
+const BANNER_SUCCESS_BOTTOM: &str= "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛";
 
 #[derive(Debug, Clone)]
 struct CompBanner {
@@ -684,15 +688,16 @@ impl CompBanner {
     }
 
     fn into_footer_vec(&self) -> Vec<String> {
-        let status_str = if compiler_state::is_success() {
-            "✅ SUCCESS"
+        let success = compiler_state::is_success();
+        let (status_str, top, bottom) = if success {
+            ("✅ SUCCESS", BANNER_SUCCESS_TOP, BANNER_SUCCESS_BOTTOM)
         } else {
-            "❌ FAILED"
+            ("❌ FAILED", BANNER_ERROR_TOP, BANNER_ERROR_BOTTOM)
         };
-        let mut lines = vec![BANNER_TOP.to_string()];
+        let mut lines = vec![top.to_string()];
         lines.extend(self.base_lines());
         lines.push(format_line(&format!("Status: {}", status_str), 70));
-        lines.push(BANNER_BOTTOM.to_string());
+        lines.push(bottom.to_string());
         lines
     }
 }

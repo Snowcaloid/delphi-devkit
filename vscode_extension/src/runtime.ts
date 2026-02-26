@@ -26,7 +26,7 @@ export abstract class Runtime {
 
   static async initialize(context: ExtensionContext) {
     this.extension = context;
-    this.compilerOutputChannel = window.createOutputChannel('DDK Compiler');
+    this.compilerOutputChannel = window.createOutputChannel('DDK Compiler', 'ddk.compiler');
     this.client = new DDK_Client();
     await this.client.initialize();
     this.projects = new ProjectsFeature();

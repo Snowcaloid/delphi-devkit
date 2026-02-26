@@ -2,16 +2,17 @@ import { CancellationToken, DocumentLink, DocumentLinkProvider, TextDocument, Ra
 import { fileExists } from "../../utils";
 
 export namespace CompilerOutputLanguage {
-  //   1_______    2____  3_____  4_________________        5_   5_______________________
-  // ( 19:07:48 ) [ERROR] [E1234] C:\Path\To\File.pas (line 42): Description of the error
-  export const PATTERN = /^\( ([^)]+?) \) \[([^\]]+)\] \[([^\]]+)\] (.*?):(\d+) - (.*)$/;
+  //   1________  2_____  3_____  4________________________  5_  6_ (opt)
+  // 19:07:48.123: [ERROR][E1234] C:\Path\To\File.pas:42(:5)? - Description of the error
+  export const PATTERN = /^(\S+?):\s+\[([^\]]+)\]\[([^\]]+)\]\s+(.*?):(\d+)(?::(\d+))?\s+-\s+(.*)$/;
   export const CONTENT = 0;
   export const TIME = 1;
   export const SEVERITY = 2;
   export const CODE = 3;
   export const FILE = 4;
   export const LINE = 5;
-  export const MESSAGE = 6;
+  export const COLUMN = 6;
+  export const MESSAGE = 7;
 
   export const CODE_URL = 'https://docwiki.embarcadero.com/RADStudio/index.php?search=Delphi+';
 }

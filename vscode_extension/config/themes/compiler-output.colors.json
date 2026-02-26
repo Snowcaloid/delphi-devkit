@@ -4,7 +4,7 @@
   "type": "dark",
   "tokenColors": [
     {
-      "scope": "markup.error.delphi",
+      "scope": "invalid.illegal.error.delphi",
       "settings": {
         "foreground": "#ff6b6b"
       }
@@ -40,9 +40,46 @@
       }
     },
     {
-      "scope": "constant.numeric.line-number.delphi",
+      "scope": "constant.numeric.line-number.delphi, constant.numeric.column-number.delphi",
       "settings": {
         "foreground": "#ffeaa7"
+      }
+    },
+    {
+      "scope": "constant.other.timestamp.delphi",
+      "settings": {
+        "foreground": "#636e72"
+      }
+    },
+    {
+      "scope": "string.unquoted.message.delphi",
+      "settings": {
+        "foreground": "#dfe6e9"
+      }
+    },
+    {
+      "scope": "entity.name.type.quoted-identifier.delphi",
+      "settings": {
+        "foreground": "#e17cf5",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": "keyword.other.banner.delphi",
+      "settings": {
+        "foreground": "#74b9ff"
+      }
+    },
+    {
+      "scope": "markup.success.banner.delphi",
+      "settings": {
+        "foreground": "#00b894"
+      }
+    },
+    {
+      "scope": "markup.error.banner.delphi",
+      "settings": {
+        "foreground": "#ff6b6b"
       }
     }
   ]

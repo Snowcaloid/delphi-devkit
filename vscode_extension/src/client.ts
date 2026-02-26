@@ -7,6 +7,8 @@ import { Entities } from './projects/entities';
 import { UUID } from 'crypto';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { CompilerOutputDefinitionProvider } from './projects/compiler/language';
+import { PROJECTS } from './constants';
 
 export type Change =
     | { type: 'NewProject', file_path: string, workspace_id: number }
@@ -68,6 +70,7 @@ interface ConfigurationData {
 
 export class DDK_Client {
     private client: LanguageClient;
+    private compilerLinkProvider = new CompilerOutputDefinitionProvider();
 
     public async initialize(): Promise<void> {
         const serverPath = this.resolveServerPath();
@@ -119,7 +122,13 @@ export class DDK_Client {
         );
         await this.client.start();
         await this.refresh();
-        Runtime.extension.subscriptions.push(...this.createFormattingProvider());
+        Runtime.extension.subscriptions.push(
+            ...this.createFormattingProvider(),
+            languages.registerDocumentLinkProvider(
+                { language: PROJECTS.LANGUAGES.COMPILER },
+                this.compilerLinkProvider
+            )
+        );
     }
 
     public async refresh(): Promise<void> {
@@ -230,6 +239,7 @@ export class DDK_Client {
     public onCompilerProgress(params: CompilerProgressParams) {
         switch (params.kind) {
             case 'Start':
+                this.compilerLinkProvider.compilerIsActive = true;
                 // generally, we need smart scroll to be enabled so that the output channel
                 // scrolls to the end when new lines are added. We do not re-enable it because
                 // we are likely the only extension that actually really cares about the setting.
@@ -244,6 +254,7 @@ export class DDK_Client {
                 Runtime.compilerOutputChannel.appendLine(params.line);
                 break;
             case 'Completed':
+                this.compilerLinkProvider.compilerIsActive = false;
                 for (const line of params.lines)
                     Runtime.compilerOutputChannel.appendLine(line);
                 if (params.success)

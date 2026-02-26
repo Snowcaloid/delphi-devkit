@@ -4,73 +4,110 @@
   "scopeName": "text.output.delphi-compiler",
   "patterns": [
     {
+      "comment": "Compiler diagnostic line: time: [SEVERITY][CODE] file:line(:col)? - message",
       "name": "meta.compiler-message.delphi",
-      "match": "^(\\( [^)]+? \\)) (\\[(ERROR|WARN|INFO|HINT)\\]) (\\[[A-Z]\\d+\\]) ((?:[A-Za-z]:|/)[^:]+):(\\d+) - (.*)$",
+      "match": "^(\\S+?):\\s+(\\[(ERROR|WARN|INFO|HINT)\\])(\\[[A-Z]\\d+\\])\\s+((?:[A-Za-z]:|/)[^:]+):(\\d+)(?::(\\d+))?\\s+-\\s+(.*)$",
       "captures": {
         "1": {
-          "name": "constant.timestamp"
+          "name": "constant.other.timestamp.delphi"
         },
         "2": {
           "name": "keyword.control.severity.delphi",
           "patterns": [
             {
               "match": "\\[ERROR\\]",
-              "name": "invalid.illegal.error"
+              "name": "invalid.illegal.error.delphi"
             },
             {
               "match": "\\[WARN\\]",
-              "name": "meta.return-type.warning"
+              "name": "markup.warning.delphi"
             },
             {
               "match": "\\[INFO\\]",
-              "name": "meta.preprocessor.string.info"
+              "name": "markup.info.delphi"
             },
             {
               "match": "\\[HINT\\]",
-              "name": "constant.numeric.hint"
+              "name": "markup.hint.delphi"
             }
           ]
         },
         "4": {
-          "name": "constant.numeric.code"
+          "name": "constant.other.error-code.delphi"
         },
         "5": {
-          "name": "string.other.link"
+          "name": "string.other.filepath.delphi"
         },
         "6": {
-          "name": "variable.parameter.line-number"
+          "name": "constant.numeric.line-number.delphi"
         },
         "7": {
-          "name": "comment.message"
+          "name": "constant.numeric.column-number.delphi"
+        },
+        "8": {
+          "name": "string.unquoted.message.delphi",
+          "patterns": [
+            {
+              "match": "'[^\\s']+'",
+              "name": "entity.name.type.quoted-identifier.delphi"
+            }
+          ]
         }
       }
     },
     {
-      "name": "string.other.link",
-      "match": "((?:[A-Za-z]:|/)[^:]+):(\\d+)"
-    },
-    {
-      "name": "constant.numeric.line-number",
-      "match": "\\(line\\s+\\d+\\)"
-    },
-    {
-      "name": "constant.numeric",
-      "match": "\\[[A-Z]\\d+\\]"
-    },
-    {
-      "name": "keyword.other.header",
-      "begin": "\\u2552",
-      "end": "\\u255B",
+      "comment": "Success banner (uses heavy box-drawing: ┏━┓ / ┗━┛)",
+      "name": "markup.success.banner.delphi",
+      "begin": "\u250f",
+      "end": "\u251b",
       "beginCaptures": {
-        "0": {
-          "name": "keyword.other.header.start"
-        }
+        "0": { "name": "markup.success.banner.delphi" }
       },
       "endCaptures": {
-        "0": {
-          "name": "keyword.other.header.end"
+        "0": { "name": "markup.success.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "markup.success.banner.delphi"
         }
-      }
+      ]
+    },
+    {
+      "comment": "Error banner (uses double box-drawing: ╔═╗ / ╚═╝)",
+      "name": "markup.error.banner.delphi",
+      "begin": "\u2554",
+      "end": "\u255d",
+      "beginCaptures": {
+        "0": { "name": "markup.error.banner.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "markup.error.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "markup.error.banner.delphi"
+        }
+      ]
+    },
+    {
+      "comment": "Normal banner (uses single/double box-drawing: ╒═╕ / ╘═╛)",
+      "name": "keyword.other.banner.delphi",
+      "begin": "\u2552",
+      "end": "\u255b",
+      "beginCaptures": {
+        "0": { "name": "keyword.other.banner.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "keyword.other.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "keyword.other.banner.delphi"
+        }
+      ]
     }
   ]
 }
