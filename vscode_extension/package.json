@@ -589,6 +589,14 @@
           {
             "scope": "markup.cancelled.banner.delphi",
             "settings": { "foreground": "#e17055" }
+          },
+          {
+            "scope": "markup.multi.banner.delphi",
+            "settings": { "foreground": "#a29bfe" }
+          },
+          {
+            "scope": "markup.project.banner.delphi",
+            "settings": { "foreground": "#636e72" }
           }
         ]
       }

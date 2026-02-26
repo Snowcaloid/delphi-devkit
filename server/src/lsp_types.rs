@@ -139,6 +139,10 @@ pub enum CompilerProgressParams {
         code: i32,
         lines: Vec<String>,
     },
+    SingleProjectStarted {
+        project_id: usize,
+        lines: Vec<String>,
+    },
     SingleProjectCompleted {
         project_id: usize,
         success: bool,
@@ -177,6 +181,17 @@ impl CompilerProgress {
             success,
             cancelled,
             code,
+            lines,
+        }).await;
+    }
+
+    pub async fn notify_single_project_started(
+        client: &tower_lsp::Client,
+        project_id: usize,
+        lines: Vec<String>
+    ) {
+        client.send_notification::<CompilerProgress>(CompilerProgressParams::SingleProjectStarted {
+            project_id,
             lines,
         }).await;
     }

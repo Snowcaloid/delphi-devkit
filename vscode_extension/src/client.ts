@@ -57,6 +57,10 @@ export type CompilerProgressParams = {
     code: number,
     lines: string[],
 } | {
+    kind: 'SingleProjectStarted',
+    project_id: number,
+    lines: string[],
+} | {
     kind: 'SingleProjectCompleted',
     project_id: number,
     success: boolean,
@@ -270,6 +274,10 @@ export class DDK_Client {
             case 'Stdout':
             case 'Stderr':
                 Runtime.compilerOutputChannel.appendLine(params.line);
+                break;
+            case 'SingleProjectStarted':
+                for (const line of params.lines)
+                    Runtime.compilerOutputChannel.appendLine(line);
                 break;
             case 'Completed':
                 this.compilerLinkProvider.compilerIsActive = false;

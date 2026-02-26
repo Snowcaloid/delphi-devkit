@@ -110,6 +110,42 @@
       ]
     },
     {
+      "comment": "Multi-project main banner (uses light+heavy: ┍━┑ / ┕━┙)",
+      "name": "markup.multi.banner.delphi",
+      "begin": "\u250d",
+      "end": "\u2519",
+      "beginCaptures": {
+        "0": { "name": "markup.multi.banner.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "markup.multi.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "markup.multi.banner.delphi"
+        }
+      ]
+    },
+    {
+      "comment": "Individual project banner within multi (uses light: ┌─┐ / └─┘)",
+      "name": "markup.project.banner.delphi",
+      "begin": "\u250c",
+      "end": "\u2518",
+      "beginCaptures": {
+        "0": { "name": "markup.project.banner.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "markup.project.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "markup.project.banner.delphi"
+        }
+      ]
+    },
+    {
       "comment": "Normal banner (uses single/double box-drawing: ╒═╕ / ╘═╛)",
       "name": "keyword.other.banner.delphi",
       "begin": "\u2552",
