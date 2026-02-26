@@ -78,7 +78,11 @@ export class DDK_Client {
             run: { command: serverPath, transport: TransportKind.stdio },
             debug: { command: serverPath, transport: TransportKind.stdio }
         };
-        const clientOptions: LanguageClientOptions = {};
+        const clientOptions: LanguageClientOptions = {
+            initializationOptions: {
+                encoding: workspace.getConfiguration(PROJECTS.SETTINGS.SECTION).get<string>(PROJECTS.SETTINGS.COMPILER_ENCODING, 'oem')
+            }
+        };
         // we can't set the documentSelector until we implement the actual LSP
         clientOptions.outputChannelName = 'DDK Server';
         this.client = new LanguageClient(
@@ -127,7 +131,14 @@ export class DDK_Client {
             languages.registerDocumentLinkProvider(
                 { language: PROJECTS.LANGUAGES.COMPILER },
                 this.compilerLinkProvider
-            )
+            ),
+            workspace.onDidChangeConfiguration(e => {
+                if (e.affectsConfiguration(`${PROJECTS.SETTINGS.SECTION}.${PROJECTS.SETTINGS.COMPILER_ENCODING}`)) {
+                    const encoding = workspace.getConfiguration(PROJECTS.SETTINGS.SECTION)
+                        .get<string>(PROJECTS.SETTINGS.COMPILER_ENCODING, 'oem');
+                    this.client.sendNotification('notifications/settings/encoding', { encoding });
+                }
+            })
         );
     }
 

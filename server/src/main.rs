@@ -17,6 +17,8 @@ use projects::*;
 use state::*;
 use crate::format::Formatter;
 
+mod encoding;
+
 #[derive(Debug, Clone)]
 struct DelphiLsp {
     client: Client,
@@ -54,6 +56,17 @@ impl DelphiLsp {
             projects: ProjectsData::new(),
             compilers: CompilerConfigurations::new(),
         })
+    }
+
+    async fn settings_encoding(
+        &self,
+        params: serde_json::Value,
+    ) -> tower_lsp::jsonrpc::Result<()> {
+        if let Some(enc) = params.get("encoding").and_then(|v| v.as_str()) {
+            encoding::set_encoding(enc);
+            lsp_info!(self.client, "Compiler encoding changed to: {}", enc);
+        }
+        Ok(())
     }
 
     async fn custom_document_format(
@@ -118,7 +131,12 @@ macro_rules! lsp_error {
 
 #[async_trait]
 impl LanguageServer for DelphiLsp {
-    async fn initialize(&self, _params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
+        if let Some(opts) = params.initialization_options {
+            if let Some(enc) = opts.get("encoding").and_then(|v| v.as_str()) {
+                encoding::set_encoding(enc);
+            }
+        }
         return Ok(InitializeResult {
             capabilities: ServerCapabilities::default(), // none
             server_info: Some(ServerInfo {
@@ -167,6 +185,7 @@ async fn main() -> Result<()> {
         .custom_method("configuration/fetch", DelphiLsp::configuration_fetch)
         .custom_method("projects/compile-cancel", DelphiLsp::projects_compile_cancel)
         .custom_method("custom/document/format", DelphiLsp::custom_document_format)
+        .custom_method("notifications/settings/encoding", DelphiLsp::settings_encoding)
         .finish();
 
     Server::new(stdin(), stdout(), socket).serve(service).await;

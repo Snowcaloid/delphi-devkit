@@ -16,6 +16,11 @@ export namespace PROJECTS {
       export const CONFIGURATIONS = `${NS}.configurations`;
     }
   }
+
+  export namespace SETTINGS {
+    export const SECTION = 'ddk';
+    export const COMPILER_ENCODING = 'compiler.encoding';
+  }
   export namespace COMMAND {
     export const ADD_WORKSPACE = `${PROJECTS.CONFIG.KEY}.addWorkspace`;
     export const RENAME_WORKSPACE = `${PROJECTS.CONFIG.KEY}.renameWorkspace`;

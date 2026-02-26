@@ -334,10 +334,10 @@ impl Compiler {
             let target = if parameters.rebuild { "Build" } else { "Make" };
             let msbuild_path = find_msbuild()?;
             let mut child_process = Command::new(msbuild_path)
-                .envs(envs)
                 .arg(project_file)
                 .arg(format!("/t:Clean,{}", target))
                 .args(args.split_whitespace())
+                .envs(envs)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .kill_on_drop(true)
@@ -436,8 +436,8 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
             Ok(_) => {}
             Err(_) => break,
         }
-        // Lossy conversion handles non-UTF8 output (e.g. OEM codepage on Windows)
-        let line = String::from_utf8_lossy(&buf)
+        // Decode using the configured compiler encoding
+        let line = crate::encoding::decode_line(&buf)
             .trim_end_matches(['\r', '\n'])
             .to_string();
         if line.is_empty() {
