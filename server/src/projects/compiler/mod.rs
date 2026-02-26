@@ -8,7 +8,7 @@ use rust_search::SearchBuilder;
 use scopeguard::defer;
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
 use tower_lsp::lsp_types::{Diagnostic, Url};
 use std::collections::HashMap;
@@ -315,7 +315,7 @@ impl Compiler {
 
     async fn do_compile(&self, parameters: &CompilationParameters<'_>) -> Result<()> {
         for project in &parameters.projects {
-            if compiler_state::check_cancelled() {
+            if compiler_state::is_cancelled() {
                 return Err(anyhow::anyhow!("Compilation cancelled by user."));
             }
 
@@ -407,7 +407,7 @@ impl Compiler {
                     ).into_footer_vec()
                 ).await
             }
-            return result;
+            result?;
         }
         return Ok(());
     }
@@ -499,18 +499,22 @@ pub async fn capture_rsvars_env(rsvars_path: &str) -> Result<HashMap<String, Str
         "NUMBER_OF_PROCESSORS",
     ];
 
-    // Create a temporary batch file
-    let temp_batch_path = std::env::temp_dir().join("dump_rsvars_env.bat");
-    let mut temp_batch = File::create(&temp_batch_path).await?;
-    temp_batch
-        .write_all(format!("@echo off\ncall \"{}\"\nset", rsvars_path).as_bytes())
-        .await?;
-    temp_batch.flush().await?;
+    // Create a temporary batch file with a unique name.
+    // We use into_temp_path() to close the file handle before cmd.exe reads it
+    // (Windows won't allow concurrent access otherwise). The TempPath auto-deletes on drop.
+    let temp_batch = {
+        use std::io::Write;
+        let mut f = tempfile::Builder::new()
+            .suffix(".bat")
+            .tempfile()?;
+        write!(f, "@echo off\ncall \"{}\"\nset", rsvars_path)?;
+        f.into_temp_path()
+    };
 
     // Execute the temporary batch file
     let mut child = Command::new("cmd")
         .arg("/C")
-        .arg(&temp_batch_path)
+        .arg(temp_batch.as_ref() as &std::path::Path)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()?;
@@ -533,9 +537,7 @@ pub async fn capture_rsvars_env(rsvars_path: &str) -> Result<HashMap<String, Str
         eprintln!("Warning: rsvars.bat environment capture exited with {}", status);
     }
 
-    // Remove the temporary batch file
-    let _ = tokio::fs::remove_file(temp_batch_path).await;
-
+    // temp_batch (TempPath) is dropped here, which deletes the file
     Ok(env_vars)
 }
 

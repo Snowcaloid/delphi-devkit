@@ -25,14 +25,6 @@ pub fn cancel() {
     CANCELLED.store(true, Ordering::SeqCst);
 }
 
-pub fn check_cancelled() -> bool {
-    let cancelled = CANCELLED.load(Ordering::SeqCst);
-    if cancelled {
-        reset();
-    }
-    return cancelled;
-}
-
 //------------------------------------------------------
 static SUCCESS: AtomicBool = AtomicBool::new(false);
 
