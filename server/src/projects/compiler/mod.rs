@@ -378,11 +378,17 @@ impl Compiler {
             let out_reader = BufReader::new(stdout);
             let err_reader = BufReader::new(stderr);
 
+            let project_dir = project.get_project_file()?
+                .parent()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| PathBuf::from(&project.directory));
+
             let stdout_task = tokio::spawn(process_output_lines(
                 self.client.clone(),
                 out_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stdout,
+                project_dir.clone(),
             ));
 
             let stderr_task = tokio::spawn(process_output_lines(
@@ -390,6 +396,7 @@ impl Compiler {
                 err_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stderr,
+                project_dir,
             ));
 
             let cancel_signal = async {
@@ -473,6 +480,7 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
     mut reader: BufReader<R>,
     compiler_name: String,
     kind: OutputKind,
+    project_dir: PathBuf,
 ) {
     use tokio::io::AsyncBufReadExt;
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -496,7 +504,15 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
         if compiler_state::is_cancelled() {
             break;
         }
-        if let Some(diagnostic) = CompilerLineDiagnostic::from_line(&line, compiler_name.clone()) {
+        if let Some(mut diagnostic) = CompilerLineDiagnostic::from_line(&line, compiler_name.clone()) {
+            // Resolve relative file paths against the project directory
+            let file_path = PathBuf::from(&diagnostic.file);
+            if file_path.is_relative() {
+                let resolved = project_dir.join(&file_path);
+                if resolved.exists() {
+                    diagnostic.file = resolved.to_string_lossy().to_string();
+                }
+            }
             if last_file != diagnostic.file && !diagnostics.is_empty() {
                 compiler_state::track_diagnosed_file(last_file.clone());
                 publish_diagnostics(&client, &last_file, &diagnostics).await;
