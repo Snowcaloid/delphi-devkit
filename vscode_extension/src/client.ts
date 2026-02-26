@@ -1,10 +1,12 @@
 import {
     LanguageClient, LanguageClientOptions, ServerOptions, TransportKind
 } from 'vscode-languageclient/node';
-import { Disposable, DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider, languages, Range, TextDocument, TextEdit, window, workspace } from 'vscode';
+import { Disposable, DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider, ExtensionMode, languages, Range, TextDocument, TextEdit, Uri, window, workspace } from 'vscode';
 import { Runtime } from './runtime';
 import { Entities } from './projects/entities';
 import { UUID } from 'crypto';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export type Change =
     | { type: 'NewProject', file_path: string, workspace_id: number }
@@ -68,7 +70,7 @@ export class DDK_Client {
     private client: LanguageClient;
 
     public async initialize(): Promise<void> {
-        const serverPath = 'D:/workspaces/delphi-devkit/server/target/debug/deps/ddk_server.exe';
+        const serverPath = this.resolveServerPath();
         const serverOptions: ServerOptions = {
             run: { command: serverPath, transport: TransportKind.stdio },
             debug: { command: serverPath, transport: TransportKind.stdio }
@@ -218,7 +220,7 @@ export class DDK_Client {
         const event = Runtime.addEvent();
         await this.client.sendRequest('projects/compile', {
             type: 'FromLink',
-            link_id: linkId,
+            project_link_id: linkId,
             rebuild: rebuild,
             event_id: event
         });
@@ -228,6 +230,9 @@ export class DDK_Client {
     public onCompilerProgress(params: CompilerProgressParams) {
         switch (params.kind) {
             case 'Start':
+                // generally, we need smart scroll to be enabled so that the output channel
+                // scrolls to the end when new lines are added. We do not re-enable it because
+                // we are likely the only extension that actually really cares about the setting.
                 workspace.getConfiguration('output.smartScroll').update('enabled', false);
                 Runtime.compilerOutputChannel.clear();
                 Runtime.compilerOutputChannel.show(true);
@@ -256,6 +261,25 @@ export class DDK_Client {
                     window.showErrorMessage(`Compilation of project ${project.name} failed with exit code ${params.code}.`);
                 break;
         }
+    }
+
+    private resolveServerPath(): string {
+        const extensionDir = Runtime.extension.extensionUri.fsPath;
+        const isDev = Runtime.extension.extensionMode !== ExtensionMode.Production;
+        const serverPath = isDev
+            ? join(extensionDir, '..', 'server', 'target', 'debug', 'ddk-server.exe')
+            : join(extensionDir, 'server', 'ddk-server.exe');
+
+        if (!existsSync(serverPath)) {
+            const mode = isDev ? 'Development' : 'Production';
+            throw new Error(
+                `DDK server binary not found at: ${serverPath} (${mode} mode). ` +
+                (isDev
+                    ? 'Run `cargo build` in the server/ directory.'
+                    : 'The extension package may be incomplete.')
+            );
+        }
+        return serverPath;
     }
 }
 
