@@ -6,7 +6,6 @@ pub mod utils;
 pub mod format;
 pub mod state;
 
-use std::sync::atomic::Ordering;
 use anyhow::Result;
 use tokio::io::{stdin, stdout};
 use tower_lsp::{Client, async_trait, jsonrpc};
@@ -43,7 +42,7 @@ impl DelphiLsp {
         &self,
         _params: CancelCompilationParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
-        CANCEL_COMPILATION.store(true, std::sync::atomic::Ordering::SeqCst);
+        crate::projects::compiler_state::cancel();
         try_finish_event!(self.client, "compilation cancelled");
     }
 
@@ -134,7 +133,7 @@ impl LanguageServer for DelphiLsp {
     }
 
     async fn shutdown(&self) -> jsonrpc::Result<()> {
-        CANCEL_COMPILATION.store(true, Ordering::SeqCst);
+        crate::projects::compiler_state::cancel();
         return Ok(())
     }
 
