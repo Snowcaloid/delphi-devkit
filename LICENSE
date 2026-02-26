@@ -2,8 +2,8 @@ DDK - Delphi Development Kit for Visual Studio Code
 Copyright © 2025 Valentin Baron.
 All Rights Reserved
 
-Version 1.0
-Date: 10.08.2025 (August 10)
+Version 1.1
+Date: 26.02.2026 (February 26)
 
 THE CONTENTS OF THIS PROJECT ARE CURRENTLY PROPRIETARY.
 UNAUTHORIZED COPYING, TRANSFERRING OR REPRODUCTION OF THE CONTENTS OF THIS
@@ -112,6 +112,29 @@ TERMS AND CONDITIONS
     terms or conditions. Notwithstanding the above, nothing herein shall
     supersede or modify the terms of any separate license agreement you may
     have executed with Licensor regarding such Contributions.
+
+    Pull Request Contributions. Any individual or Legal Entity is permitted
+    to submit Contributions to this Work via Pull Requests on the official
+    GitHub repository (https://github.com/valentin-baron/delphi-devkit). By
+    opening a Pull Request, You represent that:
+
+    (a) You are the original author of the Contribution or have the right
+        to submit it;
+
+    (b) You grant the Licensor a perpetual, worldwide, royalty-free,
+        irrevocable license to use, reproduce, modify, distribute, and
+        sublicense Your Contribution as part of the Work under the terms
+        of this License or any later version thereof;
+
+    (c) Your Contribution does not, to the best of Your knowledge, infringe
+        any third-party intellectual property rights;
+
+    (d) You understand that the Licensor is under no obligation to accept,
+        merge, or include Your Contribution in the Work;
+
+    (e) Acceptance of a Pull Request by the Licensor does not transfer
+        copyright ownership of the Contribution to the Licensor. You retain
+        copyright in Your Contribution subject to the license grant above.
 
 6. Limitation of Liability.
 

@@ -4,32 +4,39 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [2.0.0] - 2026-01-XX
+## [2.0.0] - 2026-02-26
 
 ### Breaking Changes
 
-- Removed sqlite database in favor of direct file system storage.
-- This will remove all previously stored workspaces and projects. You will need to re-add them.
+- Removed SQLite database in favor of file-based storage (`%APPDATA%\ddk\projects.ron`, `%APPDATA%\ddk\compilers.ron`).
+- Previously stored workspaces and projects **will not be migrated**. You will need to re-add them.
+- Compiler configurations are no longer in VS Code settings (`ddk.compiler.configurations`); they are now managed via `compilers.ron` and the `Edit Compiler Configurations` command.
 
-### Changes
+### Changed
 
-- Major overhaul of the whole extension.
-- Added DDK Server
-- Moved Projects logic to the server.
-- Moved compilation logic to the server.
+- Full architectural rewrite: extension now communicates with a bundled Rust LSP server (`ddk-server`) over stdio. All project state, compilation, formatting, and file watching run server-side.
+- Repository split into `server/` (Rust crate) and `vscode_extension/` (TypeScript).
+- Drag & drop project ordering is now managed server-side.
+- Author name in LICENSE/NOTICE changed
 
 ### Added
 
-- Compiler configurations are more detailed and show compiler version details.
-- More default compiler configurations have been added (All between Delphi 2007 and Delphi 13)
-- Added formatter support.
-- Added timestamps to compiler output lines.
-- Added support for compiling / recreating all projects in a workspace / group project.
+- **DDK Server**: bundled `ddk-server.exe` (Rust, async tower-lsp) handles all backend logic.
+- **Preset compiler configurations**: 19 built-in entries covering Delphi 2007 through Delphi 13.0 Florence.
+- **Bulk compilation**: compile or recreate all projects in a workspace or group project in a single command.
+- **Cancellable compilation**: cancel any active MSBuild run via `Cancel Compilation` (Ctrl+F2); uses `taskkill /F /T` to terminate the entire process tree.
+- **Formatter**: format Delphi source files via `GExperts.Formatter.exe`; configuration file editable and resettable via commands.
+- **Timestamps in compiler output**: every output line is prefixed with `HH:MM:SS.mmm`.
+- **Diagnostics in Problems panel**: MSBuild errors, warnings, and hints are parsed and published as LSP diagnostics.
+- **File watchers**: `projects.ron` and `compilers.ron` are watched for external changes; tree views update automatically.
+- **New commands**: `Compile All in Workspace`, `Recreate All in Workspace`, `Compile All in Group Project`, `Recreate All in Group Project`, `Cancel Compilation`, `Set Manual Path`, `Edit Compiler Configurations`, `Edit Projects Data`, `Edit Formatter Config`, `Reset Formatter Config`.
+- **Compiler output encoding**: configurable via `ddk.compiler.encoding` setting (`oem` default).
 
 ### Fixed
 
 - Fixed the issue where the selected project didn't work when the tree was collapsed.
 - Fixed the issue where removing workspaces/projects did not work.
+- Fixed the issue where Discover File Paths did not do anything.
 
 ## [1.1.0] - 2025-08-31
 

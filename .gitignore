@@ -1,5 +1,6 @@
 vscode_extension/dist
 vscode_extension/node_modules
+vscode_extension/server
 *.vsix
 .history
 server/target

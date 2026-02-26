@@ -5,11 +5,13 @@ const path = require('path');
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
-function copyAsset(source) {
-	const dest = path.join(__dirname, 'dist', path.basename(source));
+function copyAsset(source, destDir) {
+	destDir = destDir || path.join(__dirname, 'dist');
+	fs.mkdirSync(destDir, { recursive: true });
+	const dest = path.join(destDir, path.basename(source));
 	try {
 		fs.copyFileSync(source, dest);
-		console.log(`✓ Copied ${path.basename(source)} to dist/`);
+		console.log(`✓ Copied ${path.basename(source)} to ${path.relative(__dirname, destDir)}/`);
 	} catch (error) {
 		console.error(`✘ Failed to copy ${path.basename(source)}:`, error.message);
 	}
@@ -37,8 +39,11 @@ const copyAssetsPlugin = {
 			const formatterConfig = path.join(__dirname, '..', 'server', 'src', 'format', 'presets', 'ddk_formatter.config');
 			copyAsset(formatterConfig);
 
-			const ddkServer = path.join(__dirname, '..', 'server', 'target', 'debug', 'deps', 'ddk_server.exe');
-			copyAsset(ddkServer);
+			if (production) {
+				const serverBinary = path.join(__dirname, '..', 'server', 'target', 'release', 'ddk-server.exe');
+				const serverDir = path.join(__dirname, 'server');
+				copyAsset(serverBinary, serverDir);
+			}
 		});
 	},
 };
