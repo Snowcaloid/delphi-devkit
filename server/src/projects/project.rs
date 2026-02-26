@@ -80,7 +80,7 @@ impl Project {
                 self.dpr = Some(main_source.to_string_lossy().to_string());
                 self.dpk = None;
                 if let Ok(exe_path) = get_exe_path(&dproj_path) {
-                    let exe_file_name = exe_path.join(self.name.clone()).with_extension("exe");
+                    let exe_file_name = exe_path.with_extension("exe");
                     self.exe = Some(exe_file_name.to_string_lossy().to_string());
                     self.ini = Some(exe_file_name.with_extension("ini").to_string_lossy().to_string());
                 } else {

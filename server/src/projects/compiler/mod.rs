@@ -445,6 +445,18 @@ impl Compiler {
                     ).into_project_footer_vec()
                 ).await
             }
+            if compiler_state::is_success() {
+                let exe_missing = project.exe.as_deref()
+                    .map_or(true, |p| p.is_empty() || !PathBuf::from(p).exists());
+                if exe_missing {
+                    let mut projects_data = PROJECTS_DATA.write().await;
+                    if let Some(project) = projects_data.get_project_mut(project.id) &&
+                       let Ok(_) = project.discover_paths()
+                    {
+                        let _ = projects_data.save().await;
+                    }
+                }
+            }
             result?;
         }
         return Ok(());

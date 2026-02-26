@@ -105,9 +105,8 @@ export namespace ProjectsCommands {
 
     private static async openInFileExplorer(item: BaseFileItem): Promise<void> {
       try {
-        // Open the containing folder in system file explorer
-        const folderUri = Uri.file(dirname(item.resourceUri.fsPath));
-        await env.openExternal(folderUri);
+        // Open the file's location in Windows Explorer (or OS file manager)
+        await commands.executeCommand('revealFileInOS', item.resourceUri);
       } catch (error) {
         window.showErrorMessage(`Failed to open in file explorer: ${error}`);
       }
