@@ -54,9 +54,13 @@ impl Display for CompilerLineDiagnostic {
     }
 }
 
+lazy_static::lazy_static! {
+    pub static ref COMPILER_OUTPUT_REGEX: regex::Regex = regex::Regex::new(MSBUILD_OUTPUT_REGEX).unwrap();
+}
+
 impl CompilerLineDiagnostic {
     pub fn from_line(line: &str, compiler_name: String) -> Option<Self> {
-        if let Some(captures) = regex::Regex::new(MSBUILD_OUTPUT_REGEX).unwrap().captures(line) {
+        if let Some(captures) = COMPILER_OUTPUT_REGEX.captures(line) {
             let file = captures.name("file")?.as_str().to_string();
             let line = captures.name("line")?.as_str().parse().ok()?;
             let column = captures

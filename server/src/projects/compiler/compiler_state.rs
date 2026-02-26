@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::Mutex;
 
 //------------------------------------------------------
 static ACTIVE: AtomicBool = AtomicBool::new(false);
@@ -28,7 +30,7 @@ pub fn check_cancelled() -> bool {
     if cancelled {
         reset();
     }
-    return false;
+    return cancelled;
 }
 
 //------------------------------------------------------
@@ -60,4 +62,19 @@ pub fn reset() {
     SUCCESS.store(false, Ordering::SeqCst);
     CODE.store(-1, Ordering::SeqCst);
     CANCELLED.store(false, Ordering::SeqCst);
+}
+
+//------------------------------------------------------
+static DIAGNOSED_FILES: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+
+/// Record a file that had diagnostics published.
+pub fn track_diagnosed_file(file: String) {
+    let mut lock = DIAGNOSED_FILES.lock().unwrap();
+    lock.get_or_insert_with(HashSet::new).insert(file);
+}
+
+/// Drain and return all previously diagnosed file paths.
+pub fn take_diagnosed_files() -> HashSet<String> {
+    let mut lock = DIAGNOSED_FILES.lock().unwrap();
+    lock.take().unwrap_or_default()
 }

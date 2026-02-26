@@ -4,17 +4,6 @@ use std::path::PathBuf;
 mod document;
 pub use document::*;
 
-#[macro_export]
-macro_rules! defer_async {
-    ($inner:expr) => {
-        defer! {
-            tokio::spawn(async move {
-                $inner
-            });
-        }
-    };
-}
-
 pub trait FilePath {
     fn get_file_path() -> &'static PathBuf;
 }

@@ -1,7 +1,7 @@
 import {
     LanguageClient, LanguageClientOptions, ServerOptions, TransportKind
 } from 'vscode-languageclient/node';
-import { Disposable, DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider, ExtensionMode, languages, Range, TextDocument, TextEdit, Uri, window, workspace } from 'vscode';
+import { Disposable, DocumentFormattingEditProvider, DocumentRangeFormattingEditProvider, ExtensionMode, languages, Range, TextDocument, TextEdit, window, workspace } from 'vscode';
 import { Runtime } from './runtime';
 import { Entities } from './projects/entities';
 import { UUID } from 'crypto';

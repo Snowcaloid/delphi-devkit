@@ -2,7 +2,7 @@ pub mod compiler_state;
 
 use super::*;
 use crate::state::PROJECTS_DATA;
-use crate::{CompileProjectParams, CompilerProgress, defer_async};
+use crate::{CompileProjectParams, CompilerProgress};
 use anyhow::Result;
 use rust_search::SearchBuilder;
 use scopeguard::defer;
@@ -297,51 +297,26 @@ impl Compiler {
                 event_id: _,
             } => self.get_from_link_parameters(project_link_id, rebuild).await?,
         };
+        clear_stale_diagnostics(&self.client).await;
         // Actual compilation process
-        {
-            let params_deferred = parameters.clone();
-            let client_deferred = self.client.clone();
-            defer_async! {
-                CompilerProgress::notify_completed(
-                    &client_deferred,
-                    compiler_state::is_success(),
-                    compiler_state::get_code(),
-                    params_deferred.banner.into_footer_vec(),
-                )
-                .await
-            }
-            CompilerProgress::notify_start(&self.client, parameters.banner.into_header_vec()).await;
-
-            self.do_compile(&parameters).await?;
-        }
-        return Ok(());
+        CompilerProgress::notify_start(
+            &self.client,
+            parameters.banner.into_header_vec()
+        ).await;
+        let result = self.do_compile(&parameters).await;
+        CompilerProgress::notify_completed(
+            &self.client,
+            compiler_state::is_success(),
+            compiler_state::get_code(),
+            parameters.banner.into_footer_vec(),
+        ).await;
+        return result;
     }
 
     async fn do_compile(&self, parameters: &CompilationParameters<'_>) -> Result<()> {
         for project in &parameters.projects {
             if compiler_state::check_cancelled() {
                 return Err(anyhow::anyhow!("Compilation cancelled by user."));
-            }
-            let client_deferred = self.client.clone();
-            let project_id = project.id;
-            let only_one_project = parameters.only_one_project;
-            let single_project_banner = CompBanner::new(
-                format!("Compiling Project: {}", project.name),
-                project.get_project_file()?.to_string_lossy().to_string(),
-                parameters.configuration.product_name.clone(),
-                parameters.rebuild,
-            );
-
-            defer_async! {
-                if !only_one_project {
-                    CompilerProgress::notify_single_project_completed(
-                        &client_deferred,
-                        project_id,
-                        compiler_state::is_success(),
-                        compiler_state::get_code(),
-                        single_project_banner.into_footer_vec()
-                    ).await
-                }
             }
 
             let rsvars_path = PathBuf::from(&parameters.configuration.installation_path)
@@ -358,7 +333,6 @@ impl Compiler {
             let args = parameters.configuration.build_arguments.join(" ");
             let target = if parameters.rebuild { "Build" } else { "Make" };
             let msbuild_path = find_msbuild()?;
-            dbg!(&envs);
             let mut child_process = Command::new(msbuild_path)
                 .envs(envs)
                 .arg(project_file)
@@ -400,13 +374,14 @@ impl Compiler {
                 }
             };
 
-            tokio::select! {
+            let result = tokio::select! {
                 status = child_process.wait() => {
                     let status = status?;
                     stdout_task.await?;
                     stderr_task.await?;
                     compiler_state::set_success(status.success());
                     compiler_state::set_code(status.code().unwrap_or(-1));
+                    Ok(())
                 }
                 _ = cancel_signal => {
                     child_process.kill().await?;
@@ -414,9 +389,25 @@ impl Compiler {
                     stderr_task.abort();
                     compiler_state::set_success(false);
                     compiler_state::set_code(-1);
-                    anyhow::bail!("Compilation cancelled by user.");
+                    Err(anyhow::anyhow!("Compilation cancelled by user."))
                 }
+            };
+
+            if !parameters.only_one_project {
+                CompilerProgress::notify_single_project_completed(
+                    &self.client,
+                    project.id,
+                    compiler_state::is_success(),
+                    compiler_state::get_code(),
+                    CompBanner::new(
+                        format!("Compiling Project: {}", project.name),
+                        project.get_project_file()?.to_string_lossy().to_string(),
+                        parameters.configuration.product_name.clone(),
+                        parameters.rebuild,
+                    ).into_footer_vec()
+                ).await
             }
+            return result;
         }
         return Ok(());
     }
@@ -442,6 +433,7 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
         }
         if let Some(diagnostic) = CompilerLineDiagnostic::from_line(&line, compiler_name.clone()) {
             if last_file != diagnostic.file && !diagnostics.is_empty() {
+                compiler_state::track_diagnosed_file(last_file.clone());
                 publish_diagnostics(&client, &last_file, &diagnostics).await;
                 diagnostics.clear();
             }
@@ -461,6 +453,7 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
     }
 
     if !diagnostics.is_empty() {
+        compiler_state::track_diagnosed_file(last_file.clone());
         publish_diagnostics(&client, &last_file, &diagnostics).await;
     }
 }
@@ -583,6 +576,17 @@ pub async fn parse_rsvars(path: &str) -> Result<HashMap<String, String>> {
     }
 
     Ok(env_vars)
+}
+
+async fn clear_stale_diagnostics(client: &tower_lsp::Client) {
+    let mut tasks = tokio::task::JoinSet::new();
+    for file in compiler_state::take_diagnosed_files() {
+        let client = client.clone();
+        tasks.spawn(async move {
+            publish_diagnostics(&client, &file, &vec![]).await;
+        });
+    }
+    while tasks.join_next().await.is_some() {}
 }
 
 async fn publish_diagnostics(
