@@ -1,5 +1,7 @@
 # Delphi DevKit README
 
+[![GitHub Release](https://img.shields.io/github/v/release/valentin-baron/delphi-devkit?include_prereleases&label=latest)](https://github.com/valentin-baron/delphi-devkit/releases)
+
 Utilities for developing in Delphi using VS Code.
 
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Embarcadero Technologies, or any of its subsidiaries or its affiliates. The official Embarcadero Technologies website can be found at [https://www.embarcadero.com/](https://www.embarcadero.com/).
