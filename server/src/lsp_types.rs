@@ -135,12 +135,14 @@ pub enum CompilerProgressParams {
     },
     Completed {
         success: bool,
+        cancelled: bool,
         code: i32,
         lines: Vec<String>,
     },
     SingleProjectCompleted {
         project_id: usize,
         success: bool,
+        cancelled: bool,
         code: i32,
         lines: Vec<String>,
     },
@@ -170,9 +172,10 @@ impl CompilerProgress {
         }).await;
     }
 
-    pub async fn notify_completed(client: &tower_lsp::Client, success: bool, code: i32, lines: Vec<String>) {
+    pub async fn notify_completed(client: &tower_lsp::Client, success: bool, cancelled: bool, code: i32, lines: Vec<String>) {
         client.send_notification::<CompilerProgress>(CompilerProgressParams::Completed {
             success,
+            cancelled,
             code,
             lines,
         }).await;
@@ -182,12 +185,14 @@ impl CompilerProgress {
         client: &tower_lsp::Client,
         project_id: usize,
         success: bool,
+        cancelled: bool,
         code: i32,
         lines: Vec<String>
     ) {
         client.send_notification::<CompilerProgress>(CompilerProgressParams::SingleProjectCompleted {
             project_id,
             success,
+            cancelled,
             code,
             lines,
         }).await;

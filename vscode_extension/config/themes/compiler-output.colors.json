@@ -81,6 +81,12 @@
       "settings": {
         "foreground": "#ff6b6b"
       }
+    },
+    {
+      "scope": "markup.cancelled.banner.delphi",
+      "settings": {
+        "foreground": "#e17055"
+      }
     }
   ]
 }

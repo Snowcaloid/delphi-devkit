@@ -63,10 +63,21 @@ export abstract class Runtime {
     return undefined;
   }
 
+  public static getLinksOfProject(project?: Option<Entities.Project>): Entities.ProjectLink[] {
+    if (!project) return [];
+    const workspaceLinks = Runtime.projectsData?.workspaces
+      .flatMap((ws) => ws.project_links)
+      .filter((link) => link.project_id === project.id) || [];
+    const groupProjectLinks = Runtime.projectsData?.group_project?.project_links.filter(
+      (link) => link.project_id === project.id
+    ) || [];
+    return [...workspaceLinks, ...groupProjectLinks];
+  }
+
   public static getCompilerOfWorkspace(workspace: Entities.Workspace): Option<Entities.CompilerConfiguration> {
-      if (!workspace.compiler_id) return undefined;
-      return this.compilerConfigurations?.[workspace.compiler_id];
-    }
+    if (!workspace.compiler_id) return undefined;
+    return this.compilerConfigurations?.[workspace.compiler_id];
+  }
 
   public static async compileProjectLink(link: Entities.ProjectLink, recreate: boolean = false): Promise<boolean> {
     return await this.client.compileProject(recreate, link.project_id, link.id);

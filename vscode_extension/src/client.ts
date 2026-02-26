@@ -53,12 +53,14 @@ export type CompilerProgressParams = {
 } | {
     kind: 'Completed',
     success: boolean,
+    cancelled: boolean,
     code: number,
     lines: string[],
 } | {
     kind: 'SingleProjectCompleted',
     project_id: number,
     success: boolean,
+    cancelled: boolean,
     code: number,
     lines: string[],
 } | never;
@@ -247,10 +249,15 @@ export class DDK_Client {
         return await Runtime.waitForEvent(event);
     }
 
+    public async cancelCompilation(): Promise<void> {
+        await this.client.sendRequest('projects/compile-cancel', {});
+    }
+
     public onCompilerProgress(params: CompilerProgressParams) {
         switch (params.kind) {
             case 'Start':
                 this.compilerLinkProvider.compilerIsActive = true;
+                Runtime.setContext(PROJECTS.CONTEXT.IS_COMPILING, true);
                 // generally, we need smart scroll to be enabled so that the output channel
                 // scrolls to the end when new lines are added. We do not re-enable it because
                 // we are likely the only extension that actually really cares about the setting.
@@ -266,9 +273,12 @@ export class DDK_Client {
                 break;
             case 'Completed':
                 this.compilerLinkProvider.compilerIsActive = false;
+                Runtime.setContext(PROJECTS.CONTEXT.IS_COMPILING, false);
                 for (const line of params.lines)
                     Runtime.compilerOutputChannel.appendLine(line);
-                if (params.success)
+                if (params.cancelled)
+                    window.showWarningMessage('Compilation was cancelled.');
+                else if (params.success)
                     window.showInformationMessage('Compilation completed successfully.');
                 else
                     window.showErrorMessage(`Compilation failed with exit code ${params.code}.`);
@@ -277,7 +287,9 @@ export class DDK_Client {
                 for (const line of params.lines)
                     Runtime.compilerOutputChannel.appendLine(line);
                 const project = Runtime.projectsData?.projects.find((p) => p.id === params.project_id);
-                if (params.success && project)
+                if (params.cancelled && project)
+                    window.showWarningMessage(`Compilation of project ${project.name} was cancelled.`);
+                else if (params.success && project)
                     window.showInformationMessage(`Compilation of project ${project.name} completed successfully.`);
                 else if (project)
                     window.showErrorMessage(`Compilation of project ${project.name} failed with exit code ${params.code}.`);

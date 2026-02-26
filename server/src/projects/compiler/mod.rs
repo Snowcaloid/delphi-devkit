@@ -304,9 +304,13 @@ impl Compiler {
             parameters.banner.into_header_vec()
         ).await;
         let result = self.do_compile(&parameters).await;
+        let cancelled = compiler_state::is_cancelled();
+        // Treat cancellation as a non-error outcome so no upstream error is logged
+        let result = if cancelled { Ok(()) } else { result };
         CompilerProgress::notify_completed(
             &self.client,
             compiler_state::is_success(),
+            cancelled,
             compiler_state::get_code(),
             parameters.banner.into_footer_vec(),
         ).await;
@@ -342,6 +346,11 @@ impl Compiler {
                 .stderr(Stdio::piped())
                 .kill_on_drop(true)
                 .spawn()?;
+
+            // Capture the PID before taking stdio handles so we can kill the
+            // entire process tree on cancellation (taskkill /F /T kills MSBuild
+            // AND every compiler child process it spawned, e.g. dcc32.exe).
+            let child_pid = child_process.id();
 
             let stdout = child_process.stdout.take()
                 .ok_or_else(|| anyhow::anyhow!("Unable to access child process STDOUT"))?;
@@ -384,7 +393,17 @@ impl Compiler {
                     Ok(())
                 }
                 _ = cancel_signal => {
-                    child_process.kill().await?;
+                    // Kill the whole process tree so that child processes spawned
+                    // by MSBuild (dcc32.exe, dcc64.exe, …) are also terminated.
+                    // Without this, those processes keep file locks and the next
+                    // compilation attempt on the same project fails immediately.
+                    if let Some(pid) = child_pid {
+                        let _ = std::process::Command::new("taskkill")
+                            .args(["/F", "/T", "/PID", &pid.to_string()])
+                            .output();
+                    }
+                    // Fallback: also ask Tokio to kill the root process handle.
+                    let _ = child_process.kill().await;
                     stdout_task.abort();
                     stderr_task.abort();
                     compiler_state::set_success(false);
@@ -398,6 +417,7 @@ impl Compiler {
                     &self.client,
                     project.id,
                     compiler_state::is_success(),
+                    compiler_state::is_cancelled(),
                     compiler_state::get_code(),
                     CompBanner::new(
                         format!("Compiling Project: {}", project.name),
@@ -638,12 +658,14 @@ struct CompilationParameters<'compiler> {
 unsafe impl Send for CompilationParameters<'_> {}
 unsafe impl Sync for CompilationParameters<'_> {}
 
-const BANNER_TOP: &str          = "╒══════════════════════════════════════════════════════════════════════╕";
-const BANNER_BOTTOM: &str       = "╘══════════════════════════════════════════════════════════════════════╛";
-const BANNER_ERROR_TOP: &str     = "╔══════════════════════════════════════════════════════════════════════╗";
-const BANNER_ERROR_BOTTOM: &str  = "╚══════════════════════════════════════════════════════════════════════╝";
-const BANNER_SUCCESS_TOP: &str   = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓";
-const BANNER_SUCCESS_BOTTOM: &str= "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛";
+const BANNER_TOP: &str               = "╒══════════════════════════════════════════════════════════════════════╕";
+const BANNER_BOTTOM: &str            = "╘══════════════════════════════════════════════════════════════════════╛";
+const BANNER_ERROR_TOP: &str         = "╔══════════════════════════════════════════════════════════════════════╗";
+const BANNER_ERROR_BOTTOM: &str      = "╚══════════════════════════════════════════════════════════════════════╝";
+const BANNER_SUCCESS_TOP: &str       = "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓";
+const BANNER_SUCCESS_BOTTOM: &str    = "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛";
+const BANNER_CANCELLED_TOP: &str     = "╓──────────────────────────────────────────────────────────────────────╖";
+const BANNER_CANCELLED_BOTTOM: &str  = "╙──────────────────────────────────────────────────────────────────────╜";
 
 #[derive(Debug, Clone)]
 struct CompBanner {
@@ -688,8 +710,11 @@ impl CompBanner {
     }
 
     fn into_footer_vec(&self) -> Vec<String> {
+        let cancelled = compiler_state::is_cancelled();
         let success = compiler_state::is_success();
-        let (status_str, top, bottom) = if success {
+        let (status_str, top, bottom) = if cancelled {
+            ("⚠️  CANCELLED", BANNER_CANCELLED_TOP, BANNER_CANCELLED_BOTTOM)
+        } else if success {
             ("✅ SUCCESS", BANNER_SUCCESS_TOP, BANNER_SUCCESS_BOTTOM)
         } else {
             ("❌ FAILED", BANNER_ERROR_TOP, BANNER_ERROR_BOTTOM)

@@ -92,6 +92,24 @@
       ]
     },
     {
+      "comment": "Cancelled banner (uses mixed box-drawing: ╓─╖ / ╙─╜)",
+      "name": "markup.cancelled.banner.delphi",
+      "begin": "\u2553",
+      "end": "\u255c",
+      "beginCaptures": {
+        "0": { "name": "markup.cancelled.banner.delphi" }
+      },
+      "endCaptures": {
+        "0": { "name": "markup.cancelled.banner.delphi" }
+      },
+      "patterns": [
+        {
+          "match": ".",
+          "name": "markup.cancelled.banner.delphi"
+        }
+      ]
+    },
+    {
       "comment": "Normal banner (uses single/double box-drawing: ╒═╕ / ╘═╛)",
       "name": "keyword.other.banner.delphi",
       "begin": "\u2552",

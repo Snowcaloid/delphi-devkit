@@ -198,6 +198,12 @@
         "category": "DDK"
       },
       {
+        "command": "ddk.projects.cancelCompilation",
+        "title": "Cancel Compilation",
+        "icon": "$(debug-stop)",
+        "category": "DDK"
+      },
+      {
         "command": "ddk.projects.compileSelectedProject",
         "title": "Compile Selected Project",
         "when": "ddk:isProjectSelected == true",
@@ -579,6 +585,10 @@
           {
             "scope": "markup.error.banner.delphi",
             "settings": { "foreground": "#ff6b6b" }
+          },
+          {
+            "scope": "markup.cancelled.banner.delphi",
+            "settings": { "foreground": "#e17055" }
           }
         ]
       }
@@ -604,6 +614,11 @@
         "command": "ddk.projects.runSelectedProject",
         "key": "f9",
         "when": "ddk:doesSelectedProjectHaveExe == true"
+      },
+      {
+        "command": "ddk.projects.cancelCompilation",
+        "key": "ctrl+f2",
+        "when": "ddk:isCompiling == true"
       }
     ]
   },

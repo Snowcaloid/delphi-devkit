@@ -1,4 +1,3 @@
-import { Runtime } from '../runtime';
 import { Option } from '../types';
 
 export namespace Entities {
@@ -33,16 +32,6 @@ export namespace Entities {
     dpk?: Option<string>;
     exe?: Option<string>;
     ini?: Option<string>;
-
-    public get links(): ProjectLink[] {
-      const workspaceLinks = Runtime.projectsData?.workspaces
-        .flatMap((ws) => ws.project_links)
-        .filter((link) => link.project_id === this.id) || [];
-      const groupProjectLinks = Runtime.projectsData?.group_project?.project_links.filter(
-        (link) => link.project_id === this.id
-      ) || [];
-      return [...workspaceLinks, ...groupProjectLinks];
-    }
   }
 
   export class ProjectLink {

@@ -31,9 +31,9 @@ export namespace ProjectsCommands {
     private static async selectedProjectAction(callback: Coroutine<void, [Entities.ProjectLink]>): Promise<void> {
       const project = Runtime.activeProject;
       if (!assertError(project, 'Could not evaluate selected project.')) return;
-      const links = project!.links;
+      const links = Runtime.getLinksOfProject(project);
       if (!assertError(links.length > 0, 'Selected project has no associated project links.')) return;
-      const link = project!.links[0] || null;
+      const link = links[0] || null;
       if (!assertError(link, 'Could not find valid project link for the selected project.')) return;
       await callback(link!);
     }
@@ -251,7 +251,14 @@ export namespace ProjectsCommands {
 
   export class Compiler {
     public static get registers(): Disposable[] {
-      return [commands.registerCommand(PROJECTS.COMMAND.SELECT_COMPILER, this.selectCompilerConfiguration.bind(this))];
+      return [
+        commands.registerCommand(PROJECTS.COMMAND.SELECT_COMPILER, this.selectCompilerConfiguration.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.CANCEL_COMPILATION, this.cancelCompilation.bind(this)),
+      ];
+    }
+
+    public static async cancelCompilation(): Promise<void> {
+      await Runtime.client.cancelCompilation();
     }
 
     public static async selectCompilerConfiguration(): Promise<void> {

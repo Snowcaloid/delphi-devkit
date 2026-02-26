@@ -50,12 +50,14 @@ export namespace PROJECTS {
     export const RECREATE_SELECTED_PROJECT = `${PROJECTS.CONFIG.KEY}.recreateSelectedProject`;
     export const RUN_SELECTED_PROJECT = `${PROJECTS.CONFIG.KEY}.runSelectedProject`;
     export const EDIT_DEFAULT_INI = `${PROJECTS.CONFIG.KEY}.editDefaultIni`;
+    export const CANCEL_COMPILATION = `${PROJECTS.CONFIG.KEY}.cancelCompilation`;
   }
 
   export namespace CONTEXT {
     export const IS_GROUP_PROJECT_OPENED = 'ddk:isGroupProjectOpened';
     export const IS_PROJECT_SELECTED = 'ddk:isProjectSelected';
     export const DOES_SELECTED_PROJECT_HAVE_EXE = 'ddk:doesSelectedProjectHaveExe';
+    export const IS_COMPILING = 'ddk:isCompiling';
 
     export const WORKSPACE = 'ddk.context.projects.workspace';
     export const PROJECT = 'ddk.context.projects.project';
