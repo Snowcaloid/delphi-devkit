@@ -6,6 +6,7 @@ import { GeneralCommands } from './commands';
 import { DDK_Client } from './client';
 import { randomUUID, UUID } from 'crypto';
 import { Option } from './types';
+import { McpServerFeature } from './mcp/server';
 
 /**
  * Runtime class to manage workspace state and global variables.
@@ -23,6 +24,7 @@ export abstract class Runtime {
   public static extension: ExtensionContext;
   public static client: DDK_Client;
   public static compilerOutputChannel: OutputChannel;
+  public static mcp: McpServerFeature;
 
   static async initialize(context: ExtensionContext) {
     this.extension = context;
@@ -33,6 +35,8 @@ export abstract class Runtime {
     await this.projects.initialize();
     this.dfm = new DfmFeature();
     await this.dfm.initialize();
+    this.mcp = new McpServerFeature();
+    await this.mcp.initialize();
     context.subscriptions.push(
       ...GeneralCommands.registers,
       this.compilerOutputChannel

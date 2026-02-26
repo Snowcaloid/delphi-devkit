@@ -11,7 +11,8 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--disable-extensions"
+				"--enable-extension=github.copilot",
+				"--enable-extension=github.copilot-chat"
 			],
 			"outFiles": [
 				"${workspaceFolder}/vscode_extension/dist/**/*.js"

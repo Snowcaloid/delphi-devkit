@@ -601,6 +601,12 @@
         ]
       }
     },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "ddk.mcp",
+        "label": "DDK - Delphi Development Kit"
+      }
+    ],
     "keybindings": [
       {
         "command": "ddk.dfm.swapToDfmPas",

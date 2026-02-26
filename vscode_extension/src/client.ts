@@ -77,6 +77,15 @@ interface ConfigurationData {
 export class DDK_Client {
     private client: LanguageClient;
     private compilerLinkProvider = new CompilerOutputDefinitionProvider();
+    private compilerProgressListeners = new Set<(progressParams: CompilerProgressParams) => void>();
+
+    public addCompilerProgressListener(callback: (progressParams: CompilerProgressParams) => void): void {
+        this.compilerProgressListeners.add(callback);
+    }
+
+    public removeCompilerProgressListener(callback: (progressParams: CompilerProgressParams) => void): void {
+        this.compilerProgressListeners.delete(callback);
+    }
 
     public async initialize(): Promise<void> {
         const serverPath = this.resolveServerPath();
@@ -258,6 +267,7 @@ export class DDK_Client {
     }
 
     public onCompilerProgress(params: CompilerProgressParams) {
+        for (const listener of this.compilerProgressListeners) listener(params);
         switch (params.kind) {
             case 'Start':
                 this.compilerLinkProvider.compilerIsActive = true;
