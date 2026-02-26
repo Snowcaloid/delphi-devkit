@@ -79,13 +79,15 @@ export abstract class Runtime {
   public static addEvent(timeout: number = 5000): UUID {
     const id = randomUUID();
     this._events.push(id);
-    setTimeout(() => {
-      if (!this._events.includes(id)) return;
-      setTimeout(() => this._failedEvents = this._failedEvents.filter((it) => it !== id), 60000);
-      this._failedEvents.push(id);
-      this.finishEvent(id);
-      window.showErrorMessage(`Server Operation timed out.`);
-    }, timeout);
+    if (timeout > 0)
+      setTimeout(() => {
+        if (!this._events.includes(id)) return;
+        setTimeout(() => this._failedEvents = this._failedEvents.filter((it) => it !== id), 60000);
+        this._failedEvents.push(id);
+        this.finishEvent(id);
+        window.showErrorMessage(`Server Operation timed out.`);
+      }, timeout);
+
     return id;
   }
 

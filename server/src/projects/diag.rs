@@ -34,7 +34,7 @@ pub struct CompilerLineDiagnostic {
 
 impl Display for CompilerLineDiagnostic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let time = self.time.format("%H:%M:%S.%.3f");
+        let time = self.time.format("%H:%M:%S%.3f");
         let kind = &self.kind;
         let code = &self.code;
         let file = &self.file;

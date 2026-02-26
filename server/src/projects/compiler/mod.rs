@@ -348,19 +348,19 @@ impl Compiler {
             let stderr = child_process.stderr.take()
                 .ok_or_else(|| anyhow::anyhow!("Unable to access child process STDERR"))?;
 
-            let out_lines = BufReader::new(stdout).lines();
-            let err_lines = BufReader::new(stderr).lines();
+            let out_reader = BufReader::new(stdout);
+            let err_reader = BufReader::new(stderr);
 
             let stdout_task = tokio::spawn(process_output_lines(
                 self.client.clone(),
-                out_lines,
+                out_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stdout,
             ));
 
             let stderr_task = tokio::spawn(process_output_lines(
                 self.client.clone(),
-                err_lines,
+                err_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stderr,
             ));
@@ -420,14 +420,29 @@ enum OutputKind {
 
 async fn process_output_lines<R: AsyncRead + Unpin + Send>(
     client: tower_lsp::Client,
-    mut lines: tokio::io::Lines<BufReader<R>>,
+    mut reader: BufReader<R>,
     compiler_name: String,
     kind: OutputKind,
 ) {
+    use tokio::io::AsyncBufReadExt;
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     let mut last_file = String::new();
+    let mut buf = Vec::new();
 
-    while let Ok(Some(line)) = lines.next_line().await {
+    loop {
+        buf.clear();
+        match reader.read_until(b'\n', &mut buf).await {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(_) => break,
+        }
+        // Lossy conversion handles non-UTF8 output (e.g. OEM codepage on Windows)
+        let line = String::from_utf8_lossy(&buf)
+            .trim_end_matches(['\r', '\n'])
+            .to_string();
+        if line.is_empty() {
+            continue;
+        }
         if compiler_state::is_cancelled() {
             break;
         }
