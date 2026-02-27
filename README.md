@@ -6,7 +6,7 @@ Utilities for developing in Delphi using VS Code.
 
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Embarcadero Technologies, or any of its subsidiaries or its affiliates. The official Embarcadero Technologies website can be found at [https://www.embarcadero.com/](https://www.embarcadero.com/).
 
-This extension does not include any proprietary Embarcadero code, libraries or binaries. To build Delphi projects, you must have a valid Delphi installation and the necessary environment variables set up.
+This extension does not include any proprietary Embarcadero code, libraries or binaries. To build Delphi projects, you must have a valid Delphi installation and the necessary environment variables set up. This extension does not work with the Delphi Community Edition due to its limitations on command-line compilation.
 
 This extension is currently developed in my free time, and any feedback is welcome.
 
@@ -27,7 +27,7 @@ This extension is currently developed in my free time, and any feedback is welco
 * **File Navigation**: .pas <-> .dfm swapping with Alt+F12 hotkey
 * **Smart Navigation**: .dfm -> .pas jumps with Ctrl+click
 * **Compiler Output Enhancements**: Timestamps, clickable file links, and diagnostics published to the Problems panel
-* **Formatter Support**: Configurable Delphi code formatter via GExperts
+* **Formatter Support**: Configurable Delphi code formatter.
 * **LSP Server**: Bundled `ddk-server` (Rust) handles all project state, compilation, and formatting
 
 ## Demos
@@ -101,7 +101,7 @@ You can view and edit them directly via the `Edit Compiler Configurations` comma
 * `build_arguments` — MSBuild arguments passed during compilation
 * `condition` — optional expression to enable/disable the entry
 
-The first entry whose `GExperts.Formatter.exe` is found in its installation path is used for formatting.
+The first entry whose `Formatter.exe` is found in its installation path is used for formatting.
 
 ## Project Views
 
@@ -136,6 +136,11 @@ None so far.
 
 ## Release Notes
 
+### 2.0.2
+
+- **MCP server tools (BETA)**: initial testing of MCP server tools for external interaction.
+- Fixed README not displaying on the VS Code Marketplace store page
+
 ### 2.0.0
 
 - **Breaking**: SQLite database removed; data now stored as RON files in `%APPDATA%/ddk/`. Previously stored workspaces and projects will need to be re-added.
@@ -143,7 +148,7 @@ None so far.
 - Preset compiler configurations for all Delphi versions from 2007 to 13.0 Florence
 - Bulk compile/recreate for entire workspaces and group projects
 - Cancellable compilation (Ctrl+F2)
-- Delphi code formatter via GExperts (configurable)
+- Standard Delphi code formatter (configurable)
 - Timestamps and clickable links in all compiler output lines
 - Diagnostics published to the VS Code Problems panel
 - Fixed: selected project not working when tree was collapsed

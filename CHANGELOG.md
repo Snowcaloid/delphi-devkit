@@ -4,6 +4,17 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.2] - 2026-02-27
+
+### Added
+
+- **MCP server tools (BETA)**: `delphi_list_projects`, `delphi_select_project`, `delphi_get_available_compilers`, and `delphi_set_group_projects_compiler` — enabling AI agents to discover, select, and configure projects and compilers.
+
+### Fixed
+
+- README and CHANGELOG are now included in the VSIX package, so the VS Code Marketplace store page displays them correctly.
+- Added `repository` field to `package.json` so relative image paths resolve on the Marketplace.
+
 ## [2.0.0] - 2026-02-26
 
 ### Breaking Changes

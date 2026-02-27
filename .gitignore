@@ -1,6 +1,9 @@
 vscode_extension/dist
 vscode_extension/node_modules
 vscode_extension/server
+vscode_extension/README.md
+vscode_extension/CHANGELOG.md
+vscode_extension/LICENSE
 *.vsix
 .history
 server/target
