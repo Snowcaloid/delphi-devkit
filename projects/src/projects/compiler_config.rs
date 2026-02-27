@@ -138,6 +138,14 @@ impl CompilerConfigurations {
         self._compilers.insert(key, compiler);
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &CompilerConfiguration)> {
+        self._compilers.iter()
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &String> {
+        self._compilers.keys()
+    }
+
     pub fn validate(&self) -> Result<()> {
         for (key, compiler) in &self._compilers {
             if key.trim().is_empty() {

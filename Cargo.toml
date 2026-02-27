@@ -1,0 +1,3 @@
+[workspace]
+members = ["server", "mcp", "projects"]
+resolver = "2"

@@ -6,4 +6,4 @@ vscode_extension/CHANGELOG.md
 vscode_extension/LICENSE
 *.vsix
 .history
-server/target
+target

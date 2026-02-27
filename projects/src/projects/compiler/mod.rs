@@ -14,16 +14,35 @@ use tower_lsp::lsp_types::{Diagnostic, Url};
 use std::collections::HashMap;
 use tokio::fs::File;
 
+#[derive(Debug, Clone)]
+pub struct CompileResult {
+    pub success: bool,
+    pub cancelled: bool,
+    pub code: i32,
+}
+
 pub struct Compiler {
-    client: tower_lsp::Client,
+    client: Option<tower_lsp::Client>,
     params: CompileProjectParams,
     projects_data: ProjectsData,
 }
 
 impl Compiler {
+    /// Create a compiler with a live LSP client (used by ddk-server).
     pub async fn new(client: tower_lsp::Client, params: &CompileProjectParams) -> Self {
         Compiler {
-            client,
+            client: Some(client),
+            params: params.clone(),
+            projects_data: PROJECTS_DATA.read().await.clone(),
+        }
+    }
+
+    /// Create a compiler without an LSP client (used by ddk-mcp-server).
+    /// Progress is still broadcast via the in-process channel; diagnostics
+    /// will not be published to VS Code.
+    pub async fn new_standalone(params: &CompileProjectParams) -> Self {
+        Compiler {
+            client: None,
             params: params.clone(),
             projects_data: PROJECTS_DATA.read().await.clone(),
         }
@@ -265,7 +284,7 @@ impl Compiler {
         });
     }
 
-    pub async fn compile(&self) -> Result<()> {
+    pub async fn compile(&self) -> Result<CompileResult> {
         if !compiler_state::activate() {
             anyhow::bail!(
                 "Another compilation is already in progress. Please wait until it finishes."
@@ -297,7 +316,7 @@ impl Compiler {
                 event_id: _,
             } => self.get_from_link_parameters(project_link_id, rebuild).await?,
         };
-        clear_stale_diagnostics(&self.client).await;
+        clear_stale_diagnostics(self.client.as_ref()).await;
         // Actual compilation process
         let start_lines = if parameters.only_one_project {
             parameters.banner.into_header_vec()
@@ -305,21 +324,27 @@ impl Compiler {
             parameters.banner.into_multi_header_vec()
         };
         CompilerProgress::notify_start(
-            &self.client,
+            self.client.as_ref(),
             start_lines
         ).await;
         let result = self.do_compile(&parameters).await;
         let cancelled = compiler_state::is_cancelled();
         // Treat cancellation as a non-error outcome so no upstream error is logged
         let result = if cancelled { Ok(()) } else { result };
-        CompilerProgress::notify_completed(
-            &self.client,
-            compiler_state::is_success(),
+        let compile_result = CompileResult {
+            success: compiler_state::is_success(),
             cancelled,
-            compiler_state::get_code(),
+            code: compiler_state::get_code(),
+        };
+        CompilerProgress::notify_completed(
+            self.client.as_ref(),
+            compile_result.success,
+            compile_result.cancelled,
+            compile_result.code,
             parameters.banner.into_footer_vec(),
         ).await;
-        return result;
+        result?;
+        return Ok(compile_result);
     }
 
     async fn do_compile(&self, parameters: &CompilationParameters<'_>) -> Result<()> {
@@ -330,7 +355,7 @@ impl Compiler {
 
             if !parameters.only_one_project {
                 CompilerProgress::notify_single_project_started(
-                    &self.client,
+                    self.client.as_ref(),
                     project.id,
                     CompBanner::new(
                         format!("Compiling Project: {}", project.name),
@@ -384,7 +409,7 @@ impl Compiler {
                 .unwrap_or_else(|| PathBuf::from(&project.directory));
 
             let stdout_task = tokio::spawn(process_output_lines(
-                self.client.clone(),
+                self.client.clone(), // Option<tower_lsp::Client>
                 out_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stdout,
@@ -392,7 +417,7 @@ impl Compiler {
             ));
 
             let stderr_task = tokio::spawn(process_output_lines(
-                self.client.clone(),
+                self.client.clone(), // Option<tower_lsp::Client>
                 err_reader,
                 parameters.configuration.product_name.clone(),
                 OutputKind::Stderr,
@@ -439,7 +464,7 @@ impl Compiler {
 
             if !parameters.only_one_project {
                 CompilerProgress::notify_single_project_completed(
-                    &self.client,
+                    self.client.as_ref(),
                     project.id,
                     compiler_state::is_success(),
                     compiler_state::is_cancelled(),
@@ -476,7 +501,7 @@ enum OutputKind {
 }
 
 async fn process_output_lines<R: AsyncRead + Unpin + Send>(
-    client: tower_lsp::Client,
+    client: Option<tower_lsp::Client>,
     mut reader: BufReader<R>,
     compiler_name: String,
     kind: OutputKind,
@@ -515,27 +540,27 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
             }
             if last_file != diagnostic.file && !diagnostics.is_empty() {
                 compiler_state::track_diagnosed_file(last_file.clone());
-                publish_diagnostics(&client, &last_file, &diagnostics).await;
+                publish_diagnostics(client.as_ref(), &last_file, &diagnostics).await;
                 diagnostics.clear();
             }
             last_file = diagnostic.file.clone();
             let formatted = format!("{}", &diagnostic);
             match kind {
-                OutputKind::Stdout => CompilerProgress::notify_stdout(&client, formatted).await,
-                OutputKind::Stderr => CompilerProgress::notify_stderr(&client, formatted).await,
+                OutputKind::Stdout => CompilerProgress::notify_stdout(client.as_ref(), formatted).await,
+                OutputKind::Stderr => CompilerProgress::notify_stderr(client.as_ref(), formatted).await,
             }
             diagnostics.push(diagnostic.into());
             continue;
         }
         match kind {
-            OutputKind::Stdout => CompilerProgress::notify_stdout(&client, line).await,
-            OutputKind::Stderr => CompilerProgress::notify_stderr(&client, line).await,
+            OutputKind::Stdout => CompilerProgress::notify_stdout(client.as_ref(), line).await,
+            OutputKind::Stderr => CompilerProgress::notify_stderr(client.as_ref(), line).await,
         }
     }
 
     if !diagnostics.is_empty() {
         compiler_state::track_diagnosed_file(last_file.clone());
-        publish_diagnostics(&client, &last_file, &diagnostics).await;
+        publish_diagnostics(client.as_ref(), &last_file, &diagnostics).await;
     }
 }
 
@@ -661,22 +686,26 @@ pub async fn parse_rsvars(path: &str) -> Result<HashMap<String, String>> {
     Ok(env_vars)
 }
 
-async fn clear_stale_diagnostics(client: &tower_lsp::Client) {
+async fn clear_stale_diagnostics(client: Option<&tower_lsp::Client>) {
+    // Always drain the tracked files to prevent stale state
+    let files = compiler_state::take_diagnosed_files();
+    let Some(client) = client else { return };
     let mut tasks = tokio::task::JoinSet::new();
-    for file in compiler_state::take_diagnosed_files() {
+    for file in files {
         let client = client.clone();
         tasks.spawn(async move {
-            publish_diagnostics(&client, &file, &vec![]).await;
+            publish_diagnostics(Some(&client), &file, &vec![]).await;
         });
     }
     while tasks.join_next().await.is_some() {}
 }
 
 async fn publish_diagnostics(
-    client: &tower_lsp::Client,
+    client: Option<&tower_lsp::Client>,
     file: &str,
     diagnostics: &Vec<Diagnostic>,
 ) {
+    let Some(client) = client else { return };
     let uri = Url::from_file_path(file).unwrap_or_else(|_| Url::parse("untitled:unknown").unwrap());
     client
         .publish_diagnostics(uri, diagnostics.clone(), None)

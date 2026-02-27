@@ -157,60 +157,83 @@ impl Notification for CompilerProgress {
     const METHOD: &'static str = "notifications/compiler/progress";
 }
 
+use tokio::sync::broadcast;
+
+static COMPILER_BROADCAST: std::sync::OnceLock<broadcast::Sender<CompilerProgressParams>> =
+    std::sync::OnceLock::new();
+
+fn broadcast_channel() -> &'static broadcast::Sender<CompilerProgressParams> {
+    COMPILER_BROADCAST.get_or_init(|| broadcast::channel(512).0)
+}
+
 impl CompilerProgress {
-    pub async fn notify_start(client: &tower_lsp::Client, lines: Vec<String>) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::Start {
-            lines,
-        }).await;
+    /// Subscribe to compiler progress events from within the same process.
+    pub fn subscribe() -> broadcast::Receiver<CompilerProgressParams> {
+        broadcast_channel().subscribe()
     }
 
-    pub async fn notify_stdout(client: &tower_lsp::Client, line: String) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::Stdout {
-            line,
-        }).await;
+    fn broadcast(params: &CompilerProgressParams) {
+        // Ignore send errors (no active receivers is fine).
+        let _ = broadcast_channel().send(params.clone());
     }
 
-    pub async fn notify_stderr(client: &tower_lsp::Client, line: String) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::Stderr {
-            line,
-        }).await;
+    pub async fn notify_start(client: Option<&tower_lsp::Client>, lines: Vec<String>) {
+        let params = CompilerProgressParams::Start { lines };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
     }
 
-    pub async fn notify_completed(client: &tower_lsp::Client, success: bool, cancelled: bool, code: i32, lines: Vec<String>) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::Completed {
-            success,
-            cancelled,
-            code,
-            lines,
-        }).await;
+    pub async fn notify_stdout(client: Option<&tower_lsp::Client>, line: String) {
+        let params = CompilerProgressParams::Stdout { line };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
+    }
+
+    pub async fn notify_stderr(client: Option<&tower_lsp::Client>, line: String) {
+        let params = CompilerProgressParams::Stderr { line };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
+    }
+
+    pub async fn notify_completed(client: Option<&tower_lsp::Client>, success: bool, cancelled: bool, code: i32, lines: Vec<String>) {
+        let params = CompilerProgressParams::Completed { success, cancelled, code, lines };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
     }
 
     pub async fn notify_single_project_started(
-        client: &tower_lsp::Client,
+        client: Option<&tower_lsp::Client>,
         project_id: usize,
         lines: Vec<String>
     ) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::SingleProjectStarted {
-            project_id,
-            lines,
-        }).await;
+        let params = CompilerProgressParams::SingleProjectStarted { project_id, lines };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
     }
 
     pub async fn notify_single_project_completed(
-        client: &tower_lsp::Client,
+        client: Option<&tower_lsp::Client>,
         project_id: usize,
         success: bool,
         cancelled: bool,
         code: i32,
         lines: Vec<String>
     ) {
-        client.send_notification::<CompilerProgress>(CompilerProgressParams::SingleProjectCompleted {
-            project_id,
-            success,
-            cancelled,
-            code,
-            lines,
-        }).await;
+        let params = CompilerProgressParams::SingleProjectCompleted { project_id, success, cancelled, code, lines };
+        Self::broadcast(&params);
+        if let Some(client) = client {
+            client.send_notification::<CompilerProgress>(params).await;
+        }
     }
 }
 
@@ -253,3 +276,4 @@ pub struct CustomDocumentFormat {
     pub content: String,
     pub range: Option<Range>,
 }
+

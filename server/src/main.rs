@@ -1,23 +1,14 @@
-pub mod projects;
-pub mod lexorank;
-pub mod lsp_types;
-pub mod files;
-pub mod utils;
-pub mod format;
-pub mod state;
-
 use anyhow::Result;
 use tokio::io::{stdin, stdout};
 use tower_lsp::{Client, async_trait, jsonrpc};
 use tower_lsp::{LanguageServer, LspService, Server};
 use tower_lsp::lsp_types::*;
 
-pub(crate) use lsp_types::*;
-use projects::*;
-use state::*;
-use crate::format::Formatter;
-
-mod encoding;
+use ddk_projects::lsp_types::*;
+use ddk_projects::projects::*;
+use ddk_projects::state::*;
+use ddk_projects::format::Formatter;
+use ddk_projects::try_finish_event;
 
 #[derive(Debug, Clone)]
 struct DelphiLsp {
@@ -44,7 +35,7 @@ impl DelphiLsp {
         &self,
         _params: CancelCompilationParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
-        crate::projects::compiler_state::cancel();
+        ddk_projects::projects::compiler_state::cancel();
         try_finish_event!(self.client, "compilation cancelled");
     }
 
@@ -63,7 +54,7 @@ impl DelphiLsp {
         params: serde_json::Value,
     ) -> tower_lsp::jsonrpc::Result<()> {
         if let Some(enc) = params.get("encoding").and_then(|v| v.as_str()) {
-            encoding::set_encoding(enc);
+            ddk_projects::encoding::set_encoding(enc);
             lsp_info!(self.client, "Compiler encoding changed to: {}", enc);
         }
         Ok(())
@@ -134,7 +125,7 @@ impl LanguageServer for DelphiLsp {
     async fn initialize(&self, params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
         if let Some(opts) = params.initialization_options {
             if let Some(enc) = opts.get("encoding").and_then(|v| v.as_str()) {
-                encoding::set_encoding(enc);
+                ddk_projects::encoding::set_encoding(enc);
             }
         }
         return Ok(InitializeResult {
@@ -147,18 +138,18 @@ impl LanguageServer for DelphiLsp {
     }
 
     async fn initialized(&self, _params: InitializedParams) {
-        lsp_info!(self.client, "Delphi LSP Relay server initialized");
+        lsp_info!(self.client, "Delphi LSP server initialized");
     }
 
     async fn shutdown(&self) -> jsonrpc::Result<()> {
-        crate::projects::compiler_state::cancel();
+        ddk_projects::projects::compiler_state::cancel();
         return Ok(())
     }
 
     async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
         let client = self.client.clone();
         let settings = params.settings.clone();
-        if let Err(error) = projects::update(settings.clone(), client).await {
+        if let Err(error) = update(settings.clone(), client).await {
             lsp_error!(self.client, "Failed to apply configuration changes: {}", error);
             NotifyError::notify_json(&self.client, format!("Failed to apply configuration changes: {}", error), &settings).await;
         }

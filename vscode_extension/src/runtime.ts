@@ -35,6 +35,8 @@ export abstract class Runtime {
     await this.projects.initialize();
     this.dfm = new DfmFeature();
     await this.dfm.initialize();
+    // Register the MCP server (spawns ddk-mcp-server as a STDIO child process
+    // when VS Code or another MCP client requests it).
     this.mcp = new McpServerFeature();
     await this.mcp.initialize();
     context.subscriptions.push(

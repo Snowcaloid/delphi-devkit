@@ -319,7 +319,7 @@ export class DDK_Client {
         const extensionDir = Runtime.extension.extensionUri.fsPath;
         const isDev = Runtime.extension.extensionMode !== ExtensionMode.Production;
         const serverPath = isDev
-            ? join(extensionDir, '..', 'server', 'target', 'debug', 'ddk-server.exe')
+            ? join(extensionDir, '..', 'target', 'debug', 'ddk-server.exe')
             : join(extensionDir, 'server', 'ddk-server.exe');
 
         if (!existsSync(serverPath)) {
@@ -327,7 +327,7 @@ export class DDK_Client {
             throw new Error(
                 `DDK server binary not found at: ${serverPath} (${mode} mode). ` +
                 (isDev
-                    ? 'Run `cargo build` in the server/ directory.'
+                    ? 'Run `cargo build` in the repository root.'
                     : 'The extension package may be incomplete.')
             );
         }

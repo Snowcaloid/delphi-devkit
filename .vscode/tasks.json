@@ -79,7 +79,7 @@
             "type": "shell",
             "command": "cargo build",
             "options": {
-                "cwd": "${workspaceFolder}/server"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": []
         }

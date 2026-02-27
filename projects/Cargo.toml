@@ -1,0 +1,36 @@
+[package]
+name = "ddk-projects"
+version = "2.0.2"
+edition = "2024"
+authors = ["Valentin Baron"]
+license-file = "../LICENSE"
+description = "DDK – shared project model, state, compiler, formatter, and MCP tools"
+homepage = "https://www.github.com/valentin-baron"
+repository = "https://www.github.com/valentin-baron/delphi-devkit"
+
+[lib]
+name = "ddk_projects"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+async-trait = "0.1.89"
+chrono = "0.4.43"
+dirs = "6.0.0"
+encoding_rs = "0.8"
+fslock = "0.2.1"
+lazy_static = "1.5.0"
+notify = "8.2.0"
+phf = { version = "0.13.1", features = ["macros"] }
+regex = "1.12.2"
+ron = "0.12.0"
+roxmltree = "0.21.1"
+rust_search = "2.1.0"
+rust-mcp-sdk = { version = "0.8.3", default-features = false, features = ["server", "macros", "stdio"] }
+scopeguard = "1.2.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+substring = "1.4.5"
+tempfile = "3.24.0"
+tokio = { version = "1.49.0", features = ["fs", "io-std", "io-util", "macros", "process", "rt-multi-thread", "time", "tokio-macros"] }
+tower-lsp = { version = "0.20.0" }

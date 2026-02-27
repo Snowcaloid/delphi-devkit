@@ -36,13 +36,15 @@ const copyAssetsPlugin = {
 			const changelog = path.join(__dirname, '..', 'CHANGELOG.md');
 			copyAsset(changelog);
 
-			const formatterConfig = path.join(__dirname, '..', 'server', 'src', 'format', 'presets', 'ddk_formatter.config');
+			const formatterConfig = path.join(__dirname, '..', 'projects', 'src', 'format', 'presets', 'ddk_formatter.config');
 			copyAsset(formatterConfig);
 
 			if (production) {
-				const serverBinary = path.join(__dirname, '..', 'server', 'target', 'release', 'ddk-server.exe');
+				const serverBinary = path.join(__dirname, '..', 'target', 'release', 'ddk-server.exe');
+				const mcpBinary = path.join(__dirname, '..', 'target', 'release', 'ddk-mcp-server.exe');
 				const serverDir = path.join(__dirname, 'server');
 				copyAsset(serverBinary, serverDir);
+				copyAsset(mcpBinary, serverDir);
 			}
 		});
 	},
