@@ -1,4 +1,5 @@
 import * as http from 'http';
+import { promises as fs } from 'fs';
 import { CancellationToken, Disposable, lm, McpHttpServerDefinition, Uri } from 'vscode';
 import type { McpServerDefinitionProvider } from 'vscode';
 import { Feature } from '../types';
@@ -48,6 +49,25 @@ export class McpServerFeature implements Feature, McpServerDefinitionProvider {
   private uri!: Uri;
 
   private readonly tools: Record<string, McpTool> = {
+    get_ddk_extension_info: {
+      definition: {
+        name: 'get_ddk_extension_info',
+        description:
+          'Returns the DDK (Delphi Development Kit) extension README, describing all available features, ' +
+          'commands, settings, and project views. Use this to understand what the extension can do.',
+        inputSchema: { type: 'object', properties: {}, required: [] }
+      },
+      callback: async () => {
+        try {
+          const readmePath = Runtime.extension.asAbsolutePath('README.md');
+          const content = await fs.readFile(readmePath, 'utf8');
+          return { content: [{ type: 'text' as const, text: content }] };
+        } catch {
+          return { content: [{ type: 'text' as const, text: 'README.md not found in extension bundle.' }] };
+        }
+      }
+    },
+
     delphi_get_environment_info: {
       definition: {
         name: 'delphi_get_environment_info',
