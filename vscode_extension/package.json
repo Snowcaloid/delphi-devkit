@@ -305,7 +305,7 @@
         {
           "id": "ddk.view.configuration",
           "name": "DDK Configuration",
-          "icon": "$(settings-gear)",
+          "icon": "assets/DelphiHelmetLine.svg",
           "visibility": "collapsed"
         }
       ]
