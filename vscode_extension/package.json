@@ -27,130 +27,111 @@
         "command": "ddk.projects.refresh",
         "title": "Reload from configuration",
         "icon": "$(refresh)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.discoverProjectPaths",
         "title": "Discover Project Paths",
         "icon": "$(search)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.addProject",
         "title": "Add Project",
         "icon": "$(add)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.removeProject",
         "title": "Remove Project",
         "icon": "$(remove)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.addWorkspace",
         "title": "Add Workspace",
         "icon": "$(add)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.renameWorkspace",
         "title": "Rename Workspace",
         "icon": "$(edit)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.removeWorkspace",
         "title": "Remove Workspace",
         "icon": "$(remove)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.selectProject",
         "title": "Select Project",
         "icon": "$(check)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.compile",
         "title": "Compile",
         "icon": "$(sync-ignored)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.recreate",
         "title": "Recreate",
         "icon": "$(sync)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.showInExplorer",
         "title": "Show in Explorer",
         "icon": "$(folder)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.openInFileExplorer",
         "title": "Open in File Explorer",
         "icon": "$(folder-opened)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.runExecutable",
         "title": "Run",
         "icon": "$(play)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.configureOrCreateIni",
         "title": "Configure/Create .ini",
         "icon": "$(settings-gear)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.compileAllFromHere",
         "title": "Compile all from here",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.recreateAllFromHere",
         "title": "Recreate all from here",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.compileAllInWorkspace",
         "title": "Compile all in workspace",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.recreateAllInWorkspace",
         "title": "Recreate all in workspace",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.setManualPath",
         "title": "Set Path manually",
         "icon": "$(pencil)",
-        "category": "_ddk_treeview",
-        "when": "false"
+        "category": "DDK"
       },
       {
         "command": "ddk.projects.compileAllInGroupProject",
@@ -328,6 +309,33 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+        { "command": "ddk.projects.refresh", "when": "false" },
+        { "command": "ddk.projects.discoverProjectPaths", "when": "false" },
+        { "command": "ddk.projects.addProject", "when": "false" },
+        { "command": "ddk.projects.removeProject", "when": "false" },
+        { "command": "ddk.projects.addWorkspace", "when": "false" },
+        { "command": "ddk.projects.renameWorkspace", "when": "false" },
+        { "command": "ddk.projects.removeWorkspace", "when": "false" },
+        { "command": "ddk.projects.selectProject", "when": "false" },
+        { "command": "ddk.projects.compile", "when": "false" },
+        { "command": "ddk.projects.recreate", "when": "false" },
+        { "command": "ddk.projects.showInExplorer", "when": "false" },
+        { "command": "ddk.projects.openInFileExplorer", "when": "false" },
+        { "command": "ddk.projects.runExecutable", "when": "false" },
+        { "command": "ddk.projects.configureOrCreateIni", "when": "false" },
+        { "command": "ddk.projects.compileAllFromHere", "when": "false" },
+        { "command": "ddk.projects.recreateAllFromHere", "when": "false" },
+        { "command": "ddk.projects.compileAllInWorkspace", "when": "false" },
+        { "command": "ddk.projects.recreateAllInWorkspace", "when": "false" },
+        { "command": "ddk.projects.setManualPath", "when": "false" },
+        { "command": "ddk.projects.setProjectConfiguration", "when": "false" },
+        { "command": "ddk.projects.setProjectPlatform", "when": "false" },
+        { "command": "ddk.projects.setWorkspaceConfiguration", "when": "false" },
+        { "command": "ddk.projects.setWorkspacePlatform", "when": "false" },
+        { "command": "ddk.projects.setGroupProjectConfiguration", "when": "false" },
+        { "command": "ddk.projects.setGroupProjectPlatform", "when": "false" }
+      ],
       "view/title": [
         {
           "command": "ddk.projects.refresh",
