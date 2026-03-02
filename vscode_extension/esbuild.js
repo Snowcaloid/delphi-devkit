@@ -36,7 +36,7 @@ const copyAssetsPlugin = {
 			const changelog = path.join(__dirname, '..', 'CHANGELOG.md');
 			copyAsset(changelog);
 
-			const formatterConfig = path.join(__dirname, '..', 'projects', 'src', 'format', 'presets', 'ddk_formatter.config');
+			const formatterConfig = path.join(__dirname, '..', 'core', 'src', 'format', 'presets', 'ddk_formatter.config');
 			copyAsset(formatterConfig);
 
 			if (production) {

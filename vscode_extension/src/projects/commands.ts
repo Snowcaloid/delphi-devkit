@@ -61,6 +61,7 @@ export namespace ProjectsCommands {
         try {
           // Use the system's default application handler to launch the executable
           await env.openExternal(Uri.file(project.exe));
+          window.showInformationMessage(`Running: ${project.exe}`);
         } catch (error) {
           window.showErrorMessage(`Failed to launch executable: ${error}`);
         }
