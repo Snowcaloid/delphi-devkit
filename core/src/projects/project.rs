@@ -97,7 +97,9 @@ impl Project {
     }
 
     pub fn discover_paths(&mut self) -> Result<()> {
-        self.discover_paths_inner(None, None)
+        let config = self.active_configuration.clone();
+        let platform = self.active_platform.clone();
+        self.discover_paths_inner(config.as_deref(), platform.as_deref())
     }
 
     /// Discover paths using an explicit config/platform override.
@@ -125,10 +127,20 @@ impl Project {
             Some(ext) if ext == "dpr" => {
                 self.dpr = Some(main_source.to_string_lossy().to_string());
                 self.dpk = None;
-                // When config/platform are provided, use get_exe_path_for;
-                // always overwrite exe/ini even if old path exists.
-                let exe_result = if let (Some(cfg), Some(plat)) = (config, platform) {
-                    get_exe_path_for(&dproj_path, cfg, plat)
+                // Resolve the exe path, respecting any config/platform overrides.
+                // When only one is provided, fill the other from the dproj defaults.
+                let exe_result = if config.is_some() || platform.is_some() {
+                    let dproj = dproj_rs::Dproj::from_file(&dproj_path)
+                        .map_err(|e| anyhow::anyhow!("Failed to parse dproj: {}", e))?;
+                    let cfg = config
+                        .map(|s| s.to_string())
+                        .or_else(|| dproj.active_configuration().ok())
+                        .unwrap_or_else(|| "Debug".to_string());
+                    let plat = platform
+                        .map(|s| s.to_string())
+                        .or_else(|| dproj.active_platform().ok())
+                        .unwrap_or_else(|| "Win32".to_string());
+                    get_exe_path_for(&dproj_path, &cfg, &plat)
                 } else {
                     get_exe_path(&dproj_path)
                 };

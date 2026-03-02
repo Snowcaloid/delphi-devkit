@@ -237,6 +237,12 @@ impl ProjectsData {
         self.next_id(); // for project_id
         self.next_id(); // for link_id
 
+        // Discover exe/ini paths from the dproj right away so they are
+        // populated even when the executable hasn't been built yet.
+        if let Some(proj) = self.projects.last_mut() {
+            let _ = proj.discover_paths();
+        }
+
         return Ok(());
     }
 
