@@ -58,6 +58,7 @@ export namespace PROJECTS {
     export const SET_WORKSPACE_PLATFORM = `${PROJECTS.CONFIG.KEY}.setWorkspacePlatform`;
     export const SET_GROUP_PROJECT_CONFIGURATION = `${PROJECTS.CONFIG.KEY}.setGroupProjectConfiguration`;
     export const SET_GROUP_PROJECT_PLATFORM = `${PROJECTS.CONFIG.KEY}.setGroupProjectPlatform`;
+    export const TRANSFER_GROUP_PROJECT = `${PROJECTS.CONFIG.KEY}.transferGroupProject`;
   }
 
   export namespace CONTEXT {

@@ -305,6 +305,7 @@ export namespace ProjectsCommands {
         commands.registerCommand(PROJECTS.COMMAND.EDIT_DEFAULT_INI, this.editDefaultIni.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.COMPILE_ALL_IN_GROUP_PROJECT, this.compileAllInGroupProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RECREATE_ALL_IN_GROUP_PROJECT, this.recreateAllInGroupProject.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.TRANSFER_GROUP_PROJECT, this.transferGroupProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.REFRESH, this.refresh.bind(this)),
       ];
     }
@@ -358,6 +359,46 @@ export namespace ProjectsCommands {
       await Runtime.projects.workspacesTreeView.refresh();
       await Runtime.projects.groupProjectTreeView.refresh();
       await Runtime.projects.compilerStatusBarItem.updateDisplay();
+    }
+
+    private static async transferGroupProject(): Promise<void> {
+      const gp = Runtime.projectsData?.group_project;
+      if (!assertError(gp, 'No group project is loaded.')) return;
+
+      const data = Runtime.projectsData;
+      const name = await window.showInputBox({
+        prompt: 'Enter a name for the new workspace',
+        placeHolder: 'Workspace Name',
+        value: gp!.name,
+        validateInput: (value) => {
+          if (!value || !value.trim()) return 'Workspace name cannot be empty';
+          if (data && data.workspaces.some((ws) => ws.name.toLowerCase() === value.trim().toLowerCase()))
+            return 'A workspace with this name already exists';
+        }
+      });
+      if (!assertError(name, 'Cannot create workspace without name.')) return;
+
+      const items = Object.entries(Runtime.compilerConfigurations).sort(([keyA, configA], [keyB, configB]) =>
+        configB.compiler_version - configA.compiler_version
+      ).map(([key, cfg]) => ({
+        label: cfg.product_name,
+        description: cfg.installation_path,
+        detail: key
+      }));
+      const compilerName = await window.showQuickPick(items, {
+        placeHolder: 'Select Delphi Compiler Configuration for this workspace',
+        matchOnDescription: false,
+        matchOnDetail: false,
+        canPickMany: false
+      });
+      if (!assertError(compilerName, 'Cannot create workspace without compiler configuration.')) return;
+
+      await Runtime.client.applyChanges([{
+        type: 'TransferGroupProject',
+        name: name!.trim(),
+        compiler: compilerName!.detail
+      }]);
+      window.showInformationMessage(`Transferred group project to workspace: ${name!.trim()}`);
     }
   }
 

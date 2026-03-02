@@ -33,7 +33,8 @@ export type Change =
     | { type: 'SetWorkspaceConfiguration', workspace_id: number, config: string | null }
     | { type: 'SetWorkspacePlatform', workspace_id: number, platform: string | null }
     | { type: 'SetGroupProjectConfiguration', config: string | null }
-    | { type: 'SetGroupProjectPlatform', platform: string | null };
+    | { type: 'SetGroupProjectPlatform', platform: string | null }
+    | { type: 'TransferGroupProject', name: string, compiler: string };
 
 
 export interface Changes {

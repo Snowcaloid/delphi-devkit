@@ -259,6 +259,12 @@
         "category": "DDK"
       },
       {
+        "command": "ddk.projects.transferGroupProject",
+        "title": "Transfer Group Project to Workspace",
+        "icon": "$(files)",
+        "category": "DDK"
+      },
+      {
         "command": "ddk.formatter.editConfig",
         "title": "Edit Formatter Configuration",
         "category": "DDK"
@@ -373,6 +379,11 @@
           "command": "ddk.projects.selectCompilerConfiguration",
           "when": "view == ddk.view.projects.groupProject",
           "group": "navigation"
+        },
+        {
+          "command": "ddk.projects.transferGroupProject",
+          "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
+          "group": "navigation@0"
         },
         {
           "command": "ddk.projects.compileAllInGroupProject",

@@ -62,6 +62,7 @@ pub enum Change {
     SetWorkspacePlatform { workspace_id: usize, platform: Option<String> },
     SetGroupProjectConfiguration { config: Option<String> },
     SetGroupProjectPlatform { platform: Option<String> },
+    TransferGroupProject { name: String, compiler: String },
 }
 
 impl Change {
@@ -135,6 +136,9 @@ impl Change {
             }
             Change::SetGroupProjectPlatform { platform } => {
                 return Self::set_group_project_platform(platform).await;
+            }
+            Change::TransferGroupProject { name, compiler } => {
+                return Self::transfer_group_project(name, compiler).await;
             }
         }
     }
@@ -322,6 +326,24 @@ impl Change {
                 project.active_configuration = config.clone();
                 let _ = project.discover_paths();
             }
+        }
+        return projects_data.save().await;
+    }
+
+    async fn transfer_group_project(name: String, compiler: String) -> Result<()> {
+        if !compiler_exists(&compiler).await {
+            anyhow::bail!("Compiler not found: {}", compiler);
+        }
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let project_ids: Vec<usize> = projects_data.group_project.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("No group project is loaded"))?
+            .project_links.iter().map(|link| link.project_id).collect();
+        projects_data.new_workspace(&name, &compiler).await?;
+        let workspace_id = projects_data.workspaces.last()
+            .ok_or_else(|| anyhow::anyhow!("Failed to find newly created workspace"))?
+            .id;
+        for project_id in project_ids {
+            projects_data.add_project_link(project_id, workspace_id)?;
         }
         return projects_data.save().await;
     }
