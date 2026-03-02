@@ -327,32 +327,110 @@
     },
     "menus": {
       "commandPalette": [
-        { "command": "ddk.projects.refresh", "when": "false" },
-        { "command": "ddk.projects.discoverProjectPaths", "when": "false" },
-        { "command": "ddk.projects.addProject", "when": "false" },
-        { "command": "ddk.projects.removeProject", "when": "false" },
-        { "command": "ddk.projects.addWorkspace", "when": "false" },
-        { "command": "ddk.projects.renameWorkspace", "when": "false" },
-        { "command": "ddk.projects.removeWorkspace", "when": "false" },
-        { "command": "ddk.projects.selectProject", "when": "false" },
-        { "command": "ddk.projects.compile", "when": "false" },
-        { "command": "ddk.projects.recreate", "when": "false" },
-        { "command": "ddk.projects.showInExplorer", "when": "false" },
-        { "command": "ddk.projects.openInFileExplorer", "when": "false" },
-        { "command": "ddk.projects.runExecutable", "when": "false" },
-        { "command": "ddk.projects.configureOrCreateIni", "when": "false" },
-        { "command": "ddk.projects.compileAllFromHere", "when": "false" },
-        { "command": "ddk.projects.recreateAllFromHere", "when": "false" },
-        { "command": "ddk.projects.compileAllInWorkspace", "when": "false" },
-        { "command": "ddk.projects.recreateAllInWorkspace", "when": "false" },
-        { "command": "ddk.projects.setManualPath", "when": "false" },
-        { "command": "ddk.projects.setProjectConfiguration", "when": "false" },
-        { "command": "ddk.projects.setProjectPlatform", "when": "false" },
-        { "command": "ddk.projects.setWorkspaceConfiguration", "when": "false" },
-        { "command": "ddk.projects.setWorkspacePlatform", "when": "false" },
-        { "command": "ddk.projects.setGroupProjectConfiguration", "when": "false" },
-        { "command": "ddk.projects.setGroupProjectPlatform", "when": "false" },
-        { "command": "ddk.configuration.openItem", "when": "false" }
+        {
+          "command": "ddk.projects.refresh",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.discoverProjectPaths",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.addProject",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.removeProject",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.addWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.renameWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.removeWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.selectProject",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.compile",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.recreate",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.showInExplorer",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.openInFileExplorer",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.runExecutable",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.configureOrCreateIni",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.compileAllFromHere",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.recreateAllFromHere",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.compileAllInWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.recreateAllInWorkspace",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setManualPath",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setProjectConfiguration",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setProjectPlatform",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setWorkspaceConfiguration",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setWorkspacePlatform",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setGroupProjectConfiguration",
+          "when": "false"
+        },
+        {
+          "command": "ddk.projects.setGroupProjectPlatform",
+          "when": "false"
+        },
+        {
+          "command": "ddk.configuration.openItem",
+          "when": "false"
+        }
       ],
       "view/title": [
         {
@@ -658,71 +736,106 @@
         "textMateRules": [
           {
             "scope": "invalid.illegal.error.delphi",
-            "settings": { "foreground": "#ff6b6b" }
+            "settings": {
+              "foreground": "#ff6b6b"
+            }
           },
           {
             "scope": "markup.warning.delphi",
-            "settings": { "foreground": "#fdcb6e" }
+            "settings": {
+              "foreground": "#fdcb6e"
+            }
           },
           {
             "scope": "markup.hint.delphi",
-            "settings": { "foreground": "#74b9ff" }
+            "settings": {
+              "foreground": "#74b9ff"
+            }
           },
           {
             "scope": "markup.info.delphi",
-            "settings": { "foreground": "#55a3ff" }
+            "settings": {
+              "foreground": "#55a3ff"
+            }
           },
           {
             "scope": "constant.other.error-code.delphi",
-            "settings": { "foreground": "#a29bfe" }
+            "settings": {
+              "foreground": "#a29bfe"
+            }
           },
           {
             "scope": "string.other.filepath.delphi",
-            "settings": { "foreground": "#00b894" }
+            "settings": {
+              "foreground": "#00b894"
+            }
           },
           {
             "scope": "constant.numeric.line-number.delphi",
-            "settings": { "foreground": "#ffeaa7" }
+            "settings": {
+              "foreground": "#ffeaa7"
+            }
           },
           {
             "scope": "constant.numeric.column-number.delphi",
-            "settings": { "foreground": "#ffeaa7" }
+            "settings": {
+              "foreground": "#ffeaa7"
+            }
           },
           {
             "scope": "constant.other.timestamp.delphi",
-            "settings": { "foreground": "#636e72" }
+            "settings": {
+              "foreground": "#636e72"
+            }
           },
           {
             "scope": "string.unquoted.message.delphi",
-            "settings": { "foreground": "#dfe6e9" }
+            "settings": {
+              "foreground": "#dfe6e9"
+            }
           },
           {
             "scope": "entity.name.type.quoted-identifier.delphi",
-            "settings": { "foreground": "#e17cf5", "fontStyle": "italic" }
+            "settings": {
+              "foreground": "#e17cf5",
+              "fontStyle": "italic"
+            }
           },
           {
             "scope": "keyword.other.banner.delphi",
-            "settings": { "foreground": "#74b9ff" }
+            "settings": {
+              "foreground": "#74b9ff"
+            }
           },
           {
             "scope": "markup.success.banner.delphi",
-            "settings": { "foreground": "#00b894" }
+            "settings": {
+              "foreground": "#00b894"
+            }
           },
           {
             "scope": "markup.error.banner.delphi",
-            "settings": { "foreground": "#ff6b6b" }
+            "settings": {
+              "foreground": "#ff6b6b"
+            }
           },
           {
             "scope": "markup.cancelled.banner.delphi",
-            "settings": { "foreground": "#e17055" }
+            "settings": {
+              "foreground": "#e17055"
+            }
           },
           {
             "scope": "markup.multi.banner.delphi",
-            "settings": { "foreground": "#a29bfe" }
+            "settings": {
+              "foreground": "#a29bfe"
+            }
           },
           {
             "scope": "markup.project.banner.delphi",
-            "settings": { "foreground": "#636e72" }
+            "settings": {
+              "foreground": "#636e72"
+            }
           }
         ]
       }
@@ -816,7 +929,6 @@
     "@types/uuid": "^10.0.0",
     "@xmldom/xmldom": "^0.9.8",
     "minimatch": "^10.0.3",
-    "npm": "^11.7.0",
     "reflect-metadata": "^0.2.2",
     "uuid": "^11.1.0",
     "vscode-languageclient": "^9.0.1"
