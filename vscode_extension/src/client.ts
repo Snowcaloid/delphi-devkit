@@ -199,30 +199,6 @@ export class DDK_Client {
         ];
     }
 
-    public async projectsDataOverride(data: Entities.ProjectsData): Promise<boolean> {
-        const id = Runtime.addEvent();
-        Runtime.projectsData = data;
-        await this.client.sendNotification('workspace/didChangeConfiguration', {
-            settings: {
-                projectsData: data,
-                event_id: id
-            }
-        });
-        return await Runtime.waitForEvent(id);
-    }
-
-    public async compilersOverride(data: Entities.CompilerConfigurations): Promise<boolean> {
-        const id = Runtime.addEvent();
-        Runtime.compilerConfigurations = data;
-        await this.client.sendNotification('workspace/didChangeConfiguration', {
-            settings: {
-                compilerConfigurations: data,
-                event_id: id
-            }
-        });
-        return await Runtime.waitForEvent(id);
-    }
-
     public async applyChanges(changesArray: Change[]): Promise<boolean> {
         const changes = newChanges(changesArray);
         await this.client.sendNotification('workspace/didChangeConfiguration', {

@@ -165,15 +165,27 @@
         "category": "DDK"
       },
       {
-        "command": "ddk.importConfiguration",
-        "title": "Import Configuration",
+        "command": "ddk.exportProjects",
+        "title": "Export Projects",
+        "icon": "$(cloud-upload)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.importProjects",
+        "title": "Import Projects",
         "icon": "$(cloud-download)",
         "category": "DDK"
       },
       {
-        "command": "ddk.exportConfiguration",
-        "title": "Export Configuration",
+        "command": "ddk.exportCompilers",
+        "title": "Export Compilers",
         "icon": "$(cloud-upload)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.importCompilers",
+        "title": "Import Compilers",
+        "icon": "$(cloud-download)",
         "category": "DDK"
       },
       {
@@ -328,12 +340,12 @@
           "group": "navigation"
         },
         {
-          "command": "ddk.importConfiguration",
+          "command": "ddk.importProjects",
           "when": "view == ddk.view.projects.workspaces",
           "group": "navigation"
         },
         {
-          "command": "ddk.exportConfiguration",
+          "command": "ddk.exportProjects",
           "when": "view == ddk.view.projects.workspaces",
           "group": "navigation"
         },

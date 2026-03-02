@@ -125,8 +125,10 @@ export namespace DFM {
 }
 
 export namespace COMMANDS {
-  export const IMPORT_CONFIGURATION = 'ddk.importConfiguration';
-  export const EXPORT_CONFIGURATION = 'ddk.exportConfiguration';
+  export const EXPORT_PROJECTS = 'ddk.exportProjects';
+  export const IMPORT_PROJECTS = 'ddk.importProjects';
+  export const EXPORT_COMPILERS = 'ddk.exportCompilers';
+  export const IMPORT_COMPILERS = 'ddk.importCompilers';
   export const EDIT_COMPILER_CONFIGURATIONS = 'ddk.editCompilerConfigurations';
   export const RESET_COMPILER_CONFIGURATIONS = 'ddk.resetCompilerConfigurations';
   export const EDIT_PROJECTS_DATA = 'ddk.editProjectsData';
