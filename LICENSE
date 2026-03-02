@@ -1,9 +1,9 @@
 DDK - Delphi Development Kit for Visual Studio Code
-Copyright © 2025 Valentin Baron.
+Copyright © 2025–2026 Valentin Baron.
 All Rights Reserved
 
-Version 1.1
-Date: 26.02.2026 (February 26)
+Version 1.2
+Date: 02.03.2026 (March 2)
 
 THE CONTENTS OF THIS PROJECT ARE CURRENTLY PROPRIETARY.
 UNAUTHORIZED COPYING, TRANSFERRING OR REPRODUCTION OF THE CONTENTS OF THIS
@@ -18,7 +18,7 @@ TERMS AND CONDITIONS
 1. Definitions.
 
     "License" shall mean the terms and conditions for use, reproduction, and
-    distribution as defined by Sections 1 through 9 of this document.
+    distribution as defined by Sections 1 through 13 of this document.
 
     "Licensor" shall mean the copyright owner or entity authorized by the
     copyright owner that is granting the License.
@@ -45,8 +45,7 @@ TERMS AND CONDITIONS
 
     "Work" shall mean the work of authorship, whether in Source or Object
     form, made available under the License, as indicated by a copyright notice
-    that is included in or attached to the work (an example is provided in the
-    Appendix below).
+    that is included in or attached to the work.
 
     "Derivative Works" shall mean any work, whether in Source or Object form,
     that is based on (or derived from) the Work and for which the editorial
@@ -86,14 +85,40 @@ TERMS AND CONDITIONS
     use in describing the origin of the Work and reproducing the content of the
     NOTICE file.
 
-3. Redistribution.
+3. Grant of Use.
+
+    The Work is made available free of charge through the Visual Studio Code
+    Marketplace. Any individual or Legal Entity may install and use the Work
+    for any purpose — personal, educational, or commercial — without time
+    limit, provided the Work remains available on the VS Code Marketplace or
+    has previously been installed by You while it was available. This right
+    of use survives any later removal or unpublishing of the Work from the
+    Marketplace, as well as any change in the Licensor's employment,
+    affiliation, or availability.
+
+4. Maintenance.
+
+    The Licensor is under no obligation to maintain, update, patch, or
+    otherwise support the Work. No guarantee is made regarding the
+    availability of future versions, bug fixes, security updates, or
+    compatibility with future versions of Visual Studio Code or any other
+    software. The Work is provided on an "as available" basis, and the
+    Licensor may cease development at any time without notice.
+
+5. Redistribution.
 
     This project is distributed exclusively via the VS Code Marketplace.
     Redistribution in Source or Object form is prohibited unless explicitly
     authorized in writing by the Licensor. All rights not expressly granted
     to You under this License are reserved by the Licensor.
 
-4. Disclaimer of Warranty.
+6. Modifications and Derivative Works.
+
+    Forking, modifying, or creating Derivative Works of the Work is permitted
+    only after prior written agreement with the Licensor. Contact the Licensor
+    at the address given in Section 13 to discuss terms.
+
+7. Disclaimer of Warranty.
 
     Unless required by applicable law or agreed to in writing, Licensor
     provides the Work (and each Contributor provides its Contributions)
@@ -104,7 +129,7 @@ TERMS AND CONDITIONS
     appropriateness of using the Work and assume any risks associated with Your
     exercise of permissions under this License.
 
-5. Submission of Contributions.
+8. Submission of Contributions.
 
     Unless You explicitly state otherwise, any Contribution intentionally
     submitted for inclusion in the Work by You to the Licensor shall be under
@@ -136,7 +161,7 @@ TERMS AND CONDITIONS
         copyright ownership of the Contribution to the Licensor. You retain
         copyright in Your Contribution subject to the license grant above.
 
-6. Limitation of Liability.
+9. Limitation of Liability.
 
     In no event and under no legal theory, whether in tort
     (including negligence), contract, or otherwise, unless required by
@@ -149,17 +174,34 @@ TERMS AND CONDITIONS
     or any and all other commercial damages or losses), even if such
     Contributor has been advised of the possibility of such damages.
 
-7. Termination.
+10. Termination.
 
     This License and the rights granted hereunder will terminate automatically
     upon any breach by You of the terms of this License.
 
-8. Governing Law.
+11. Abandonment Clause.
+
+    If the official GitHub repository
+    (https://github.com/valentin-baron/delphi-devkit) receives no commits
+    from the Licensor or any authorized Contributor for a continuous period
+    of six (6) months, the restrictions set forth in Sections 5
+    (Redistribution) and 6 (Modifications and Derivative Works) shall
+    automatically and irrevocably cease to apply. From that point forward,
+    You are granted a perpetual, worldwide, royalty-free, non-exclusive
+    license to use, reproduce, modify, distribute, sublicense, and create
+    Derivative Works of the Work, subject only to the attribution
+    requirements of Section 2 (Trademarks), the Disclaimer of Warranty
+    (Section 7), and the Limitation of Liability (Section 9). Empty
+    commits made solely to reset this six-month period without substantive
+    changes to the Work shall not be considered activity for the purposes
+    of this clause.
+
+12. Governing Law.
 
     This License shall be governed by and construed in accordance with the laws
     of Germany, excluding its conflict of law provisions.
 
-9. Contact Information.
+13. Contact Information.
 
     Questions about the License may be directed to valentin.baron@outlook.com .
 
