@@ -4,6 +4,30 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.4] - 2026-03-02
+
+### Added
+
+- **DDK Configuration panel**: new collapsed-by-default tree view listing all DDK config files (Default INI, Projects Data, Compiler Configurations, Formatter Configuration, Extension Settings). Clicking any item opens the file in the editor, creating it with sensible defaults if it does not yet exist.
+- **Formatter config seeding**: `ddk_formatter.config` is now seeded from the bundled default template on first open (instead of being created empty), so it is immediately usable before the first format operation.
+- **Run notification**: a status message is now shown when a project executable is launched.
+
+### Changed
+
+- **Import / Export redesign**: the single combined JSON import/export command has been replaced with four separate RON-based commands — Export Projects Data, Import Projects Data, Export Compiler Configurations, Import Compiler Configurations — operating directly on the `.ron` files.
+- **Default INI location**: the default INI template is now stored in `%APPDATA%\ddk\default.ini` (previously inside the extension's `dist/` folder), making it easy to customise before applying it to a project.
+- **Formatter config location**: `ddk_formatter.config` is now resolved from `%APPDATA%\ddk\` consistently on both the extension side and the Rust server side.
+
+### Fixed
+
+- **Windows `\\?\` path prefix**: paths returned by `dproj-rs` that carry the extended-length path prefix are now stripped before use, preventing "file not found" errors on path operations.
+- **Discover File Paths overrides**: `discover_paths()` now correctly forwards per-project `active_configuration` and `active_platform` overrides; partial overrides (only one set) are handled by reading the dproj to fill in the missing default.
+- **Discover File Paths on add**: `discover_paths()` is now called immediately when a project is added via `new_project()`, so executable and INI paths are populated without requiring a manual refresh.
+- **Keyboard shortcut context keys**: `ddk:isProjectSelected` and `ddk:doesSelectedProjectHaveExe` context keys are now updated on every data notification and refresh, not only during tree rendering, so keybindings work reliably after reloads.
+- **INI file open error**: `vscode.open` in `createIniFile` now receives a proper `Uri.file()` object instead of a raw string.
+- **Command palette pollution**: 26 context-menu-only commands are now hidden from the Command Palette via the `commandPalette` menu section.
+- **esbuild asset path**: the formatter config preset was being copied from the wrong source directory; corrected to `core/src/format/presets/`.
+
 ## [2.0.3] - 2026-03-02
 
 ### Changed
