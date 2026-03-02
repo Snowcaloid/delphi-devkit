@@ -4,6 +4,13 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.3] - 2026-03-02
+
+### Changed
+
+- **MCP server**: moved into its own standalone binary (`ddk-mcp-server`).
+- **DPROJ handling**: simplified file handling and integrated `dproj-rs` for parsing.
+
 ## [2.0.2] - 2026-02-27
 
 ### Added
