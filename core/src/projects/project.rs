@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use crate::lexorank::{LexoRank, HasLexoRank};
 use crate::projects::*;
-use crate::files::dproj::{find_dproj_file, get_main_source, get_exe_path};
+use crate::files::dproj::{find_dproj_file, get_main_source, get_exe_path, get_exe_path_for};
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ProjectLink {
@@ -47,6 +47,7 @@ impl HasLexoRank for ProjectLink {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Project {
     pub id: usize,
     pub name: String,
@@ -56,10 +57,55 @@ pub struct Project {
     pub dpk: Option<String>,
     pub exe: Option<String>,
     pub ini: Option<String>,
+    /// Per-project build configuration override (e.g. "Debug", "Release").
+    /// `None` means use the `.dproj` file default.
+    pub active_configuration: Option<String>,
+    /// Per-project build platform override (e.g. "Win32", "Win64").
+    /// `None` means use the `.dproj` file default.
+    pub active_platform: Option<String>,
+}
+
+impl Default for Project {
+    fn default() -> Self {
+        Project {
+            id: 0,
+            name: String::new(),
+            directory: String::new(),
+            dproj: None,
+            dpr: None,
+            dpk: None,
+            exe: None,
+            ini: None,
+            active_configuration: None,
+            active_platform: None,
+        }
+    }
 }
 
 impl Project {
+    /// Resolve the effective (configuration, platform) for this project.
+    /// Falls back to the dproj file's defaults when the project-level
+    /// override is `None`.
+    pub fn effective_config_platform(&self, dproj: &dproj_rs::Dproj) -> (String, String) {
+        let config = self.active_configuration.clone()
+            .or_else(|| dproj.active_configuration().ok())
+            .unwrap_or_else(|| "Debug".to_string());
+        let platform = self.active_platform.clone()
+            .or_else(|| dproj.active_platform().ok())
+            .unwrap_or_else(|| "Win32".to_string());
+        (config, platform)
+    }
+
     pub fn discover_paths(&mut self) -> Result<()> {
+        self.discover_paths_inner(None, None)
+    }
+
+    /// Discover paths using an explicit config/platform override.
+    pub fn discover_paths_for(&mut self, config: &str, platform: &str) -> Result<()> {
+        self.discover_paths_inner(Some(config), Some(platform))
+    }
+
+    fn discover_paths_inner(&mut self, config: Option<&str>, platform: Option<&str>) -> Result<()> {
         if self.dproj.is_none() {
             if let Some(dpr_path) = &self.dpr {
                 let dproj_path = find_dproj_file(&PathBuf::from(dpr_path))?;
@@ -79,29 +125,20 @@ impl Project {
             Some(ext) if ext == "dpr" => {
                 self.dpr = Some(main_source.to_string_lossy().to_string());
                 self.dpk = None;
-                if let Ok(exe_path) = get_exe_path(&dproj_path) {
+                // When config/platform are provided, use get_exe_path_for;
+                // always overwrite exe/ini even if old path exists.
+                let exe_result = if let (Some(cfg), Some(plat)) = (config, platform) {
+                    get_exe_path_for(&dproj_path, cfg, plat)
+                } else {
+                    get_exe_path(&dproj_path)
+                };
+                if let Ok(exe_path) = exe_result {
                     let exe_file_name = exe_path.with_extension("exe");
                     self.exe = Some(exe_file_name.to_string_lossy().to_string());
                     self.ini = Some(exe_file_name.with_extension("ini").to_string_lossy().to_string());
                 } else {
-                    if self.exe.is_some() {
-                        let exe_path = PathBuf::from(self.exe.as_ref().unwrap());
-                        if exe_path.exists() {
-                            self.ini = Some(exe_path.with_extension("ini").to_string_lossy().to_string());
-                        } else if self.ini.is_some() {
-                            let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
-                            self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
-                        } else {
-                            self.exe = None;
-                            self.ini = None;
-                        }
-                    } else if self.ini.is_some() {
-                        let ini_path = PathBuf::from(self.ini.as_ref().unwrap());
-                        self.exe = Some(ini_path.with_extension("exe").to_string_lossy().to_string());
-                    } else {
-                        self.exe = None;
-                        self.ini = None;
-                    }
+                    self.exe = None;
+                    self.ini = None;
                 }
             },
             Some(ext) if ext == "dpk" => {

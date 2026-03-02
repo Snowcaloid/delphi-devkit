@@ -1,6 +1,7 @@
 pub mod compiler_state;
 
 use super::*;
+use crate::files::dproj as dproj_cache;
 use crate::state::PROJECTS_DATA;
 use crate::{CompileProjectParams, CompilerProgress};
 use anyhow::Result;
@@ -107,6 +108,18 @@ impl Compiler {
         }
         let target = project.get_project_file()?;
         let compiler_name = configuration.product_name.clone();
+        // Resolve config/platform for the banner
+        let (eff_config, eff_platform) = if let Some(dproj_path) = &project.dproj {
+            if let Ok(dproj_obj) = dproj_cache::get_or_load(project.id, &PathBuf::from(dproj_path)) {
+                project.effective_config_platform(&dproj_obj)
+            } else {
+                (project.active_configuration.clone().unwrap_or_else(|| "Debug".to_string()),
+                 project.active_platform.clone().unwrap_or_else(|| "Win32".to_string()))
+            }
+        } else {
+            (project.active_configuration.clone().unwrap_or_else(|| "Debug".to_string()),
+             project.active_platform.clone().unwrap_or_else(|| "Win32".to_string()))
+        };
         return Ok(CompilationParameters {
             projects: vec![project],
             configuration,
@@ -117,7 +130,7 @@ impl Compiler {
                 target.to_string_lossy().to_string(),
                 compiler_name,
                 rebuild,
-            ),
+            ).with_config_platform(eff_config, eff_platform),
         });
     }
 
@@ -351,6 +364,20 @@ impl Compiler {
                 return Err(anyhow::anyhow!("Compilation cancelled by user."));
             }
 
+            // Resolve effective configuration/platform for this project early,
+            // so the banner can display it and MSBuild receives the right args.
+            let (eff_config, eff_platform) = if let Some(dproj_path) = &project.dproj {
+                if let Ok(dproj_obj) = dproj_cache::get_or_load(project.id, &PathBuf::from(dproj_path)) {
+                    project.effective_config_platform(&dproj_obj)
+                } else {
+                    (project.active_configuration.clone().unwrap_or_else(|| "Debug".to_string()),
+                     project.active_platform.clone().unwrap_or_else(|| "Win32".to_string()))
+                }
+            } else {
+                (project.active_configuration.clone().unwrap_or_else(|| "Debug".to_string()),
+                 project.active_platform.clone().unwrap_or_else(|| "Win32".to_string()))
+            };
+
             if !parameters.only_one_project {
                 CompilerProgress::notify_single_project_started(
                     self.client.as_ref(),
@@ -360,7 +387,8 @@ impl Compiler {
                         project.get_project_file()?.to_string_lossy().to_string(),
                         parameters.configuration.product_name.clone(),
                         parameters.rebuild,
-                    ).into_project_header_vec()
+                    ).with_config_platform(eff_config.clone(), eff_platform.clone())
+                    .into_project_header_vec()
                 ).await;
             }
 
@@ -378,11 +406,14 @@ impl Compiler {
             let project_file = project.get_project_file()?;
             let args = parameters.configuration.build_arguments.join(" ");
             let target = if parameters.rebuild { "Build" } else { "Make" };
+
             let msbuild_path = find_msbuild()?;
             let mut child_process = Command::new(msbuild_path)
                 .arg(project_file)
                 .arg(format!("/t:Clean,{}", target))
                 .args(args.split_whitespace())
+                .arg(format!("/p:Configuration={}", eff_config))
+                .arg(format!("/p:Platform={}", eff_platform))
                 .envs(envs)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -473,7 +504,8 @@ impl Compiler {
                         project.get_project_file()?.to_string_lossy().to_string(),
                         parameters.configuration.product_name.clone(),
                         parameters.rebuild,
-                    ).into_project_footer_vec()
+                    ).with_config_platform(eff_config.clone(), eff_platform.clone())
+                    .into_project_footer_vec()
                 ).await
             }
             if compiler_state::is_success() {
@@ -662,6 +694,8 @@ struct CompBanner {
     target: String,
     compiler_name: String,
     rebuild: bool,
+    /// Optional per-project config/platform shown in the banner.
+    config_platform: Option<(String, String)>,
 }
 
 impl CompBanner {
@@ -671,7 +705,13 @@ impl CompBanner {
             target,
             compiler_name,
             rebuild,
+            config_platform: None,
         }
+    }
+
+    fn with_config_platform(mut self, config: String, platform: String) -> Self {
+        self.config_platform = Some((config, platform));
+        self
     }
 
     fn action_str(&self) -> &str {
@@ -683,12 +723,16 @@ impl CompBanner {
     }
 
     fn base_lines(&self) -> Vec<String> {
-        vec![
+        let mut lines = vec![
             format_line(&self.title, 72),
             format_line(&format!("→ {} ←", self.target), 70),
             format_line(&format!("🛠️ Compiler: {}", self.compiler_name), 70),
-            format_line(&format!("🗲 Action: {}", self.action_str()), 70),
-        ]
+        ];
+        if let Some((config, platform)) = &self.config_platform {
+            lines.push(format_line(&format!("📋 Config: {} | Platform: {}", config, platform), 70));
+        }
+        lines.push(format_line(&format!("🗲 Action: {}", self.action_str()), 70));
+        lines
     }
 
     fn into_header_vec(&self) -> Vec<String> {

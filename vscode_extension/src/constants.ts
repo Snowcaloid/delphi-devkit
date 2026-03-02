@@ -11,6 +11,7 @@ export namespace PROJECTS {
       export const EXCLUDE_PATTERNS = `${NS}.excludePatterns`;
     }
     export const SortProjects = 'sortProjects';
+    export const CONFIG_PLATFORM_DISPLAY = 'configPlatformDisplay';
     export namespace COMPILER {
       export const NS = 'compiler';
       export const CONFIGURATIONS = `${NS}.configurations`;
@@ -51,6 +52,12 @@ export namespace PROJECTS {
     export const RUN_SELECTED_PROJECT = `${PROJECTS.CONFIG.KEY}.runSelectedProject`;
     export const EDIT_DEFAULT_INI = `${PROJECTS.CONFIG.KEY}.editDefaultIni`;
     export const CANCEL_COMPILATION = `${PROJECTS.CONFIG.KEY}.cancelCompilation`;
+    export const SET_PROJECT_CONFIGURATION = `${PROJECTS.CONFIG.KEY}.setProjectConfiguration`;
+    export const SET_PROJECT_PLATFORM = `${PROJECTS.CONFIG.KEY}.setProjectPlatform`;
+    export const SET_WORKSPACE_CONFIGURATION = `${PROJECTS.CONFIG.KEY}.setWorkspaceConfiguration`;
+    export const SET_WORKSPACE_PLATFORM = `${PROJECTS.CONFIG.KEY}.setWorkspacePlatform`;
+    export const SET_GROUP_PROJECT_CONFIGURATION = `${PROJECTS.CONFIG.KEY}.setGroupProjectConfiguration`;
+    export const SET_GROUP_PROJECT_PLATFORM = `${PROJECTS.CONFIG.KEY}.setGroupProjectPlatform`;
   }
 
   export namespace CONTEXT {
@@ -62,6 +69,10 @@ export namespace PROJECTS {
     export const WORKSPACE = 'ddk.context.projects.workspace';
     export const PROJECT = 'ddk.context.projects.project';
     export const PROJECT_FILE = 'ddk.context.projects.projectFile';
+    export const CONFIGURATION_GROUP = 'ddk.context.projects.configurationGroup';
+    export const PLATFORM_GROUP = 'ddk.context.projects.platformGroup';
+    export const CONFIGURATION_ITEM = 'ddk.context.projects.configurationItem';
+    export const PLATFORM_ITEM = 'ddk.context.projects.platformItem';
   }
 
   export namespace VIEW {

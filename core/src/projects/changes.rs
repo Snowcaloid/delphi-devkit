@@ -55,6 +55,13 @@ pub enum Change {
     SetGroupProject { groupproj_path: String },
     RemoveGroupProject,
     SetGroupProjectCompiler { compiler: String },
+    // ─── Build configuration / platform overrides ────────────────────────
+    SetProjectConfiguration { project_id: usize, config: Option<String> },
+    SetProjectPlatform { project_id: usize, platform: Option<String> },
+    SetWorkspaceConfiguration { workspace_id: usize, config: Option<String> },
+    SetWorkspacePlatform { workspace_id: usize, platform: Option<String> },
+    SetGroupProjectConfiguration { config: Option<String> },
+    SetGroupProjectPlatform { platform: Option<String> },
 }
 
 impl Change {
@@ -110,6 +117,24 @@ impl Change {
             }
             Change::SetGroupProjectCompiler { compiler } => {
                 return Self::set_group_project_compiler(compiler).await;
+            }
+            Change::SetProjectConfiguration { project_id, config } => {
+                return Self::set_project_configuration(project_id, config).await;
+            }
+            Change::SetProjectPlatform { project_id, platform } => {
+                return Self::set_project_platform(project_id, platform).await;
+            }
+            Change::SetWorkspaceConfiguration { workspace_id, config } => {
+                return Self::set_workspace_configuration(workspace_id, config).await;
+            }
+            Change::SetWorkspacePlatform { workspace_id, platform } => {
+                return Self::set_workspace_platform(workspace_id, platform).await;
+            }
+            Change::SetGroupProjectConfiguration { config } => {
+                return Self::set_group_project_configuration(config).await;
+            }
+            Change::SetGroupProjectPlatform { platform } => {
+                return Self::set_group_project_platform(platform).await;
             }
         }
     }
@@ -225,6 +250,96 @@ impl Change {
         }
         let mut projects_data = PROJECTS_DATA.write().await;
         projects_data.group_project_compiler_id = compiler.clone();
+        return projects_data.save().await;
+    }
+
+    // ─── Configuration / platform override handlers ──────────────────────
+
+    async fn set_project_configuration(project_id: usize, config: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let project = projects_data.get_project_mut(project_id)
+            .ok_or_else(|| anyhow::anyhow!("Project with id {} not found", project_id))?;
+        project.active_configuration = config;
+        let _ = project.discover_paths();
+        return projects_data.save().await;
+    }
+
+    async fn set_project_platform(project_id: usize, platform: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let project = projects_data.get_project_mut(project_id)
+            .ok_or_else(|| anyhow::anyhow!("Project with id {} not found", project_id))?;
+        project.active_platform = platform;
+        let _ = project.discover_paths();
+        return projects_data.save().await;
+    }
+
+    async fn set_workspace_configuration(workspace_id: usize, config: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        // Set on the workspace itself
+        let linked_project_ids: Vec<usize> = {
+            let workspace = projects_data.get_workspace_mut(workspace_id)
+                .ok_or_else(|| anyhow::anyhow!("Workspace with id {} not found", workspace_id))?;
+            workspace.active_configuration = config.clone();
+            workspace.project_links.iter().map(|link| link.project_id).collect()
+        };
+        // Cascade to all linked projects
+        for pid in linked_project_ids {
+            if let Some(project) = projects_data.get_project_mut(pid) {
+                project.active_configuration = config.clone();
+                let _ = project.discover_paths();
+            }
+        }
+        return projects_data.save().await;
+    }
+
+    async fn set_workspace_platform(workspace_id: usize, platform: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let linked_project_ids: Vec<usize> = {
+            let workspace = projects_data.get_workspace_mut(workspace_id)
+                .ok_or_else(|| anyhow::anyhow!("Workspace with id {} not found", workspace_id))?;
+            workspace.active_platform = platform.clone();
+            workspace.project_links.iter().map(|link| link.project_id).collect()
+        };
+        for pid in linked_project_ids {
+            if let Some(project) = projects_data.get_project_mut(pid) {
+                project.active_platform = platform.clone();
+                let _ = project.discover_paths();
+            }
+        }
+        return projects_data.save().await;
+    }
+
+    async fn set_group_project_configuration(config: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let linked_project_ids: Vec<usize> = {
+            let gp = projects_data.group_project.as_mut()
+                .ok_or_else(|| anyhow::anyhow!("No group project is set"))?;
+            gp.active_configuration = config.clone();
+            gp.project_links.iter().map(|link| link.project_id).collect()
+        };
+        for pid in linked_project_ids {
+            if let Some(project) = projects_data.get_project_mut(pid) {
+                project.active_configuration = config.clone();
+                let _ = project.discover_paths();
+            }
+        }
+        return projects_data.save().await;
+    }
+
+    async fn set_group_project_platform(platform: Option<String>) -> Result<()> {
+        let mut projects_data = PROJECTS_DATA.write().await;
+        let linked_project_ids: Vec<usize> = {
+            let gp = projects_data.group_project.as_mut()
+                .ok_or_else(|| anyhow::anyhow!("No group project is set"))?;
+            gp.active_platform = platform.clone();
+            gp.project_links.iter().map(|link| link.project_id).collect()
+        };
+        for pid in linked_project_ids {
+            if let Some(project) = projects_data.get_project_mut(pid) {
+                project.active_platform = platform.clone();
+                let _ = project.discover_paths();
+            }
+        }
         return projects_data.save().await;
     }
 }

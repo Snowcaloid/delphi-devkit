@@ -4,12 +4,32 @@ use crate::lexorank::LexoRank;
 use super::*;
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Workspace {
     pub id: usize,
     pub name: String,
     pub compiler_id: String,
     pub project_links: Vec<ProjectLink>,
     pub sort_rank: LexoRank,
+    /// Workspace-level configuration override.  When set, all linked projects
+    /// inherit this value (unless individually overridden).
+    pub active_configuration: Option<String>,
+    /// Workspace-level platform override.
+    pub active_platform: Option<String>,
+}
+
+impl Default for Workspace {
+    fn default() -> Self {
+        Workspace {
+            id: 0,
+            name: String::new(),
+            compiler_id: String::from("12.0"),
+            project_links: Vec::new(),
+            sort_rank: LexoRank::default(),
+            active_configuration: None,
+            active_platform: None,
+        }
+    }
 }
 
 impl Workspace {
@@ -20,6 +40,8 @@ impl Workspace {
             compiler_id,
             project_links: Vec::new(),
             sort_rank: lexo_rank,
+            active_configuration: None,
+            active_platform: None,
         }
     }
 

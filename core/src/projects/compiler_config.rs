@@ -89,11 +89,26 @@ impl<'de> Deserialize<'de> for CompilerConfigurations {
     where
         D: serde::Deserializer<'de>,
     {
-        let compilers = CompilerMap::deserialize(deserializer)?;
+        let mut compilers = CompilerMap::deserialize(deserializer)?;
+        // Strip any leftover /p:Configuration=… or /p:Platform=… arguments
+        // that were baked into user-saved configs from older versions.
+        for config in compilers.values_mut() {
+            sanitize_build_arguments(&mut config.build_arguments);
+        }
         Ok(CompilerConfigurations {
             _compilers: compilers,
         })
     }
+}
+
+/// Remove `/p:Configuration=…` and `/p:Platform=…` arguments from the
+/// build arguments list.  These are now injected dynamically at build time
+/// based on per-project / per-workspace overrides.
+pub(crate) fn sanitize_build_arguments(args: &mut Vec<String>) {
+    args.retain(|arg| {
+        let lower = arg.to_lowercase();
+        !lower.starts_with("/p:configuration=") && !lower.starts_with("/p:platform=")
+    });
 }
 
 impl CompilerConfigurations {

@@ -8,6 +8,7 @@ use ddk_core::lsp_types::*;
 use ddk_core::projects::*;
 use ddk_core::state::*;
 use ddk_core::format::Formatter;
+use ddk_core::files::dproj as dproj_cache;
 use ddk_core::try_finish_event;
 
 #[derive(Debug, Clone)]
@@ -84,6 +85,41 @@ impl DelphiLsp {
             range,
             new_text,
         });
+    }
+
+    async fn dproj_metadata(
+        &self,
+        params: DprojMetadataParams,
+    ) -> tower_lsp::jsonrpc::Result<DprojMetadataResponse> {
+        let projects_data = PROJECTS_DATA.read().await;
+        let project = projects_data
+            .get_project(params.project_id)
+            .ok_or_else(|| {
+                jsonrpc::Error::invalid_params(format!(
+                    "Project with id {} not found",
+                    params.project_id
+                ))
+            })?;
+        let dproj_path = project.dproj.as_ref().ok_or_else(|| {
+            jsonrpc::Error::invalid_params(format!(
+                "Project {} has no .dproj file",
+                params.project_id
+            ))
+        })?;
+        let path = std::path::PathBuf::from(dproj_path);
+        let dproj_obj = dproj_cache::get_or_load(project.id, &path).map_err(|e| {
+            jsonrpc::Error::invalid_params(format!("Failed to load .dproj: {}", e))
+        })?;
+        let configurations: Vec<String> = dproj_obj.configurations().iter().map(|s| s.to_string()).collect();
+        let platforms: Vec<String> = dproj_obj.platforms().iter().map(|(s, _)| s.to_string()).collect();
+        let (active_configuration, active_platform) =
+            project.effective_config_platform(&dproj_obj);
+        Ok(DprojMetadataResponse {
+            configurations,
+            platforms,
+            active_configuration,
+            active_platform,
+        })
     }
 }
 
@@ -177,6 +213,7 @@ async fn main() -> Result<()> {
         .custom_method("projects/compile-cancel", DelphiLsp::projects_compile_cancel)
         .custom_method("custom/document/format", DelphiLsp::custom_document_format)
         .custom_method("notifications/settings/encoding", DelphiLsp::settings_encoding)
+        .custom_method("dproj/metadata", DelphiLsp::dproj_metadata)
         .finish();
 
     Server::new(stdin(), stdout(), socket).serve(service).await;

@@ -271,6 +271,26 @@ pub struct ConfigurationFetchResponse {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CancelCompilationParams {}
 
+/// Request params for `dproj/metadata` – asks the server for configuration
+/// and platform information about a single project's .dproj file.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DprojMetadataParams {
+    pub project_id: usize,
+}
+
+/// Response for `dproj/metadata`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DprojMetadataResponse {
+    /// All available build configurations (e.g. `["Debug","Release"]`).
+    pub configurations: Vec<String>,
+    /// All available target platforms (e.g. `["Win32","Win64"]`).
+    pub platforms: Vec<String>,
+    /// The effective active configuration (project override → dproj default).
+    pub active_configuration: String,
+    /// The effective active platform (project override → dproj default).
+    pub active_platform: String,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CustomDocumentFormat {
     pub content: String,

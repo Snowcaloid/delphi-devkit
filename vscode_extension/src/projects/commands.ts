@@ -11,6 +11,7 @@ import { assertError, basenameNoExt } from '../utils';
 import { WorkspaceItem } from './trees/items/workspaceItem';
 import { Change } from '../client';
 import { Option } from '../types';
+import { ConfigurationItem, PlatformItem } from './trees/items/configurationItem';
 
 export namespace ProjectsCommands {
   export function register() {
@@ -360,7 +361,13 @@ export namespace ProjectsCommands {
         commands.registerCommand(PROJECTS.COMMAND.REMOVE_PROJECT, this.removeProject.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.ADD_WORKSPACE, this.addWorkspace.bind(this)),
         commands.registerCommand(PROJECTS.COMMAND.RENAME_WORKSPACE, this.renameWorkspace.bind(this)),
-        commands.registerCommand(PROJECTS.COMMAND.REMOVE_WORKSPACE, this.removeWorkspace.bind(this))
+        commands.registerCommand(PROJECTS.COMMAND.REMOVE_WORKSPACE, this.removeWorkspace.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_PROJECT_CONFIGURATION, this.setProjectConfiguration.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_PROJECT_PLATFORM, this.setProjectPlatform.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_WORKSPACE_CONFIGURATION, this.setWorkspaceConfiguration.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_WORKSPACE_PLATFORM, this.setWorkspacePlatform.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_GROUP_PROJECT_CONFIGURATION, this.setGroupProjectConfiguration.bind(this)),
+        commands.registerCommand(PROJECTS.COMMAND.SET_GROUP_PROJECT_PLATFORM, this.setGroupProjectPlatform.bind(this)),
       ];
     }
 
@@ -491,6 +498,127 @@ export namespace ProjectsCommands {
         }
       ]);
       window.showInformationMessage(`Renamed workspace ${ws.name} to: ${newName!.trim()}`);
+    }
+
+    // ─── Configuration / Platform overrides ──────────────────────────────
+
+    private static async setProjectConfiguration(item: ConfigurationItem): Promise<void> {
+      await Runtime.client.applyChanges([
+        { type: 'SetProjectConfiguration', project_id: item.projectId, config: item.configName }
+      ]);
+    }
+
+    private static async setProjectPlatform(item: PlatformItem): Promise<void> {
+      await Runtime.client.applyChanges([
+        { type: 'SetProjectPlatform', project_id: item.projectId, platform: item.platformName }
+      ]);
+    }
+
+    private static async setWorkspaceConfiguration(item: WorkspaceItem): Promise<void> {
+      const ws = item.workspace;
+      try {
+        // Get configs from first project in workspace that has a dproj
+        const firstLink = ws.project_links[0];
+        if (!firstLink) return;
+        const project = Runtime.getProjectOfLink(firstLink);
+        if (!project?.dproj) return;
+        const metadata = await Runtime.client.dprojMetadata(project.id);
+        const items = metadata.configurations.map((cfg) => ({
+          label: cfg,
+          description: cfg === metadata.active_configuration ? '(active)' : ''
+        }));
+        items.push({ label: '$(close) Reset to default', description: '' });
+        const selected = await window.showQuickPick(items, {
+          placeHolder: `Set configuration for workspace "${ws.name}"`
+        });
+        if (!selected) return;
+        const config = selected.label.startsWith('$(close)') ? null : selected.label;
+        await Runtime.client.applyChanges([
+          { type: 'SetWorkspaceConfiguration', workspace_id: ws.id, config }
+        ]);
+      } catch (e) {
+        window.showErrorMessage(`Failed to set workspace configuration: ${e}`);
+      }
+    }
+
+    private static async setWorkspacePlatform(item: WorkspaceItem): Promise<void> {
+      const ws = item.workspace;
+      try {
+        const firstLink = ws.project_links[0];
+        if (!firstLink) return;
+        const project = Runtime.getProjectOfLink(firstLink);
+        if (!project?.dproj) return;
+        const metadata = await Runtime.client.dprojMetadata(project.id);
+        const items = metadata.platforms.map((plat) => ({
+          label: plat,
+          description: plat === metadata.active_platform ? '(active)' : ''
+        }));
+        items.push({ label: '$(close) Reset to default', description: '' });
+        const selected = await window.showQuickPick(items, {
+          placeHolder: `Set platform for workspace "${ws.name}"`
+        });
+        if (!selected) return;
+        const platform = selected.label.startsWith('$(close)') ? null : selected.label;
+        await Runtime.client.applyChanges([
+          { type: 'SetWorkspacePlatform', workspace_id: ws.id, platform }
+        ]);
+      } catch (e) {
+        window.showErrorMessage(`Failed to set workspace platform: ${e}`);
+      }
+    }
+
+    private static async setGroupProjectConfiguration(): Promise<void> {
+      const gp = Runtime.projectsData?.group_project;
+      if (!gp) return;
+      try {
+        const firstLink = gp.project_links[0];
+        if (!firstLink) return;
+        const project = Runtime.getProjectOfLink(firstLink);
+        if (!project?.dproj) return;
+        const metadata = await Runtime.client.dprojMetadata(project.id);
+        const items = metadata.configurations.map((cfg) => ({
+          label: cfg,
+          description: cfg === metadata.active_configuration ? '(active)' : ''
+        }));
+        items.push({ label: '$(close) Reset to default', description: '' });
+        const selected = await window.showQuickPick(items, {
+          placeHolder: `Set configuration for group project "${gp.name}"`
+        });
+        if (!selected) return;
+        const config = selected.label.startsWith('$(close)') ? null : selected.label;
+        await Runtime.client.applyChanges([
+          { type: 'SetGroupProjectConfiguration', config }
+        ]);
+      } catch (e) {
+        window.showErrorMessage(`Failed to set group project configuration: ${e}`);
+      }
+    }
+
+    private static async setGroupProjectPlatform(): Promise<void> {
+      const gp = Runtime.projectsData?.group_project;
+      if (!gp) return;
+      try {
+        const firstLink = gp.project_links[0];
+        if (!firstLink) return;
+        const project = Runtime.getProjectOfLink(firstLink);
+        if (!project?.dproj) return;
+        const metadata = await Runtime.client.dprojMetadata(project.id);
+        const items = metadata.platforms.map((plat) => ({
+          label: plat,
+          description: plat === metadata.active_platform ? '(active)' : ''
+        }));
+        items.push({ label: '$(close) Reset to default', description: '' });
+        const selected = await window.showQuickPick(items, {
+          placeHolder: `Set platform for group project "${gp.name}"`
+        });
+        if (!selected) return;
+        const platform = selected.label.startsWith('$(close)') ? null : selected.label;
+        await Runtime.client.applyChanges([
+          { type: 'SetGroupProjectPlatform', platform }
+        ]);
+      } catch (e) {
+        window.showErrorMessage(`Failed to set group project platform: ${e}`);
+      }
     }
   }
 }

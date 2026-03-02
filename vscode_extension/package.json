@@ -232,6 +232,40 @@
         "category": "DDK"
       },
       {
+        "command": "ddk.projects.setProjectConfiguration",
+        "title": "Set Project Configuration",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.setProjectPlatform",
+        "title": "Set Project Platform",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.setWorkspaceConfiguration",
+        "title": "Set Configuration",
+        "icon": "$(symbol-enum)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.setWorkspacePlatform",
+        "title": "Set Platform",
+        "icon": "$(device-desktop)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.setGroupProjectConfiguration",
+        "title": "Set Group Project Configuration",
+        "icon": "$(symbol-enum)",
+        "category": "DDK"
+      },
+      {
+        "command": "ddk.projects.setGroupProjectPlatform",
+        "title": "Set Group Project Platform",
+        "icon": "$(device-desktop)",
+        "category": "DDK"
+      },
+      {
         "command": "ddk.formatter.editConfig",
         "title": "Edit Formatter Configuration",
         "category": "DDK"
@@ -327,6 +361,16 @@
           "command": "ddk.projects.unloadGroupProject",
           "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
           "group": "navigation@4"
+        },
+        {
+          "command": "ddk.projects.setGroupProjectConfiguration",
+          "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
+          "group": "navigation@5"
+        },
+        {
+          "command": "ddk.projects.setGroupProjectPlatform",
+          "when": "view == ddk.view.projects.groupProject && ddk:isGroupProjectOpened == true",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
@@ -399,6 +443,26 @@
           "command": "ddk.projects.removeWorkspace",
           "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
           "group": "5_workspace@2"
+        },
+        {
+          "command": "ddk.projects.setWorkspaceConfiguration",
+          "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
+          "group": "5_workspace@3"
+        },
+        {
+          "command": "ddk.projects.setWorkspacePlatform",
+          "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
+          "group": "5_workspace@4"
+        },
+        {
+          "command": "ddk.projects.setWorkspaceConfiguration",
+          "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
+          "group": "inline@1"
+        },
+        {
+          "command": "ddk.projects.setWorkspacePlatform",
+          "when": "view == ddk.view.projects.workspaces && viewItem == ddk.context.projects.workspace",
+          "group": "inline@2"
         },
         {
           "command": "ddk.projects.addProject",
@@ -521,6 +585,21 @@
             "KOI8-U (Ukrainian)"
           ],
           "description": "Encoding used by the Delphi compiler output. Determines how raw compiler bytes are decoded before display."
+        },
+        "ddk.projects.configPlatformDisplay": {
+          "type": "string",
+          "default": "aboveFiles",
+          "enum": [
+            "aboveFiles",
+            "belowFiles",
+            "off"
+          ],
+          "enumDescriptions": [
+            "Show Configurations and Platforms above project files",
+            "Show Configurations and Platforms below project files",
+            "Do not show Configurations and Platforms in the project tree"
+          ],
+          "description": "Controls where build configurations and target platforms are displayed in the project tree."
         }
       }
     },

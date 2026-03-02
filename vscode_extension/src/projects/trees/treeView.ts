@@ -8,6 +8,7 @@ import { PROJECTS } from '../../constants';
 import { TreeItemDecorator } from './treeItemDecorator';
 import { WorkspaceItem } from './items/workspaceItem';
 import { GroupProjectTreeDragDropController, WorkspaceTreeDragDropController } from './dragAndDrop';
+import { ConfigurationGroupItem, PlatformGroupItem } from './items/configurationItem';
 
 type NullableTreeItem = BaseFileItem | undefined | null | void;
 
@@ -58,7 +59,8 @@ export abstract class DelphiProjectsTreeView implements TreeDataProvider<TreeIte
     workspace.onDidChangeConfiguration((event: ConfigurationChangeEvent) => {
       if (
         event.affectsConfiguration(PROJECTS.CONFIG.full(PROJECTS.CONFIG.DISCOVERY.PROJECT_PATHS)) ||
-        event.affectsConfiguration(PROJECTS.CONFIG.full(PROJECTS.CONFIG.DISCOVERY.EXCLUDE_PATTERNS))
+        event.affectsConfiguration(PROJECTS.CONFIG.full(PROJECTS.CONFIG.DISCOVERY.EXCLUDE_PATTERNS)) ||
+        event.affectsConfiguration(PROJECTS.CONFIG.full(PROJECTS.CONFIG.CONFIG_PLATFORM_DISPLAY))
       )
         this.refresh();
     });
@@ -73,14 +75,37 @@ export abstract class DelphiProjectsTreeView implements TreeDataProvider<TreeIte
     return element;
   }
 
-  private createChildrenForProject(project: ProjectItem): BaseFileItem[] {
-    const children: BaseFileItem[] = [];
-    project.createChild(DelphiProjectTreeItemType.DprojFile, children);
-    project.createChild(DelphiProjectTreeItemType.DprFile, children);
-    project.createChild(DelphiProjectTreeItemType.DpkFile, children);
-    project.createChild(DelphiProjectTreeItemType.ExecutableFile, children);
-    project.createChild(DelphiProjectTreeItemType.IniFile, children);
-    return children;
+  private async createChildrenForProject(project: ProjectItem): Promise<TreeItem[]> {
+    const fileChildren: BaseFileItem[] = [];
+    project.createChild(DelphiProjectTreeItemType.DprojFile, fileChildren);
+    project.createChild(DelphiProjectTreeItemType.DprFile, fileChildren);
+    project.createChild(DelphiProjectTreeItemType.DpkFile, fileChildren);
+    project.createChild(DelphiProjectTreeItemType.ExecutableFile, fileChildren);
+    project.createChild(DelphiProjectTreeItemType.IniFile, fileChildren);
+
+    const displayMode = workspace.getConfiguration(PROJECTS.CONFIG.KEY)
+      .get<string>(PROJECTS.CONFIG.CONFIG_PLATFORM_DISPLAY, 'aboveFiles');
+
+    if (displayMode === 'off') return fileChildren;
+
+    // Fetch dproj metadata and add config/platform groups if there are options
+    const configItems: TreeItem[] = [];
+    try {
+      const metadata = await Runtime.client.dprojMetadata(project.entity.id);
+      project.dprojMetadata = metadata;
+      if (metadata.configurations.length > 1) {
+        configItems.push(new ConfigurationGroupItem(project.entity.id, project.link.id, metadata));
+      }
+      if (metadata.platforms.length > 1) {
+        configItems.push(new PlatformGroupItem(project.entity.id, project.link.id, metadata));
+      }
+    } catch {
+      // If metadata fetch fails, just show the file children
+    }
+
+    return displayMode === 'belowFiles'
+      ? [...fileChildren, ...configItems]
+      : [...configItems, ...fileChildren];
   }
 
   protected abstract loadTreeItemsFromDatabase(): Promise<TreeItem[]>;
@@ -97,8 +122,10 @@ export abstract class DelphiProjectsTreeView implements TreeDataProvider<TreeIte
     if (!element)
       if (this.itemsLoaded) return this.loadedItems;
       else return await this.loadTreeItemsFromDatabase();
-    else if (element instanceof ProjectItem) return this.createChildrenForProject(element);
+    else if (element instanceof ProjectItem) return await this.createChildrenForProject(element);
     else if (element instanceof WorkspaceItem) return element.projects;
+    else if (element instanceof ConfigurationGroupItem) return element.getChildren();
+    else if (element instanceof PlatformGroupItem) return element.getChildren();
 
     return [];
   }

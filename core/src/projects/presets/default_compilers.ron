@@ -10,7 +10,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "12.0": (
@@ -24,7 +23,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "11.0": (
@@ -38,7 +36,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "10.4": (
@@ -52,7 +49,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "10.3": (
@@ -66,7 +62,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "10.2": (
@@ -80,7 +75,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "10.1": (
@@ -94,7 +88,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "10": (
@@ -108,7 +101,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE8": (
@@ -122,7 +114,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE7": (
@@ -136,7 +127,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE6": (
@@ -150,7 +140,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE5": (
@@ -164,7 +153,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=1",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE4": (
@@ -178,7 +166,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE3": (
@@ -192,7 +179,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE2": (
@@ -206,7 +192,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "XE": (
@@ -220,7 +205,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "2010": (
@@ -234,7 +218,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "2009": (
@@ -248,7 +231,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
     "2007": (
@@ -262,7 +244,6 @@
             "/verbosity:minimal",
             "/p:DCC_DebugInformation=True",
             "/p:RuntimeIdentifiers=3.5",
-            "/p:Configuration=Debug"
         ]
     ),
 }

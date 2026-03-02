@@ -6,15 +6,19 @@ import { DprFileItem } from './dprFile';
 import { IniFileItem } from './iniFile';
 import { ExeFileItem } from './exeFile';
 import { DpkFileItem } from './dpkFile';
+import { ConfigurationGroupItem, PlatformGroupItem } from './configurationItem';
 import { basename } from 'path';
 import { Entities } from '../../entities';
 import { Runtime } from '../../../runtime';
 import { fileExists } from '../../../utils';
 import { PROJECTS } from '../../../constants';
+import { DprojMetadata } from '../../../client';
 
 export class ProjectItem extends BaseFileItem implements MainProjectItem {
   public entity: Entities.Project;
   public children: BaseFileItem[] = [];
+  /** Populated lazily when the tree expands this project. */
+  public dprojMetadata?: DprojMetadata;
 
   constructor(
     public link: Entities.ProjectLink,

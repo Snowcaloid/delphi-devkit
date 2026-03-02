@@ -15,12 +15,16 @@ export namespace Entities {
     compiler_id: string;
     project_links: ProjectLink[];
     sort_rank: string;
+    active_configuration?: Option<string>;
+    active_platform?: Option<string>;
   }
 
   export class GroupProject {
     name: string;
     path: string;
     project_links: ProjectLink[];
+    active_configuration?: Option<string>;
+    active_platform?: Option<string>;
   }
 
   export class Project {
@@ -32,6 +36,8 @@ export namespace Entities {
     dpk?: Option<string>;
     exe?: Option<string>;
     ini?: Option<string>;
+    active_configuration?: Option<string>;
+    active_platform?: Option<string>;
   }
 
   export class ProjectLink {

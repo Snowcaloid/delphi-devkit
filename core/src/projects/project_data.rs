@@ -192,6 +192,8 @@ impl ProjectsData {
                     dpk: None,
                     exe: None,
                     ini: None,
+                    active_configuration: None,
+                    active_platform: None,
                 }
             },
             Some(ext) if ext == "dpr" => {
@@ -204,6 +206,8 @@ impl ProjectsData {
                     dpk: None,
                     exe: None,
                     ini: None,
+                    active_configuration: None,
+                    active_platform: None,
                 }
             },
             Some(ext) if ext == "dpk" => {
@@ -216,6 +220,8 @@ impl ProjectsData {
                     dpk: Some(file_path.clone()),
                     exe: None,
                     ini: None,
+                    active_configuration: None,
+                    active_platform: None,
                 }
             },
             _ => {
@@ -510,6 +516,8 @@ impl ProjectsData {
             name: path.file_stem().and_then(|s| s.to_str()).unwrap_or("<name error>").to_string(),
             project_links: Vec::new(),
             path: groupproj_path.clone(),
+            active_configuration: None,
+            active_platform: None,
         };
         group_project.fill(self)?;
         self.group_project = Some(group_project);

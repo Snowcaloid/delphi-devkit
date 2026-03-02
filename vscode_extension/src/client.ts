@@ -27,7 +27,13 @@ export type Change =
     | { type: 'UpdateCompiler', key: string, data: Partial<Entities.CompilerConfiguration> }
     | { type: 'SetGroupProject', groupproj_path: string }
     | { type: 'RemoveGroupProject' }
-    | { type: 'SetGroupProjectCompiler', compiler: string };
+    | { type: 'SetGroupProjectCompiler', compiler: string }
+    | { type: 'SetProjectConfiguration', project_id: number, config: string | null }
+    | { type: 'SetProjectPlatform', project_id: number, platform: string | null }
+    | { type: 'SetWorkspaceConfiguration', workspace_id: number, config: string | null }
+    | { type: 'SetWorkspacePlatform', workspace_id: number, platform: string | null }
+    | { type: 'SetGroupProjectConfiguration', config: string | null }
+    | { type: 'SetGroupProjectPlatform', platform: string | null };
 
 
 export interface Changes {
@@ -72,6 +78,13 @@ export type CompilerProgressParams = {
 interface ConfigurationData {
     projects: Entities.ProjectsData;
     compilers: Entities.CompilerConfigurations;
+}
+
+export interface DprojMetadata {
+    configurations: string[];
+    platforms: string[];
+    active_configuration: string;
+    active_platform: string;
 }
 
 export class DDK_Client {
@@ -264,6 +277,10 @@ export class DDK_Client {
 
     public async cancelCompilation(): Promise<void> {
         await this.client.sendRequest('projects/compile-cancel', {});
+    }
+
+    public async dprojMetadata(projectId: number): Promise<DprojMetadata> {
+        return await this.client.sendRequest('dproj/metadata', { project_id: projectId });
     }
 
     public onCompilerProgress(params: CompilerProgressParams) {

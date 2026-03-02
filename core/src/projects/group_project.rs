@@ -5,10 +5,27 @@ use crate::projects::*;
 use crate::files::groupproj::parse_groupproj;
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GroupProject {
     pub name: String,
     pub path: String,
     pub project_links: Vec<ProjectLink>,
+    /// Group-project-level configuration override.
+    pub active_configuration: Option<String>,
+    /// Group-project-level platform override.
+    pub active_platform: Option<String>,
+}
+
+impl Default for GroupProject {
+    fn default() -> Self {
+        GroupProject {
+            name: String::new(),
+            path: String::new(),
+            project_links: Vec::new(),
+            active_configuration: None,
+            active_platform: None,
+        }
+    }
 }
 
 impl GroupProject {
@@ -31,6 +48,8 @@ impl GroupProject {
                     dpk: None,
                     exe: None,
                     ini: None,
+                    active_configuration: None,
+                    active_platform: None,
                 };
                 project.discover_paths()?;
                 projects_data.projects.push(project);

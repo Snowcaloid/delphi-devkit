@@ -6,7 +6,11 @@ export const enum DelphiProjectTreeItemType {
   DpkFile,
   DprFile,
   ExecutableFile,
-  IniFile
+  IniFile,
+  ConfigurationGroup,
+  PlatformGroup,
+  ConfigurationItem,
+  PlatformItem
 }
 
 export const enum WorkspaceViewMode {
