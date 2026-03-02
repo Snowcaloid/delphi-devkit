@@ -133,7 +133,7 @@ export namespace ProjectsCommands {
       } catch {}
 
       await fs.writeFile(iniPath, content, 'utf8');
-      await commands.executeCommand('vscode.open', iniPath);
+      await commands.executeCommand('vscode.open', Uri.file(iniPath));
       window.showInformationMessage(`Created and opened new INI file: ${iniPath}`);
 
       let project = item.project ? item.project : item;
