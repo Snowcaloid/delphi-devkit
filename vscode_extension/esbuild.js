@@ -42,9 +42,11 @@ const copyAssetsPlugin = {
 			if (production) {
 				const serverBinary = path.join(__dirname, '..', 'target', 'release', 'ddk-server.exe');
 				const mcpBinary = path.join(__dirname, '..', 'target', 'release', 'ddk-mcp-server.exe');
+				const cliBinary = path.join(__dirname, '..', 'target', 'release', 'ddk.exe');
 				const serverDir = path.join(__dirname, 'server');
 				copyAsset(serverBinary, serverDir);
 				copyAsset(mcpBinary, serverDir);
+				copyAsset(cliBinary, serverDir);
 			}
 		});
 	},

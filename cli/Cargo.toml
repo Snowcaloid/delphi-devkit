@@ -1,0 +1,20 @@
+[package]
+name = "ddk-cli"
+version = "2.0.4"
+edition = "2024"
+authors = ["Valentin Baron"]
+license-file = "../LICENSE"
+description = "DDK – command-line interface for Delphi project management"
+homepage = "https://www.github.com/valentin-baron"
+repository = "https://www.github.com/valentin-baron/delphi-devkit"
+
+[[bin]]
+name = "ddk"
+path = "src/main.rs"
+
+[dependencies]
+ddk-core = { path = "../core" }
+anyhow = "1.0.100"
+clap = { version = "4.5", features = ["derive", "color"] }
+serde_json = "1.0.149"
+tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros"] }
