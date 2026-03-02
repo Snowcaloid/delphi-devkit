@@ -57,9 +57,20 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build server (release)
+      - name: Build all crates (release)
         run: cargo build --release
-        working-directory: server
+
+      - name: Create DDK CLI zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path target/release/ddk.exe -DestinationPath ddk-windows-x86_64.zip
+
+      - name: Upload DDK CLI zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ddk-cli-zip
+          path: ddk-windows-x86_64.zip
+          retention-days: 7
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -96,16 +107,18 @@ jobs:
             vsce package --out delphi-devkit.vsix
           fi
 
-      - name: Verify binary is inside VSIX
+      - name: Verify binaries are inside VSIX
         shell: pwsh
         working-directory: vscode_extension
         run: |
           $entries = 7z l delphi-devkit.vsix
-          if ($entries | Select-String -Quiet 'ddk-server.exe') {
-            Write-Host "✓ ddk-server.exe found in VSIX"
-          } else {
-            Write-Error "✘ ddk-server.exe NOT found in VSIX — aborting"
-            exit 1
+          foreach ($bin in @('ddk-server.exe', 'ddk-mcp-server.exe', 'ddk.exe')) {
+            if ($entries | Select-String -Quiet $bin) {
+              Write-Host "✓ $bin found in VSIX"
+            } else {
+              Write-Error "✘ $bin NOT found in VSIX — aborting"
+              exit 1
+            }
           }
 
       - name: Upload VSIX artifact
@@ -128,6 +141,11 @@ jobs:
         with:
           name: delphi-devkit-vsix
 
+      - name: Download DDK CLI zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ddk-cli-zip
+
       - name: Install vsce
         run: npm install -g @vscode/vsce
 
@@ -149,4 +167,15 @@ jobs:
           name: ${{ github.ref_name }}
           prerelease: ${{ needs.build.outputs.is_pre == 'true' }}
           generateReleaseNotes: true
-          artifacts: delphi-devkit.vsix
+          artifacts: |
+            delphi-devkit.vsix
+            ddk-windows-x86_64.zip
+
+      - name: Update WinGet package
+        if: needs.build.outputs.is_pre != 'true'
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: ValentinBaron.DDK
+          version: ${{ needs.build.outputs.tag_version }}
+          installers-regex: ddk-windows-x86_64\.zip$
+          token: ${{ secrets.WINGET_PAT }}

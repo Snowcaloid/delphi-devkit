@@ -1,0 +1,16 @@
+# Created using wingetcreate
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+
+PackageIdentifier: ValentinBaron.DDK
+PackageVersion: 2.0.4
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: ddk.exe
+    PortableCommandAlias: ddk
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/valentin-baron/delphi-devkit/releases/download/v2.0.4/ddk-windows-x86_64.zip
+    InstallerSha256: # Will be computed by winget-releaser action or wingetcreate
+ManifestType: installer
+ManifestVersion: 1.9.0
