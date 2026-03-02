@@ -29,6 +29,32 @@ This extension is currently developed in my free time, and any feedback is welco
 * **Compiler Output Enhancements**: Timestamps, clickable file links, and diagnostics published to the Problems panel
 * **Formatter Support**: Configurable Delphi code formatter.
 * **LSP Server**: Bundled `ddk-server` (Rust) handles all project state, compilation, and formatting
+* **MCP Server**: Bundled `ddk-mcp-server` exposes project and compiler management as MCP tools for AI assistants (VS Code Copilot, Claude Desktop, etc.)
+* **CLI** (`ddk`): Standalone command-line interface for managing projects and compilers outside of VS Code. Install via WinGet or use the bundled binary.
+
+## Installation
+
+### VS Code Extension
+Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Snowcaloid.delphi-devkit). The extension bundles all Rust binaries — no extra setup needed.
+
+### CLI (standalone)
+```
+winget install ValentinBaron.DDK
+```
+Or download `ddk-windows-x86_64.zip` from the [latest release](https://github.com/valentin-baron/delphi-devkit/releases) and add `ddk.exe` to your PATH.
+
+### CLI Usage
+```
+ddk project list                # List all known projects
+ddk project select <ID>         # Select a project by ID
+ddk compiler list               # List available compiler configurations
+ddk compiler set <KEY>          # Set the group project compiler
+ddk compile                     # Compile the active project
+ddk compile --rebuild -p <ID>   # Rebuild a specific project by ID
+ddk env                         # Show active project & compiler info
+ddk info                        # Print the DDK README
+ddk --json <command>            # Output as JSON
+```
 
 ## Demos
 
@@ -56,6 +82,7 @@ This extension is currently developed in my free time, and any feedback is welco
 * `Select Delphi Compiler for Group Projects` - Choose the active compiler configuration for .groupproj files
 * `Pick Group Project` - Load a Delphi group project (.groupproj)
 * `Unload Group Project` - Unload the currently loaded group project
+* `Transfer Group Project to Workspace` - Convert the loaded group project into a self-defined workspace
 * `Refresh` - Refresh the projects view and discover file paths
 
 ### Workspace Management
@@ -133,39 +160,3 @@ The first entry whose `Formatter.exe` is found in its installation path is used 
 ## Known Issues
 
 None so far.
-
-## Release Notes
-
-### 2.0.2
-
-- **MCP server tools (BETA)**: initial testing of MCP server tools for external interaction.
-- Fixed README not displaying on the VS Code Marketplace store page
-
-### 2.0.0
-
-- **Breaking**: SQLite database removed; data now stored as RON files in `%APPDATA%/ddk/`. Previously stored workspaces and projects will need to be re-added.
-- Bundled `ddk-server` Rust binary for all project state, compilation, and formatting logic
-- Preset compiler configurations for all Delphi versions from 2007 to 13.0 Florence
-- Bulk compile/recreate for entire workspaces and group projects
-- Cancellable compilation (Ctrl+F2)
-- Standard Delphi code formatter (configurable)
-- Timestamps and clickable links in all compiler output lines
-- Diagnostics published to the VS Code Problems panel
-- Fixed: selected project not working when tree was collapsed
-- Fixed: removing workspaces/projects not working
-- Fixed: Discover File Paths not doing anything
-
-### 1.1.0
-
-- Fixed the issue where the compiler's diagnostic output was always mapped as information and added error code to diagnostics.
-- Added support for hyperlinks in compiler output channel.
-
-### 1.0.0
-
-- Complete rewrite with dual project view system
-- Added Self-Defined Workspaces with drag & drop support
-- Added Loaded Group Project view for .groupproj files
-- Configuration import/export functionality
-- Enhanced visual indicators and file icons
-- Improved compiler management and project actions
-- Added keyboard shortcuts for common operations

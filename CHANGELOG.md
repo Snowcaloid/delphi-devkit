@@ -4,6 +4,25 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.0.5] - 2026-03-02
+
+### Added
+
+- **DDK CLI** (`ddk`): new standalone command-line interface for managing Delphi projects and compilers outside of VS Code. Subcommands: `project list`, `project select <ID>`, `compiler list`, `compiler set <KEY>`, `compile [--rebuild] [--project <ID>]`, `env`, `info`. Supports a global `--json` flag for machine-readable output.
+- **Shared commands module** (`ddk_core::commands`): business logic extracted from the MCP handler into typed, reusable command functions. Both the MCP server and CLI are now thin wrappers over the same implementation.
+- **Transfer Group Project to Workspace**: new command that converts the loaded group project into a self-defined workspace, carrying over all project links and the compiler configuration.
+- **WinGet distribution**: `ddk.exe` is published as a GitHub Release asset (`ddk-windows-x86_64.zip`) and submitted to the Windows Package Manager (`winget install ValentinBaron.DDK`). Installs to PATH automatically via WinGet's portable installer support.
+
+### Changed
+
+- **MCP `delphi_compile_selected_project`**: now accepts an optional `project_id` parameter. When provided, the project is selected before compilation — no need to call `delphi_select_project` separately.
+- **MCP handler thinned**: all inline business logic replaced with calls to `ddk_core::commands`, reducing the handler from ~450 lines to ~120 lines.
+- **Release workflow**: builds all workspace crates (not just `server/`), creates the CLI zip artifact, verifies all three binaries (`ddk-server.exe`, `ddk-mcp-server.exe`, `ddk.exe`) are in the VSIX, and auto-submits WinGet manifest updates on stable releases.
+
+### Fixed
+
+- **Configuration view icon**: corrected to use the new asset path.
+
 ## [2.0.4] - 2026-03-02
 
 ### Added
