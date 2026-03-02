@@ -730,7 +730,7 @@
       {
         "command": "ddk.projects.runSelectedProject",
         "key": "f9",
-        "when": "ddk:doesSelectedProjectHaveExe == true"
+        "when": "ddk:isProjectSelected == true && ddk:doesSelectedProjectHaveExe == true"
       },
       {
         "command": "ddk.projects.cancelCompilation",

@@ -4,6 +4,7 @@ import { DfmFeature } from './dfm/feature';
 import { Entities } from './projects/entities';
 import { GeneralCommands } from './commands';
 import { DDK_Client } from './client';
+import { PROJECTS } from './constants';
 import { randomUUID, UUID } from 'crypto';
 import { Option } from './types';
 import { McpServerFeature } from './mcp/server';
@@ -47,6 +48,16 @@ export abstract class Runtime {
 
   public static get activeProject(): Option<Entities.Project> {
     return this.projectsData.projects.find((p) => p.id === this.projectsData.active_project_id);
+  }
+
+  /** Update VS Code context keys that govern keybinding `when` clauses.
+   *  Must be called whenever `projectsData` changes so that shortcuts
+   *  work even when the tree view is not visible. */
+  public static updateProjectContexts(): void {
+    const hasSelected = !!this.projectsData?.active_project_id;
+    const hasExe = !!this.activeProject?.exe;
+    this.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, hasSelected);
+    this.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, hasExe);
   }
 
   public static get groupProjectsCompiler(): Option<Entities.CompilerConfiguration> {

@@ -123,6 +123,7 @@ export class DDK_Client {
             'notifications/projects/update',
             async (it: { projects: Entities.ProjectsData }) => {
                 Runtime.projectsData = it.projects;
+                Runtime.updateProjectContexts();
                 await Runtime.projects.workspacesTreeView.refresh();
                 await Runtime.projects.groupProjectTreeView.refresh();
                 await Runtime.projects.compilerStatusBarItem.updateDisplay();
@@ -175,6 +176,7 @@ export class DDK_Client {
             const data: ConfigurationData = await this.client.sendRequest('configuration/fetch', {});
             Runtime.projectsData = data.projects;
             Runtime.compilerConfigurations = data.compilers;
+            Runtime.updateProjectContexts();
         } catch (e) {
             window.showErrorMessage(`Failed to fetch configuration from DDK Server: ${e}`);
         }

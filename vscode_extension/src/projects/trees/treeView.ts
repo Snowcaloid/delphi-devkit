@@ -164,8 +164,7 @@ export class WorkspacesTreeView extends DelphiProjectsTreeView {
 
   protected async loadTreeItemsFromDatabase(): Promise<TreeItem[]> {
     let data = Runtime.projectsData;
-    Runtime.setContext(PROJECTS.CONTEXT.IS_PROJECT_SELECTED, !!data?.active_project_id);
-    Runtime.setContext(PROJECTS.CONTEXT.DOES_SELECTED_PROJECT_HAVE_EXE, !!Runtime.activeProject?.exe);
+    Runtime.updateProjectContexts();
     this.workspaceItems = data?.workspaces.map((ws) => new WorkspaceItem(ws)) || [];
     this.workspaceItems = this.workspaceItems.sort((a, b) => a.workspace.sort_rank.localeCompare(b.workspace.sort_rank));
     this.projects = this.workspaceItems.flatMap((ws) => ws.projects);
