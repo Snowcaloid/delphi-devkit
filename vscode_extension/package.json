@@ -282,6 +282,11 @@
         "command": "ddk.editProjectsData",
         "title": "Edit Projects Data",
         "category": "DDK"
+      },
+      {
+        "command": "ddk.configuration.openItem",
+        "title": "Open Configuration Item",
+        "category": "DDK"
       }
     ],
     "views": {
@@ -296,6 +301,12 @@
           "id": "ddk.view.projects.groupProject",
           "name": "Loaded Group Project",
           "icon": "assets/DelphiHelmetLine.svg"
+        },
+        {
+          "id": "ddk.view.configuration",
+          "name": "DDK Configuration",
+          "icon": "$(settings-gear)",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -334,7 +345,8 @@
         { "command": "ddk.projects.setWorkspaceConfiguration", "when": "false" },
         { "command": "ddk.projects.setWorkspacePlatform", "when": "false" },
         { "command": "ddk.projects.setGroupProjectConfiguration", "when": "false" },
-        { "command": "ddk.projects.setGroupProjectPlatform", "when": "false" }
+        { "command": "ddk.projects.setGroupProjectPlatform", "when": "false" },
+        { "command": "ddk.configuration.openItem", "when": "false" }
       ],
       "view/title": [
         {

@@ -12,6 +12,7 @@ import { WorkspaceItem } from './trees/items/workspaceItem';
 import { Change } from '../client';
 import { Option } from '../types';
 import { ConfigurationItem, PlatformItem } from './trees/items/configurationItem';
+import { ConfigurationTreeView } from './trees/configurationTreeView';
 
 export namespace ProjectsCommands {
   export function register() {
@@ -127,9 +128,8 @@ export namespace ProjectsCommands {
       if (!assertError(item.projectExe, `No executable for: ${item.label} - cannot create INI file.`)) return;
       let iniPath = join(dirname(item.projectExe!.fsPath), `${basenameNoExt(item.projectExe!.fsPath)}.ini`);
       let content = `; ${iniPath}\n[CmdLineParam]\n`;
-      const defaultIniPath = Runtime.extension.asAbsolutePath('dist/default.ini');
       try {
-        content = await fs.readFile(defaultIniPath, 'utf8');
+        content = await fs.readFile(join(ConfigurationTreeView.ddkDir, 'default.ini'), 'utf8');
       } catch {}
 
       await fs.writeFile(iniPath, content, 'utf8');
@@ -331,7 +331,13 @@ export namespace ProjectsCommands {
     }
 
     private static async editDefaultIni(): Promise<void> {
-      const defaultIniPath = Runtime.extension.asAbsolutePath('dist/default.ini');
+      const defaultIniPath = join(ConfigurationTreeView.ddkDir, 'default.ini');
+      try {
+        await fs.access(defaultIniPath);
+      } catch {
+        await fs.mkdir(ConfigurationTreeView.ddkDir, { recursive: true });
+        await fs.writeFile(defaultIniPath, `; Default INI template – used as the starting content\n; when DDK creates a new .ini file for a project.\n[CmdLineParam]\n`, 'utf8');
+      }
       try {
         await commands.executeCommand('vscode.open', Uri.file(defaultIniPath));
       } catch (error) {

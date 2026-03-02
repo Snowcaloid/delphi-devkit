@@ -78,6 +78,7 @@ export namespace PROJECTS {
   export namespace VIEW {
     export const WORKSPACES = 'ddk.view.projects.workspaces';
     export const GROUP_PROJECT = 'ddk.view.projects.groupProject';
+    export const CONFIGURATION = 'ddk.view.configuration';
   }
 
   export namespace STATUS_BAR {
