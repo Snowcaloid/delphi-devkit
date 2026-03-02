@@ -50,7 +50,12 @@ pub trait Stateful {
     {
         let path = <Self as FilePath>::get_file_path();
         let _lock = obtain_lock::<Self>().await?;
-        if let Ok(serialized) = ron::to_string(&self) {
+        if let Ok(serialized) = ron::ser::to_string_pretty(
+            &self,
+            PrettyConfig::default()
+                .struct_names(true)
+                .escape_strings(false)
+        ) {
             Self::mark_state_changed(true);
             if let Err(e) = std::fs::write(&path, serialized) {
                 Self::mark_state_changed(false);

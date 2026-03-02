@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use crate::utils::normalize_path;
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Dproj Cache
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -58,6 +60,7 @@ pub fn get_main_source(dproj_path: &PathBuf) -> Result<PathBuf> {
     let dproj = Dproj::from_file(dproj_path)
         .map_err(|e| anyhow::anyhow!("Failed to parse dproj: {}", e))?;
     dproj.get_main_source()
+        .map(normalize_path)
         .map_err(|e| anyhow::anyhow!("Main source not found in dproj: {}", e))
 }
 
@@ -65,6 +68,7 @@ pub fn get_exe_path(dproj_path: &PathBuf) -> Result<PathBuf> {
     let dproj = Dproj::from_file(dproj_path)
         .map_err(|e| anyhow::anyhow!("Failed to parse dproj: {}", e))?;
     dproj.get_exe_path()
+        .map(normalize_path)
         .map_err(|e| anyhow::anyhow!("Exe path not found in dproj: {}", e))
 }
 
@@ -72,6 +76,7 @@ pub fn get_exe_path_for(dproj_path: &PathBuf, config: &str, platform: &str) -> R
     let dproj = Dproj::from_file(dproj_path)
         .map_err(|e| anyhow::anyhow!("Failed to parse dproj: {}", e))?;
     dproj.get_exe_path_for(config, platform)
+        .map(normalize_path)
         .map_err(|e| anyhow::anyhow!("Exe path not found in dproj for {}/{}: {}", config, platform, e))
 }
 
