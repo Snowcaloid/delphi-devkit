@@ -10,9 +10,11 @@
 //! selected project or compiler are picked up by ddk-server's file watcher,
 //! which pushes the updated state to VS Code automatically.
 
-use ddk_projects::mcp::DdkMcpHandler;
-use ddk_projects::projects::{ProjectsData, CompilerConfigurations};
-use ddk_projects::state::Stateful;
+mod handler;
+
+use handler::DdkMcpHandler;
+use ddk_core::projects::{ProjectsData, CompilerConfigurations};
+use ddk_core::state::Stateful;
 
 use rust_mcp_sdk::{
     McpServer, ToMcpServerHandler, StdioTransport, TransportOptions,

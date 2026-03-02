@@ -200,16 +200,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ddk-mcp-server"
-version = "2.0.3"
-dependencies = [
- "ddk-projects",
- "rust-mcp-sdk",
- "tokio",
-]
-
-[[package]]
-name = "ddk-projects"
+name = "ddk-core"
 version = "2.0.3"
 dependencies = [
  "anyhow",
@@ -225,7 +216,6 @@ dependencies = [
  "regex",
  "ron",
  "roxmltree",
- "rust-mcp-sdk",
  "rust_search",
  "scopeguard",
  "serde",
@@ -237,11 +227,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ddk-mcp-server"
+version = "2.0.3"
+dependencies = [
+ "async-trait",
+ "ddk-core",
+ "rust-mcp-sdk",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "ddk-server"
 version = "2.0.3"
 dependencies = [
  "anyhow",
- "ddk-projects",
+ "ddk-core",
  "serde_json",
  "tokio",
  "tower-lsp",

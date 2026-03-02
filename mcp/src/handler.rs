@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
-use crate::projects::*;
-use crate::state::*;
+use ddk_core::projects::*;
+use ddk_core::state::*;
 
 // ---------------------------------------------------------------------------
 // README content embedded at compile time
 // ---------------------------------------------------------------------------
 
-static README_CONTENT: &str = include_str!("../../../README.md");
+static README_CONTENT: &str = include_str!("../../README.md");
 
 // ---------------------------------------------------------------------------
 // Tool input types (mcp_tool! generates ::tool() returning a Tool definition)
@@ -361,7 +361,7 @@ async fn compile_selected_project(args: &Value) -> String {
         }
     };
 
-    let params = crate::lsp_types::CompileProjectParams::Project {
+    let params = ddk_core::lsp_types::CompileProjectParams::Project {
         project_id,
         project_link_id: Some(link_id),
         rebuild,
@@ -377,7 +377,7 @@ async fn compile_selected_project(args: &Value) -> String {
     let collected: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let collected_clone = collected.clone();
-    let mut receiver = crate::lsp_types::CompilerProgress::subscribe();
+    let mut receiver = ddk_core::lsp_types::CompilerProgress::subscribe();
 
     let collect_handle = tokio::spawn(async move {
         loop {
@@ -385,14 +385,14 @@ async fn compile_selected_project(args: &Value) -> String {
                 Ok(event) => {
                     let mut lines = collected_clone.lock().unwrap();
                     match event {
-                        crate::lsp_types::CompilerProgressParams::Start { lines: ls }
-                        | crate::lsp_types::CompilerProgressParams::SingleProjectStarted { lines: ls, .. }
-                        | crate::lsp_types::CompilerProgressParams::Completed { lines: ls, .. }
-                        | crate::lsp_types::CompilerProgressParams::SingleProjectCompleted { lines: ls, .. } => {
+                        ddk_core::lsp_types::CompilerProgressParams::Start { lines: ls }
+                        | ddk_core::lsp_types::CompilerProgressParams::SingleProjectStarted { lines: ls, .. }
+                        | ddk_core::lsp_types::CompilerProgressParams::Completed { lines: ls, .. }
+                        | ddk_core::lsp_types::CompilerProgressParams::SingleProjectCompleted { lines: ls, .. } => {
                             lines.extend(ls);
                         }
-                        crate::lsp_types::CompilerProgressParams::Stdout { line }
-                        | crate::lsp_types::CompilerProgressParams::Stderr { line } => {
+                        ddk_core::lsp_types::CompilerProgressParams::Stdout { line }
+                        | ddk_core::lsp_types::CompilerProgressParams::Stderr { line } => {
                             lines.push(line);
                         }
                     }

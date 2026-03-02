@@ -4,11 +4,11 @@ use tower_lsp::{Client, async_trait, jsonrpc};
 use tower_lsp::{LanguageServer, LspService, Server};
 use tower_lsp::lsp_types::*;
 
-use ddk_projects::lsp_types::*;
-use ddk_projects::projects::*;
-use ddk_projects::state::*;
-use ddk_projects::format::Formatter;
-use ddk_projects::try_finish_event;
+use ddk_core::lsp_types::*;
+use ddk_core::projects::*;
+use ddk_core::state::*;
+use ddk_core::format::Formatter;
+use ddk_core::try_finish_event;
 
 #[derive(Debug, Clone)]
 struct DelphiLsp {
@@ -35,7 +35,7 @@ impl DelphiLsp {
         &self,
         _params: CancelCompilationParams,
     ) -> tower_lsp::jsonrpc::Result<()> {
-        ddk_projects::projects::compiler_state::cancel();
+        ddk_core::projects::compiler_state::cancel();
         try_finish_event!(self.client, "compilation cancelled");
     }
 
@@ -54,7 +54,7 @@ impl DelphiLsp {
         params: serde_json::Value,
     ) -> tower_lsp::jsonrpc::Result<()> {
         if let Some(enc) = params.get("encoding").and_then(|v| v.as_str()) {
-            ddk_projects::encoding::set_encoding(enc);
+            ddk_core::encoding::set_encoding(enc);
             lsp_info!(self.client, "Compiler encoding changed to: {}", enc);
         }
         Ok(())
@@ -125,7 +125,7 @@ impl LanguageServer for DelphiLsp {
     async fn initialize(&self, params: InitializeParams) -> jsonrpc::Result<InitializeResult> {
         if let Some(opts) = params.initialization_options {
             if let Some(enc) = opts.get("encoding").and_then(|v| v.as_str()) {
-                ddk_projects::encoding::set_encoding(enc);
+                ddk_core::encoding::set_encoding(enc);
             }
         }
         return Ok(InitializeResult {
@@ -142,7 +142,7 @@ impl LanguageServer for DelphiLsp {
     }
 
     async fn shutdown(&self) -> jsonrpc::Result<()> {
-        ddk_projects::projects::compiler_state::cancel();
+        ddk_core::projects::compiler_state::cancel();
         return Ok(())
     }
 

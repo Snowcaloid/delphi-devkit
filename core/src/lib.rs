@@ -5,7 +5,6 @@ pub mod files;
 pub mod utils;
 pub mod format;
 pub mod state;
-pub mod mcp;
 pub mod encoding;
 
 // Re-export all lsp_types at the crate root so internal modules that use

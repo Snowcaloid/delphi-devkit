@@ -18,7 +18,7 @@ enum IdObject {
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ProjectsData {
     pub(super) id_counter: usize,
-    pub(crate) active_project_id: Option<usize>,
+    pub active_project_id: Option<usize>,
     pub workspaces: Vec<Workspace>,
     pub projects: Vec<Project>,
     pub group_project: Option<GroupProject>,
