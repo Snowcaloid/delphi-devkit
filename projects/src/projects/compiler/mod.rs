@@ -8,11 +8,9 @@ use rust_search::SearchBuilder;
 use scopeguard::defer;
 use std::path::PathBuf;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
+use tokio::io::{AsyncRead, BufReader};
 use tokio::process::Command;
 use tower_lsp::lsp_types::{Diagnostic, Url};
-use std::collections::HashMap;
-use tokio::fs::File;
 
 #[derive(Debug, Clone)]
 pub struct CompileResult {
@@ -375,7 +373,8 @@ impl Compiler {
                     rsvars_path.to_string_lossy()
                 );
             }
-            let envs = capture_rsvars_env(&rsvars_path.to_string_lossy()).await?;
+            let envs = dproj_rs::rsvars::parse_rsvars_file(&rsvars_path)
+                .map_err(|e| anyhow::anyhow!("Failed to parse rsvars.bat: {}", e))?;
             let project_file = project.get_project_file()?;
             let args = parameters.configuration.build_arguments.join(" ");
             let target = if parameters.rebuild { "Build" } else { "Make" };
@@ -595,96 +594,7 @@ fn find_msbuild() -> Result<String> {
     );
 }
 
-pub async fn capture_rsvars_env(rsvars_path: &str) -> Result<HashMap<String, String>> {
-    // List of variables to skip
-    let skip_vars = [
-        "PROCESSOR_ARCHITECTURE",
-        "PROCESSOR_IDENTIFIER",
-        "PROCESSOR_LEVEL",
-        "PROCESSOR_REVISION",
-        "NUMBER_OF_PROCESSORS",
-    ];
 
-    // Create a temporary batch file with a unique name.
-    // We use into_temp_path() to close the file handle before cmd.exe reads it
-    // (Windows won't allow concurrent access otherwise). The TempPath auto-deletes on drop.
-    let temp_batch = {
-        use std::io::Write;
-        let mut f = tempfile::Builder::new()
-            .suffix(".bat")
-            .tempfile()?;
-        write!(f, "@echo off\ncall \"{}\"\nset", rsvars_path)?;
-        f.into_temp_path()
-    };
-
-    // Execute the temporary batch file
-    let mut child = Command::new("cmd")
-        .arg("/C")
-        .arg(temp_batch.as_ref() as &std::path::Path)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?;
-
-    let stdout = child.stdout.take().expect("Child stdout missing");
-    let mut reader = BufReader::new(stdout).lines();
-
-    let mut env_vars = HashMap::new();
-    while let Some(line) = reader.next_line().await? {
-        if let Some((key, value)) = line.split_once('=') {
-            if !skip_vars.contains(&key) {
-                env_vars.insert(key.to_string(), value.to_string().replace(";;", ";"));
-            }
-        }
-    }
-
-    // Wait for the batch process to finish
-    let status = child.wait().await?;
-    if !status.success() {
-        eprintln!("Warning: rsvars.bat environment capture exited with {}", status);
-    }
-
-    // temp_batch (TempPath) is dropped here, which deletes the file
-    Ok(env_vars)
-}
-
-pub async fn parse_rsvars(path: &str) -> Result<HashMap<String, String>> {
-    let file = File::open(path).await?;
-    let reader = BufReader::new(file);
-    let mut lines = reader.lines();
-
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-
-    while let Some(line) = lines.next_line().await? {
-        let trimmed = line.trim_start();
-        if trimmed.to_ascii_uppercase().starts_with("@SET ") {
-            let rest = &trimmed[5..];
-            if let Some((key, value)) = rest.split_once('=') {
-                let key = key.trim().to_string();
-                let mut value = value.trim().to_string();
-
-                // Expand %VAR% references from already-parsed variables or system env
-                while let Some(start) = value.find('%') {
-                    if let Some(end) = value[start + 1..].find('%') {
-                        let end = start + 1 + end;
-                        let var_name = &value[start + 1..end];
-                        let replacement = env_vars
-                            .get(var_name)
-                            .cloned()
-                            .or_else(|| std::env::var(var_name).ok())
-                            .unwrap_or_default();
-                        value.replace_range(start..=end, &replacement);
-                    } else {
-                        break; // unmatched %, leave as is
-                    }
-                }
-
-                env_vars.insert(key, value);
-            }
-        }
-    }
-
-    Ok(env_vars)
-}
 
 async fn clear_stale_diagnostics(client: Option<&tower_lsp::Client>) {
     // Always drain the tracked files to prevent stale state
