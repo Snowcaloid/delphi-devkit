@@ -70,6 +70,9 @@ ddk --json <command>            # Output as JSON
 ### Compile a Project
 ![Compile selected project](vscode_extension/assets/compile_selected_project.gif)
 
+### Transfer Group Project to Workspace
+![Transfer group project to workspace](vscode_extension/assets/transfer_groupproj_to_ws.gif)
+
 ### Format Delphi Source
 ![Formatter](vscode_extension/assets/formatter.gif)
 
