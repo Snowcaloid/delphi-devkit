@@ -49,6 +49,16 @@ enum Commands {
 
     /// Print the DDK extension README.
     Info,
+
+    /// Format a Delphi source file in-place.
+    Format {
+        /// Path to the file to format.
+        file: String,
+        /// Encoding of the source file, e.g. "utf-8", "windows-1252", "oem".
+        /// Defaults to "utf-8" when not specified.
+        #[arg(long, short = 'e')]
+        encoding: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -144,6 +154,15 @@ async fn main() -> Result<()> {
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {
                 print!("{output}");
+            }
+        }
+
+        Commands::Format { file, encoding } => {
+            let result = commands::cmd_format_file(file, encoding).await?;
+            if cli.json {
+                println!("{}", serde_json::to_string_pretty(&result)?);
+            } else {
+                println!("{result}");
             }
         }
     }

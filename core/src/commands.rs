@@ -4,7 +4,7 @@
 //! Each function returns a typed Rust struct; the caller decides how to
 //! present it (JSON for MCP, human-readable table for CLI, etc.).
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -469,6 +469,18 @@ pub async fn cmd_set_group_compiler(compiler_key: String) -> Result<SetCompilerR
     })
 }
 
+/// Result of formatting a file in-place.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormatFileResult {
+    pub file_path: String,
+}
+
+impl fmt::Display for FormatFileResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Formatted: {}", self.file_path)
+    }
+}
+
 /// Compiles a project. If `project_id` is `Some`, that project is
 /// selected first; otherwise the currently active project is compiled.
 /// Collects compiler broadcast output and returns it as a `CompileOutput`.
@@ -566,4 +578,28 @@ pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<Com
             );
         }
     }
+}
+
+/// Formats a Delphi source file in-place.
+///
+/// Reads the file at `file_path`, decodes it with `encoding` (e.g. `"utf-8"`,
+/// `"windows-1252"`, `"oem"`), runs it through the DDK formatter, then
+/// encodes the result back to the same encoding before writing.
+/// Defaults to `"utf-8"` when `encoding` is `None`.
+pub async fn cmd_format_file(file_path: String, encoding: Option<String>) -> Result<FormatFileResult> {
+    use crate::format::Formatter;
+    use crate::encoding::{decode_bytes, encode_string};
+
+    let encoding_label = encoding.as_deref().unwrap_or("utf-8");
+
+    let raw = std::fs::read(&file_path)
+        .with_context(|| format!("Failed to read file: {file_path}"))?;
+    let content = decode_bytes(&raw, encoding_label);
+
+    let formatted = Formatter::new(content)?.execute().await?;
+
+    let out_bytes = encode_string(&formatted, encoding_label);
+    std::fs::write(&file_path, &out_bytes)
+        .with_context(|| format!("Failed to write file: {file_path}"))?;
+    Ok(FormatFileResult { file_path })
 }

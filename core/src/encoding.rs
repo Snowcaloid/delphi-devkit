@@ -4,6 +4,110 @@ use encoding_rs::Encoding;
 /// The special value "oem" means: auto-detect using the Windows OEM codepage.
 static COMPILER_ENCODING: RwLock<&str> = RwLock::new("oem");
 
+/// Decode raw bytes to a UTF-8 `String` using the given encoding label.
+///
+/// Recognised special values: `"oem"` (Windows system OEM codepage auto-detected
+/// at runtime), `"utf-8"`, `"utf-32le"`, `"utf-32be"`.
+/// Every other value is passed to `encoding_rs` by label.
+pub fn decode_bytes(bytes: &[u8], label: &str) -> String {
+    let lower = label.to_lowercase();
+    match lower.as_str() {
+        "oem" => decode_oem(bytes),
+        "utf-8" | "utf8" => String::from_utf8_lossy(bytes).to_string(),
+        "utf-32le" => decode_utf32(bytes, true),
+        "utf-32be" => decode_utf32(bytes, false),
+        _ => match Encoding::for_label(lower.as_bytes()) {
+            Some(enc) => {
+                let (decoded, _, _) = enc.decode(bytes);
+                decoded.into_owned()
+            }
+            None => String::from_utf8_lossy(bytes).to_string(),
+        },
+    }
+}
+
+/// Encode a UTF-8 `str` to raw bytes using the given encoding label.
+///
+/// `"oem"` maps to the Windows system OEM codepage (via `WideCharToMultiByte`
+/// on Windows, falls back to UTF-8 on other platforms).
+/// Every other value is passed to `encoding_rs` by label.
+pub fn encode_string(s: &str, label: &str) -> Vec<u8> {
+    let lower = label.to_lowercase();
+    match lower.as_str() {
+        "oem" => encode_oem(s),
+        "utf-8" | "utf8" => s.as_bytes().to_vec(),
+        "utf-32le" => {
+            let mut out = Vec::with_capacity(s.chars().count() * 4);
+            for c in s.chars() {
+                out.extend_from_slice(&(c as u32).to_le_bytes());
+            }
+            out
+        }
+        "utf-32be" => {
+            let mut out = Vec::with_capacity(s.chars().count() * 4);
+            for c in s.chars() {
+                out.extend_from_slice(&(c as u32).to_be_bytes());
+            }
+            out
+        }
+        _ => match Encoding::for_label(lower.as_bytes()) {
+            Some(enc) => {
+                let (bytes, _, _) = enc.encode(s);
+                bytes.into_owned()
+            }
+            None => s.as_bytes().to_vec(),
+        },
+    }
+}
+
+/// Encode a string to the system OEM codepage using `WideCharToMultiByte`.
+///
+/// On non-Windows platforms, falls back to returning the raw UTF-8 bytes.
+#[cfg(windows)]
+fn encode_oem(s: &str) -> Vec<u8> {
+    // CP_OEMCP = 1 — the current system OEM codepage.
+    const CP_OEMCP: u32 = 1;
+    unsafe extern "system" {
+        fn WideCharToMultiByte(
+            code_page: u32,
+            dw_flags: u32,
+            lp_wide_char_str: *const u16,
+            cch_wide_char: i32,
+            lp_multi_byte_str: *mut u8,
+            cb_multi_byte: i32,
+            lp_default_char: *const u8,
+            lp_used_default_char: *mut i32,
+        ) -> i32;
+    }
+    let wide: Vec<u16> = s.encode_utf16().collect();
+    let size = unsafe {
+        WideCharToMultiByte(
+            CP_OEMCP, 0,
+            wide.as_ptr(), wide.len() as i32,
+            std::ptr::null_mut(), 0,
+            std::ptr::null(), std::ptr::null_mut(),
+        )
+    };
+    if size <= 0 {
+        return s.as_bytes().to_vec();
+    }
+    let mut out = vec![0u8; size as usize];
+    unsafe {
+        WideCharToMultiByte(
+            CP_OEMCP, 0,
+            wide.as_ptr(), wide.len() as i32,
+            out.as_mut_ptr(), size,
+            std::ptr::null(), std::ptr::null_mut(),
+        );
+    }
+    out
+}
+
+#[cfg(not(windows))]
+fn encode_oem(s: &str) -> Vec<u8> {
+    s.as_bytes().to_vec()
+}
+
 /// Set the compiler output encoding label (e.g. "windows-1252", "utf-8", "oem").
 ///
 /// "oem" (the default) auto-detects the system's OEM codepage at decode time,

@@ -100,6 +100,22 @@ pub struct CompileSelectedProjectArgs {
     pub project_id: Option<u64>,
 }
 
+#[macros::mcp_tool(
+    name = "delphi_format_file",
+    description = "Formats a Delphi source file (.pas / .dpr / .dpk) in-place using the DDK formatter. \
+        The file is read from disk, reformatted, and written back to the same path. \
+        Requires at least one Delphi compiler installation to be present. \
+        Specify the encoding when the file is not UTF-8, e.g. \"windows-1252\" for ANSI or \"oem\" for the system OEM codepage."
+)]
+#[derive(Debug, Deserialize, Serialize, macros::JsonSchema)]
+pub struct FormatFileArgs {
+    /// Absolute or relative path to the Delphi source file to format.
+    pub file_path: String,
+    /// Encoding of the source file, e.g. "utf-8", "windows-1252", "oem".
+    /// Defaults to "utf-8" when not specified.
+    pub encoding: Option<String>,
+}
+
 rust_mcp_sdk::tool_box!(DdkTools, [
     GetDdkExtensionInfoArgs,
     GetEnvironmentInfoArgs,
@@ -108,6 +124,7 @@ rust_mcp_sdk::tool_box!(DdkTools, [
     GetAvailableCompilersArgs,
     SetGroupProjectsCompilerArgs,
     CompileSelectedProjectArgs,
+    FormatFileArgs,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -146,6 +163,7 @@ impl ServerHandler for DdkMcpHandler {
             "delphi_get_available_compilers"  => get_available_compilers().await,
             "delphi_set_group_projects_compiler" => set_group_projects_compiler(&args).await,
             "delphi_compile_selected_project" => compile_selected_project(&args).await,
+            "delphi_format_file"              => format_file(&args).await,
             _ => format!("Unknown tool: {name}"),
         };
         Ok(CallToolResult::text_content(vec![TextContent::from(result_text)]))
