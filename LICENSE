@@ -2,16 +2,8 @@ DDK - Delphi Development Kit for Visual Studio Code
 Copyright © 2025–2026 Valentin Baron.
 All Rights Reserved
 
-Version 1.2
-Date: 02.03.2026 (March 2)
-
-THE CONTENTS OF THIS PROJECT ARE CURRENTLY PROPRIETARY.
-UNAUTHORIZED COPYING, TRANSFERRING OR REPRODUCTION OF THE CONTENTS OF THIS
-PROJECT, VIA ANY MEDIUM IS STRICTLY PROHIBITED.
-
-The receipt or possession of the source code and/or any parts thereof does not
-convey or imply any right to use them for any purpose other than the purpose for
-which they were provided to you.
+Version 1.4
+Date: 03.03.2026 (March 3)
 
 TERMS AND CONDITIONS
 
@@ -73,7 +65,7 @@ TERMS AND CONDITIONS
     behalf of whom a Contribution has been received by Licensor and
     subsequently incorporated within the Work.
 
-2. Trademarks
+2. Trademarks.
 
     This software is an independent work and is not affiliated with, endorsed
     by, or sponsored by Embarcadero Technologies, Inc. Delphi and related logos
@@ -83,7 +75,7 @@ TERMS AND CONDITIONS
     does not grant permission to use the trade names, trademarks, service marks,
     or product names of Delphi, except as required for reasonable and customary
     use in describing the origin of the Work and reproducing the content of the
-    NOTICE file.
+    NOTICE file (NOTICE.txt).
 
 3. Grant of Use.
 
@@ -108,15 +100,56 @@ TERMS AND CONDITIONS
 5. Redistribution.
 
     This project is distributed exclusively via the VS Code Marketplace.
-    Redistribution in Source or Object form is prohibited unless explicitly
-    authorized in writing by the Licensor. All rights not expressly granted
-    to You under this License are reserved by the Licensor.
+    Public redistribution — making the Work or any portion thereof available
+    to third parties in Source or Object form via any medium — is prohibited
+    without a separate written contract with the Licensor explicitly
+    authorizing such redistribution.
+
+    Monetary redistribution — selling, licensing for a fee, bundling as part
+    of a commercial product, or otherwise distributing the Work for direct or
+    indirect financial gain — is likewise prohibited without such a written
+    contract. Commercial redistribution rights are available under a separate
+    written contract with the Licensor, which may include royalty arrangements.
+    Interested parties may direct inquiries to the contact information provided
+    in Section 13.
+
+    Private copies and local builds retained solely for Your own use are not
+    considered redistribution under this Section. All rights not expressly
+    granted to You under this License are reserved by the Licensor.
+
+    5.1 Showcase Exception.
+
+    Notwithstanding the above, any individual or Legal Entity is permitted
+    to publicly showcase, demonstrate, discuss, blog about, or present the
+    Work or any part thereof — including code snippets, features,
+    screenshots, and recordings — for any non-redistributive purpose
+    (e.g., tutorials, articles, portfolios, conference talks, or reviews),
+    provided that:
+
+    (a) The original Work is clearly attributed by name ("DDK - Delphi
+        Development Kit for Visual Studio Code"), with Valentin Baron
+        identified as the author and copyright holder, and a link to the
+        official repository (https://github.com/valentin-baron/delphi-devkit)
+        included where reasonably possible;
+
+    (b) Contributors may additionally take personal credit for the specific
+        parts of the Work they themselves authored, but may not claim
+        authorship of parts of the Work they did not contribute to.
+
+    This exception does not authorize redistribution of the Work in Source or
+    Object form, and does not override any other restriction in this License.
 
 6. Modifications and Derivative Works.
 
-    Forking, modifying, or creating Derivative Works of the Work is permitted
-    only after prior written agreement with the Licensor. Contact the Licensor
-    at the address given in Section 13 to discuss terms.
+    Forking, modifying, and creating Derivative Works of the Work is
+    permitted without prior written agreement. You may maintain private
+    forks, apply local modifications, and submit Contributions (via Pull
+    Requests or other means) for potential inclusion in the official Work.
+
+    However, publicly distributing or commercially exploiting Derivative
+    Works remains subject to the redistribution restrictions of Section 5.
+    A Derivative Work held privately and not made available to third parties
+    is not restricted by Section 5.
 
 7. Disclaimer of Warranty.
 
@@ -131,25 +164,19 @@ TERMS AND CONDITIONS
 
 8. Submission of Contributions.
 
-    Unless You explicitly state otherwise, any Contribution intentionally
-    submitted for inclusion in the Work by You to the Licensor shall be under
-    the terms and conditions of this License, without any additional
-    terms or conditions. Notwithstanding the above, nothing herein shall
-    supersede or modify the terms of any separate license agreement you may
-    have executed with Licensor regarding such Contributions.
-
-    Pull Request Contributions. Any individual or Legal Entity is permitted
-    to submit Contributions to this Work via Pull Requests on the official
-    GitHub repository (https://github.com/valentin-baron/delphi-devkit). By
-    opening a Pull Request, You represent that:
+    Any individual or Legal Entity is permitted to submit Contributions to
+    this Work by any means, including but not limited to Pull Requests,
+    patches, or direct communication with the Licensor. By submitting a
+    Contribution, You represent that:
 
     (a) You are the original author of the Contribution or have the right
         to submit it;
 
     (b) You grant the Licensor a perpetual, worldwide, royalty-free,
         irrevocable license to use, reproduce, modify, distribute, and
-        sublicense Your Contribution as part of the Work under the terms
-        of this License or any later version thereof;
+        sublicense Your Contribution solely as part of the Work, under
+        the terms of this License or any later version thereof, and not
+        independently of it or for unrelated purposes;
 
     (c) Your Contribution does not, to the best of Your knowledge, infringe
         any third-party intellectual property rights;
@@ -157,9 +184,13 @@ TERMS AND CONDITIONS
     (d) You understand that the Licensor is under no obligation to accept,
         merge, or include Your Contribution in the Work;
 
-    (e) Acceptance of a Pull Request by the Licensor does not transfer
+    (e) Acceptance of a Contribution by the Licensor does not transfer
         copyright ownership of the Contribution to the Licensor. You retain
-        copyright in Your Contribution subject to the license grant above.
+        copyright in Your Contribution subject to the license grant above;
+
+    (f) Upon acceptance of Your Contribution, the Licensor shall credit You
+        by name or handle in the official CONTRIBUTORS file of the repository,
+        unless You explicitly request otherwise.
 
 9. Limitation of Liability.
 
@@ -177,29 +208,44 @@ TERMS AND CONDITIONS
 10. Termination.
 
     This License and the rights granted hereunder will terminate automatically
-    upon any breach by You of the terms of this License.
+    if You fail to cure any breach of the terms of this License within
+    thirty (30) days after becoming aware of such breach.
+
+    Sections 7 (Disclaimer of Warranty), 8(b) (Contribution License Grant),
+    and 9 (Limitation of Liability) shall survive any termination of this
+    License.
 
 11. Abandonment Clause.
 
     If the official GitHub repository
     (https://github.com/valentin-baron/delphi-devkit) receives no commits
     from the Licensor or any authorized Contributor for a continuous period
-    of six (6) months, the restrictions set forth in Sections 5
-    (Redistribution) and 6 (Modifications and Derivative Works) shall
-    automatically and irrevocably cease to apply. From that point forward,
-    You are granted a perpetual, worldwide, royalty-free, non-exclusive
-    license to use, reproduce, modify, distribute, sublicense, and create
-    Derivative Works of the Work, subject only to the attribution
-    requirements of Section 2 (Trademarks), the Disclaimer of Warranty
-    (Section 7), and the Limitation of Liability (Section 9). Empty
-    commits made solely to reset this six-month period without substantive
-    changes to the Work shall not be considered activity for the purposes
-    of this clause.
+    of six (6) months, the redistribution restrictions set forth in Section 5
+    may be waived upon request. In such a case, a written confirmation sent
+    by You to the Licensor at the address given in Section 13, followed by
+    an affirmative reply from the Licensor, shall be sufficient to authorize
+    redistribution in lieu of a formal written contract. If the Licensor fails
+    to respond within thirty (30) days of Your written request, the
+    redistribution restrictions shall be deemed waived automatically, subject
+    to the conditions set forth in the following paragraph.
+
+    Upon such confirmation or deemed waiver, You are granted a perpetual,
+    worldwide,
+    royalty-free, non-exclusive license to use, reproduce, modify, distribute,
+    and create Derivative Works of the Work, subject only to the
+    attribution requirements of Section 2 (Trademarks), the Disclaimer of
+    Warranty (Section 7), and the Limitation of Liability (Section 9).
+
+    Empty commits made solely to reset this six-month period without
+    substantive changes to the Work shall not be considered activity for
+    the purposes of this clause.
 
 12. Governing Law.
 
     This License shall be governed by and construed in accordance with the laws
-    of Germany, excluding its conflict of law provisions.
+    of Germany, excluding its conflict of law provisions and the United Nations
+    Convention on Contracts for the International Sale of Goods (CISG). The
+    exclusive place of jurisdiction shall be Munich, Germany.
 
 13. Contact Information.
 
