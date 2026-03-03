@@ -104,7 +104,7 @@ impl<'de> Deserialize<'de> for CompilerConfigurations {
 /// Remove `/p:Configuration=…` and `/p:Platform=…` arguments from the
 /// build arguments list.  These are now injected dynamically at build time
 /// based on per-project / per-workspace overrides.
-pub(crate) fn sanitize_build_arguments(args: &mut Vec<String>) {
+pub fn sanitize_build_arguments(args: &mut Vec<String>) {
     args.retain(|arg| {
         let lower = arg.to_lowercase();
         !lower.starts_with("/p:configuration=") && !lower.starts_with("/p:platform=")

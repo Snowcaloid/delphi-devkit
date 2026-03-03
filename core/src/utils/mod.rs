@@ -1,20 +1,51 @@
 use serde::{Serialize, Deserialize};
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, Component};
 
 mod document;
 pub use document::*;
 
-/// Strip the Windows extended-length path prefix (`\\?\`) if present.
+/// Normalise a path by:
+///   1. Resolving `.` and `..` segments purely (without touching the filesystem).
+///   2. Stripping the Windows extended-length prefix (`\\?\`) if present.
 ///
-/// `std::fs::canonicalize()` on Windows returns paths like `\\?\C:\Users\…`
-/// which are valid but ugly when stored in config files. This normalises
-/// them back to regular paths (e.g. `C:\Users\…`).
+/// `std::fs::canonicalize()` requires the path to exist and on Windows returns
+/// paths like `\\?\C:\Users\…`, which are valid but ugly in config files. This
+/// function works on any path string regardless of whether the target exists.
 pub fn normalize_path(path: impl AsRef<Path>) -> PathBuf {
-    let s = path.as_ref().to_string_lossy();
-    if s.starts_with(r"\\?\") {
-        PathBuf::from(&s[4..])
+    let path = path.as_ref();
+
+    // Strip \\?\ prefix first so Component parsing sees a normal path.
+    let path = {
+        let s = path.to_string_lossy();
+        if s.starts_with(r"\\?\") {
+            PathBuf::from(&s[4..])
+        } else {
+            path.to_path_buf()
+        }
+    };
+
+    // Resolve `.` and `..` using a stack-based approach.
+    let mut components: Vec<Component> = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => { /* skip `.` */ }
+            Component::ParentDir => {
+                // Pop the last normal component if possible;
+                // if we're already at a root, just ignore the `..`.
+                match components.last() {
+                    Some(Component::Normal(_)) => { components.pop(); }
+                    Some(Component::RootDir) | Some(Component::Prefix(_)) => { /* can't go above root */ }
+                    _ => { components.push(component); }
+                }
+            }
+            _ => { components.push(component); }
+        }
+    }
+
+    if components.is_empty() {
+        PathBuf::from(".")
     } else {
-        path.as_ref().to_path_buf()
+        components.iter().collect()
     }
 }
 
