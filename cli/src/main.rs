@@ -98,15 +98,11 @@ async fn main() -> Result<()> {
 
         Commands::Project(cmd) => match cmd {
             ProjectCmd::List => {
-                let projects = commands::cmd_list_projects().await?;
+                let result = commands::cmd_list_projects().await?;
                 if cli.json {
-                    println!("{}", serde_json::to_string_pretty(&projects)?);
-                } else if projects.is_empty() {
-                    println!("No projects found.");
+                    println!("{}", serde_json::to_string_pretty(&result)?);
                 } else {
-                    for p in &projects {
-                        println!("{p}");
-                    }
+                    print!("{result}");
                 }
             }
             ProjectCmd::Select { id } => {

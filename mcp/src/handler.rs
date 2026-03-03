@@ -40,7 +40,7 @@ pub struct GetEnvironmentInfoArgs {}
 
 #[macros::mcp_tool(
     name = "delphi_list_projects",
-    description = "Lists all known Delphi projects with their IDs, names, and key paths. Use this when no project is currently selected to discover available projects before selecting one."
+    description = "Lists all known Delphi projects grouped by their workspace or group project. Each workspace has its own compiler configuration. Projects are shown with their IDs, names, and paths. Use this to discover available projects and their hierarchy before selecting one."
 )]
 #[derive(Debug, Deserialize, Serialize, macros::JsonSchema)]
 pub struct ListProjectsArgs {}
@@ -165,12 +165,7 @@ async fn get_environment_info() -> String {
 
 async fn list_projects() -> String {
     match commands::cmd_list_projects().await {
-        Ok(projects) => {
-            if projects.is_empty() {
-                return "No projects found.".to_string();
-            }
-            serde_json::to_string_pretty(&projects).unwrap_or_default()
-        }
+        Ok(result) => serde_json::to_string_pretty(&result).unwrap_or_default(),
         Err(e) => format!("Error: {e}"),
     }
 }

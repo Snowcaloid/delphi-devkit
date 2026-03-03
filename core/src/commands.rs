@@ -16,7 +16,7 @@ use crate::state::*;
 // Result types
 // ---------------------------------------------------------------------------
 
-/// Summary of a single project (returned by `list_projects`).
+/// Summary of a single project entry within a workspace or group project.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectSummary {
     pub id: usize,
@@ -26,14 +26,63 @@ pub struct ProjectSummary {
     pub active: bool,
 }
 
-impl fmt::Display for ProjectSummary {
+/// Summary of a user-defined workspace and its projects.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceSummary {
+    pub id: usize,
+    pub name: String,
+    pub compiler_id: String,
+    pub projects: Vec<ProjectSummary>,
+}
+
+/// Summary of the loaded group project and its projects.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GroupProjectSummary {
+    pub name: String,
+    pub path: String,
+    pub compiler_id: String,
+    pub projects: Vec<ProjectSummary>,
+}
+
+/// Hierarchical project listing preserving workspace / group-project structure.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectListResult {
+    pub workspaces: Vec<WorkspaceSummary>,
+    pub group_project: Option<GroupProjectSummary>,
+    pub active_project_id: Option<usize>,
+}
+
+impl fmt::Display for ProjectListResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let marker = if self.active { " *" } else { "" };
-        write!(
-            f,
-            "[{}]{} {} ({})",
-            self.id, marker, self.name, self.directory
-        )
+        if self.workspaces.is_empty() && self.group_project.is_none() {
+            return write!(f, "No projects found.");
+        }
+
+        for ws in &self.workspaces {
+            writeln!(f, "Workspace: {} (compiler: {})", ws.name, ws.compiler_id)?;
+            if ws.projects.is_empty() {
+                writeln!(f, "  (empty)")?;
+            } else {
+                for p in &ws.projects {
+                    let marker = if p.active { " *" } else { "" };
+                    writeln!(f, "  [{}]{} {} ({})", p.id, marker, p.name, p.directory)?;
+                }
+            }
+        }
+
+        if let Some(gp) = &self.group_project {
+            writeln!(f, "Group Project: {} (compiler: {})", gp.name, gp.compiler_id)?;
+            if gp.projects.is_empty() {
+                writeln!(f, "  (empty)")?;
+            } else {
+                for p in &gp.projects {
+                    let marker = if p.active { " *" } else { "" };
+                    writeln!(f, "  [{}]{} {} ({})", p.id, marker, p.name, p.directory)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -291,21 +340,64 @@ pub async fn cmd_get_environment_info() -> Result<EnvironmentInfo> {
     })
 }
 
-/// Lists all known projects.
-pub async fn cmd_list_projects() -> Result<Vec<ProjectSummary>> {
+/// Lists all known projects, preserving workspace / group-project hierarchy.
+pub async fn cmd_list_projects() -> Result<ProjectListResult> {
     let projects_data = PROJECTS_DATA.read().await;
     let active_id = projects_data.active_project_id;
-    Ok(projects_data
-        .projects
+
+    let make_summary = |p: &crate::projects::Project| ProjectSummary {
+        id: p.id,
+        name: p.name.clone(),
+        directory: p.directory.clone(),
+        dproj: p.dproj.clone(),
+        active: Some(p.id) == active_id,
+    };
+
+    let workspaces = projects_data
+        .workspaces
         .iter()
-        .map(|p| ProjectSummary {
-            id: p.id,
-            name: p.name.clone(),
-            directory: p.directory.clone(),
-            dproj: p.dproj.clone(),
-            active: Some(p.id) == active_id,
+        .map(|ws| {
+            let projects = ws
+                .project_links
+                .iter()
+                .filter_map(|link| {
+                    projects_data
+                        .get_project(link.project_id)
+                        .map(&make_summary)
+                })
+                .collect();
+            WorkspaceSummary {
+                id: ws.id,
+                name: ws.name.clone(),
+                compiler_id: ws.compiler_id.clone(),
+                projects,
+            }
         })
-        .collect())
+        .collect();
+
+    let group_project = projects_data.group_project.as_ref().map(|gp| {
+        let projects = gp
+            .project_links
+            .iter()
+            .filter_map(|link| {
+                projects_data
+                    .get_project(link.project_id)
+                    .map(&make_summary)
+            })
+            .collect();
+        GroupProjectSummary {
+            name: gp.name.clone(),
+            path: gp.path.clone(),
+            compiler_id: projects_data.group_project_compiler_id.clone(),
+            projects,
+        }
+    });
+
+    Ok(ProjectListResult {
+        workspaces,
+        group_project,
+        active_project_id: active_id,
+    })
 }
 
 /// Selects a project by ID.
