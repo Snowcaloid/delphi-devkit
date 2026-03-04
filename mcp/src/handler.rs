@@ -230,3 +230,17 @@ async fn compile_selected_project(args: &Value) -> String {
         Err(e) => format!("{e}"),
     }
 }
+
+async fn format_file(args: &Value) -> String {
+    let file_path = match args.get("file_path").and_then(|v| v.as_str()) {
+        Some(p) => p.to_string(),
+        _ => return "Missing required parameter: file_path".to_string(),
+    };
+    let encoding = args
+        .get("encoding")
+        .and_then(|v| v.as_str().map(|s| s.to_string()));
+    match commands::cmd_format_file(file_path, encoding).await {
+        Ok(path) => format!("{path}"),
+        Err(e) => format!("{e}"),
+    }
+}
