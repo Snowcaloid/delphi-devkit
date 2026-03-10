@@ -219,6 +219,8 @@ pub struct CompileOutput {
     pub lines: Vec<String>,
 }
 
+pub type CompileProgressCallback = std::sync::Arc<dyn Fn(String) + Send + Sync>;
+
 impl fmt::Display for CompileOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let summary = if self.cancelled {
@@ -485,6 +487,16 @@ impl fmt::Display for FormatFileResult {
 /// selected first; otherwise the currently active project is compiled.
 /// Collects compiler broadcast output and returns it as a `CompileOutput`.
 pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<CompileOutput> {
+    cmd_compile_with_progress(rebuild, project_id, None).await
+}
+
+/// Compiles a project and optionally invokes `on_progress` for each emitted
+/// compiler output line as it arrives.
+pub async fn cmd_compile_with_progress(
+    rebuild: bool,
+    project_id: Option<usize>,
+    on_progress: Option<CompileProgressCallback>,
+) -> Result<CompileOutput> {
     // If an explicit project was requested, select it first.
     if let Some(pid) = project_id {
         cmd_select_project(pid).await?;
@@ -519,6 +531,7 @@ pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<Com
     let collected: std::sync::Arc<std::sync::Mutex<Vec<String>>> =
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let collected_clone = collected.clone();
+    let progress_callback = on_progress.clone();
     let mut receiver = CompilerProgress::subscribe();
 
     let collect_handle = tokio::spawn(async move {
@@ -531,10 +544,18 @@ pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<Com
                         | CompilerProgressParams::SingleProjectStarted { lines: ls, .. }
                         | CompilerProgressParams::Completed { lines: ls, .. }
                         | CompilerProgressParams::SingleProjectCompleted { lines: ls, .. } => {
+                            if let Some(callback) = &progress_callback {
+                                for line in &ls {
+                                    callback(line.clone());
+                                }
+                            }
                             lines.extend(ls);
                         }
                         CompilerProgressParams::Stdout { line }
                         | CompilerProgressParams::Stderr { line } => {
+                            if let Some(callback) = &progress_callback {
+                                callback(line.clone());
+                            }
                             lines.push(line);
                         }
                     }
@@ -568,6 +589,9 @@ pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<Com
         }),
         Err(e) => {
             // Still return collected output on failure.
+            if on_progress.is_some() {
+                bail!("Compilation failed: {e}");
+            }
             bail!(
                 "Compilation failed: {e}{}",
                 if output_lines.is_empty() {

@@ -6,6 +6,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::io::{self, Write};
 
 use ddk_core::commands;
 use ddk_core::projects::{CompilerConfigurations, ProjectsData};
@@ -149,11 +150,24 @@ async fn main() -> Result<()> {
         },
 
         Commands::Compile { rebuild, project } => {
-            let output = commands::cmd_compile(rebuild, project).await?;
             if cli.json {
+                let output = commands::cmd_compile(rebuild, project).await?;
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {
-                print!("{output}");
+                let stdout = std::sync::Arc::new(std::sync::Mutex::new(io::stdout()));
+                let output = commands::cmd_compile_with_progress(
+                    rebuild,
+                    project,
+                    Some(std::sync::Arc::new(move |line: String| {
+                        let mut handle = stdout.lock().unwrap();
+                        let _ = writeln!(handle, "{line}");
+                        let _ = handle.flush();
+                    })),
+                )
+                .await?;
+                if output.lines.is_empty() {
+                    print!("{output}");
+                }
             }
         }
 
