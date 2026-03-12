@@ -1,0 +1,8 @@
+# Statically link the MSVC C Runtime into the binary.
+# This makes the executables fully self-contained: no VC++ Redistributable
+# (vcruntime140.dll / msvcp140.dll) needs to be installed on the target machine.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
