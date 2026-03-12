@@ -28,10 +28,6 @@ export abstract class BaseFileItem extends TreeItem {
     return this.collapsibleState !== TreeItemCollapsibleState.None; // Only project items are collapsible
   }
 
-  public get projectUri(): Uri {
-    return this.project.resourceUri;
-  }
-
   public get projectDproj(): Uri | undefined {
     const path = this.project.entity.dproj;
     if (path) return Uri.file(path);

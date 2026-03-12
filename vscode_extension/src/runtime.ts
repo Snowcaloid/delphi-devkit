@@ -73,13 +73,6 @@ export abstract class Runtime {
     return this.projectsData?.workspaces.find((ws) => ws.project_links.some((l) => link.id === l.id));
   }
 
-  public static getGroupProjectOfLink(link: Entities.ProjectLink): Option<Entities.GroupProject> {
-    if (this.projectsData?.group_project?.project_links.some((l) => l.id === link.id))
-      return this.projectsData?.group_project;
-
-    return undefined;
-  }
-
   public static getLinksOfProject(project?: Option<Entities.Project>): Entities.ProjectLink[] {
     if (!project) return [];
     const workspaceLinks = Runtime.projectsData?.workspaces
@@ -89,11 +82,6 @@ export abstract class Runtime {
       (link) => link.project_id === project.id
     ) || [];
     return [...workspaceLinks, ...groupProjectLinks];
-  }
-
-  public static getCompilerOfWorkspace(workspace: Entities.Workspace): Option<Entities.CompilerConfiguration> {
-    if (!workspace.compiler_id) return undefined;
-    return this.compilerConfigurations?.[workspace.compiler_id];
   }
 
   public static async compileProjectLink(link: Entities.ProjectLink, recreate: boolean = false): Promise<boolean> {
