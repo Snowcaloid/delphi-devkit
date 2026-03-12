@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::lexorank::{LexoRank, HasLexoRank};
 use crate::projects::*;
 use crate::files::dproj::{find_dproj_file, get_main_source, get_exe_path, get_exe_path_for};
+use crate::utils::normalize_path;
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct ProjectLink {
@@ -111,10 +112,10 @@ impl Project {
         if self.dproj.is_none() {
             if let Some(dpr_path) = &self.dpr {
                 let dproj_path = find_dproj_file(&PathBuf::from(dpr_path))?;
-                self.dproj = Some(dproj_path.to_string_lossy().to_string());
+                self.dproj = Some(normalize_path(&dproj_path).to_string_lossy().to_string());
             } else if let Some(dpk_path) = &self.dpk {
                 let dproj_path = find_dproj_file(&PathBuf::from(dpk_path))?;
-                self.dproj = Some(dproj_path.to_string_lossy().to_string());
+                self.dproj = Some(normalize_path(&dproj_path).to_string_lossy().to_string());
             }
         }
         if self.dproj.is_none() {

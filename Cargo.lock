@@ -331,6 +331,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tower-lsp",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

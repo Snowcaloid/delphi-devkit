@@ -63,7 +63,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
     this.collapsibleState = hasChildren ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
   }
 
-  createChild(type: DelphiProjectTreeItemType, children: BaseFileItem[]): void {
+  async createChild(type: DelphiProjectTreeItemType, children: BaseFileItem[]): Promise<void> {
     let item: BaseFileItem | undefined = undefined;
     let uri: Uri | undefined | null = null;
     switch (type) {
@@ -73,7 +73,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
           item = new DprojFileItem(
             this,
             basename(uri!.fsPath),
-            fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
+            await fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
           );
 
         break;
@@ -83,7 +83,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
           item = new DprFileItem(
             this,
             basename(uri!.fsPath),
-            fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
+            await fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
           );
 
         break;
@@ -93,7 +93,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
           item = new DpkFileItem(
             this,
             basename(uri!.fsPath),
-            fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
+            await fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
           );
 
         break;
@@ -103,7 +103,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
           item = new ExeFileItem(
             this,
             basename(uri!.fsPath),
-            fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
+            await fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
         );
 
         break;
@@ -113,7 +113,7 @@ export class ProjectItem extends BaseFileItem implements MainProjectItem {
           item = new IniFileItem(
             this,
             basename(uri!.fsPath),
-            fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
+            await fileExists(uri) ? uri : Uri.from({ scheme: PROJECTS.SCHEME.MISSING, path: uri.fsPath })
         );
 
         break;

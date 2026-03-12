@@ -1,5 +1,5 @@
 use crate::state::{PROJECTS_DATA, PROJECTS_DATA_CHANGED, Stateful};
-use crate::utils::{FilePath, Load};
+use crate::utils::{FilePath, Load, normalize_path};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use super::*;
@@ -181,6 +181,8 @@ impl ProjectsData {
             _ => anyhow::bail!("Workspace with id {} not found", workspace_id),
         };
         let file = PathBuf::from(file_path);
+        let file = normalize_path(&file);
+        let file_path = file.to_string_lossy().to_string();
         let project = match file.extension().and_then(|ext| ext.to_str()).map(|s| s.to_lowercase()) {
             Some(ext) if ext == "dproj" => {
                 Project {
@@ -381,36 +383,42 @@ impl ProjectsData {
             project.name = name;
         }
         if let Some(directory) = data.directory {
+            let directory = normalize_path(&directory).to_string_lossy().to_string();
             if !PathBuf::from(&directory).exists() {
                 anyhow::bail!("Directory does not exist: {}", directory);
             }
             project.directory = directory;
         }
         if let Some(dproj) = data.dproj {
+            let dproj = normalize_path(&dproj).to_string_lossy().to_string();
             if !PathBuf::from(&dproj).exists() {
                 anyhow::bail!(".dproj file does not exist: {}", dproj);
             }
             project.dproj = Some(dproj);
         }
         if let Some(dpr) = data.dpr {
+            let dpr = normalize_path(&dpr).to_string_lossy().to_string();
             if !PathBuf::from(&dpr).exists() {
                 anyhow::bail!(".dpr file does not exist: {}", dpr);
             }
             project.dpr = Some(dpr);
         }
         if let Some(dpk) = data.dpk {
+            let dpk = normalize_path(&dpk).to_string_lossy().to_string();
             if !PathBuf::from(&dpk).exists() {
                 anyhow::bail!(".dpk file does not exist: {}", dpk);
             }
             project.dpk = Some(dpk);
         }
         if let Some(exe) = data.exe {
+            let exe = normalize_path(&exe).to_string_lossy().to_string();
             if !PathBuf::from(&exe).exists() {
                 anyhow::bail!(".exe file does not exist: {}", exe);
             }
             project.exe = Some(exe);
         }
         if let Some(ini) = data.ini {
+            let ini = normalize_path(&ini).to_string_lossy().to_string();
             if !PathBuf::from(&ini).exists() {
                 anyhow::bail!(".ini file does not exist: {}", ini);
             }

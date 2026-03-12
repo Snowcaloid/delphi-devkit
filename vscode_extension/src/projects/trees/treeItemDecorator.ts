@@ -1,9 +1,9 @@
-import { CancellationToken, FileDecoration, FileDecorationProvider, ProviderResult, ThemeColor, Uri } from 'vscode';
+import { CancellationToken, FileDecoration, FileDecorationProvider, ThemeColor, Uri } from 'vscode';
 import { PROJECTS } from '../../constants';
 import { fileExists } from '../../utils';
 
 export class TreeItemDecorator implements FileDecorationProvider {
-  public provideFileDecoration(uri: Uri, token: CancellationToken): ProviderResult<FileDecoration> {
+  public async provideFileDecoration(uri: Uri, token: CancellationToken): Promise<FileDecoration | undefined> {
     let decoration: FileDecoration;
     switch (uri.scheme) {
       case PROJECTS.SCHEME.SELECTED:
@@ -23,7 +23,7 @@ export class TreeItemDecorator implements FileDecorationProvider {
         }, 1000);
         return decoration;
       case 'file':
-        if (!fileExists(uri)) {
+        if (!await fileExists(uri)) {
           decoration = new FileDecoration('!', 'file does not exist', new ThemeColor('errorForeground'));
           decoration.propagate = false;
           return decoration;

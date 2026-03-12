@@ -67,7 +67,7 @@ export class CompilerOutputDefinitionProvider implements DocumentLinkProvider {
       matchesByFile.map(async (o) => {
         const fileName = o.file;
         if (token.isCancellationRequested) throw new Error('Operation cancelled');
-        if (!fileExists(fileName)) return [];
+        if (!await fileExists(fileName)) return [];
         const fileContent = await workspace.fs.readFile(Uri.file(fileName));
         const fileText = Buffer.from(fileContent).toString('utf8');
         const fileLines = fileText.split(/\r?\n/g);

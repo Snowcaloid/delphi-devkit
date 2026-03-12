@@ -1,10 +1,12 @@
 import { dirname, basename, join, extname } from 'path';
 import { Uri, workspace, window } from 'vscode';
-import fs from 'fs';
 
-export function fileExists(filePath: string | Uri | undefined | null): boolean {
+export async function fileExists(filePath: string | Uri | undefined | null): Promise<boolean> {
+  if (!filePath) return false;
   try {
-    return !!filePath && !!fs.statSync(filePath instanceof Uri ? filePath.fsPath : filePath);
+    const uri = filePath instanceof Uri ? filePath : Uri.file(filePath);
+    await workspace.fs.stat(uri);
+    return true;
   } catch {
     return false;
   }

@@ -3,6 +3,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use crate::projects::*;
 use crate::files::groupproj::parse_groupproj;
+use crate::utils::normalize_path;
 
 #[derive(Debug, Eq, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -32,6 +33,7 @@ impl GroupProject {
     pub fn fill(&mut self, projects_data: &mut ProjectsData) -> Result<()> {
         let project_paths = parse_groupproj(PathBuf::from(&self.path))?;
         for project_path in project_paths {
+            let project_path = normalize_path(&project_path);
             let dproj = project_path.to_string_lossy().to_string();
             let existing_project_id = projects_data.find_project_by_dproj(&dproj).map(|p| p.id);
             if let Some(existing_id) = existing_project_id {

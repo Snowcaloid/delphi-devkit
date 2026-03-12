@@ -30,6 +30,39 @@ fn leaves_unc_path_without_prefix_unchanged() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  Delphi-style bare UNC paths  (UNC\server\share\...)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Delphi project files sometimes store UNC paths without the leading `\\`.
+/// e.g. `UNC\Mac\repos\be\BE\D12\be.dpr` should become `\\Mac\repos\be\BE\D12\be.dpr`.
+#[test]
+fn converts_bare_unc_prefix_to_unc_path() {
+    let input = r"UNC\Mac\repos\be\BE\D12\be.dpr";
+    assert_eq!(normalize_path(input), PathBuf::from(r"\\Mac\repos\be\BE\D12\be.dpr"));
+}
+
+#[test]
+fn converts_bare_unc_prefix_case_insensitive() {
+    let input = r"unc\server\share\path\file.exe";
+    assert_eq!(normalize_path(input), PathBuf::from(r"\\server\share\path\file.exe"));
+}
+
+/// `\\?\UNC\server\share\...` is the extended-length UNC form; strip `\\?\` and
+/// then convert the remaining `UNC\` prefix.
+#[test]
+fn strips_extended_length_unc_prefix() {
+    let input = r"\\?\UNC\Mac\repos\be\BE\D12\be.dproj";
+    assert_eq!(normalize_path(input), PathBuf::from(r"\\Mac\repos\be\BE\D12\be.dproj"));
+}
+
+/// Dotdot resolution must work after UNC conversion.
+#[test]
+fn resolves_parent_dir_after_unc_conversion() {
+    let input = r"UNC\Mac\repos\be\BE\D12\..\other\file.exe";
+    assert_eq!(normalize_path(input), PathBuf::from(r"\\Mac\repos\be\BE\other\file.exe"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  Resolving `..` segments
 // ═══════════════════════════════════════════════════════════════════════════════
 

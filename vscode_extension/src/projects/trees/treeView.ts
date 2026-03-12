@@ -77,11 +77,11 @@ export abstract class DelphiProjectsTreeView implements TreeDataProvider<TreeIte
 
   private async createChildrenForProject(project: ProjectItem): Promise<TreeItem[]> {
     const fileChildren: BaseFileItem[] = [];
-    project.createChild(DelphiProjectTreeItemType.DprojFile, fileChildren);
-    project.createChild(DelphiProjectTreeItemType.DprFile, fileChildren);
-    project.createChild(DelphiProjectTreeItemType.DpkFile, fileChildren);
-    project.createChild(DelphiProjectTreeItemType.ExecutableFile, fileChildren);
-    project.createChild(DelphiProjectTreeItemType.IniFile, fileChildren);
+    await project.createChild(DelphiProjectTreeItemType.DprojFile, fileChildren);
+    await project.createChild(DelphiProjectTreeItemType.DprFile, fileChildren);
+    await project.createChild(DelphiProjectTreeItemType.DpkFile, fileChildren);
+    await project.createChild(DelphiProjectTreeItemType.ExecutableFile, fileChildren);
+    await project.createChild(DelphiProjectTreeItemType.IniFile, fileChildren);
 
     const displayMode = workspace.getConfiguration(PROJECTS.CONFIG.KEY)
       .get<string>(PROJECTS.CONFIG.CONFIG_PLATFORM_DISPLAY, 'aboveFiles');
