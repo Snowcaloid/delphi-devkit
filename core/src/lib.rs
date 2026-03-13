@@ -7,6 +7,7 @@ pub mod utils;
 pub mod format;
 pub mod state;
 pub mod encoding;
+pub mod parser;
 
 // Re-export all lsp_types at the crate root so internal modules that use
 // `crate::EventDone`, `crate::CompilerProgress`, etc. continue to resolve.
