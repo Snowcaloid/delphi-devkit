@@ -15,7 +15,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Changed
 
-- **MCP `delphi_compile_selected_project`**: now accepts an optional `project_id` parameter. When provided, the project is selected before compilation — no need to call `delphi_select_project` separately.
+- **MCP `delphi_compile_project`**: now accepts an optional `project_id` parameter. When provided, the project is selected before compilation — no need to call `delphi_select_project` separately.
 - **MCP handler thinned**: all inline business logic replaced with calls to `ddk_core::commands`, reducing the handler from ~450 lines to ~120 lines.
 - **Release workflow**: builds all workspace crates (not just `server/`), creates the CLI zip artifact, verifies all three binaries (`ddk-server.exe`, `ddk-mcp-server.exe`, `ddk.exe`) are in the VSIX, and auto-submits WinGet manifest updates on stable releases.
 

@@ -73,30 +73,20 @@ pub struct SetGroupProjectsCompilerArgs {
 }
 
 #[macros::mcp_tool(
-    name = "delphi_compile_selected_project",
-    description = "Compiles the currently selected/active Delphi project. \
-        BEFORE calling this tool: always call delphi_get_environment_info first to \
-        check which project is active, then verify it matches what the user asked for. \
-        When matching: always prioritize an explicit project name in the user's request \
-        (e.g. 'compile be', 'build MyProject') over whatever file is currently open in \
-        the editor. Match by project name, then use delphi_select_project to switch if \
-        needed. Never assume the active project is correct without checking. \
-        The tool returns the raw compiler output as a single string. \
-        Because this runs via MCP (not LSP), the user cannot see any output directly — \
-        YOU are responsible for presenting the results. \
-        Always show: (1) banner lines from the start of compilation, \
-        (2) all errors verbatim with file path and line number, \
-        (3) the final summary line (e.g. 'Compile ok' or error count). \
-        For hints and warnings: only surface those in files you modified during \
-        the current session — the project may have hundreds of pre-existing warnings \
-        that are not relevant to the current change."
+    name = "delphi_compile_project",
+    description = "Compiles a Delphi project. \
+        Pass project_id to target a specific project (does not change the active project). \
+        Omit project_id to compile the currently active project. \
+        Use delphi_list_projects to discover IDs. Always match by project name from the user's request. \
+        Returns raw compiler output — always present: banner lines, all errors with file/line, and the final summary. \
+        Only surface warnings from files you modified this session."
 )]
 #[derive(Debug, Deserialize, Serialize, macros::JsonSchema)]
 pub struct CompileSelectedProjectArgs {
     /// If true, rebuilds the project from scratch. If false, performs an incremental compile.
     pub rebuild: Option<bool>,
-    /// Optional project ID to compile. If provided, that project is selected
-    /// first. If omitted, the currently active project is compiled.
+    /// Optional project ID to compile. If provided, that specific project is compiled
+    /// without changing the active project. If omitted, the currently active project is compiled.
     pub project_id: Option<u64>,
 }
 
@@ -162,7 +152,7 @@ impl ServerHandler for DdkMcpHandler {
             "delphi_select_project"           => select_project(&args).await,
             "delphi_get_available_compilers"  => get_available_compilers().await,
             "delphi_set_group_projects_compiler" => set_group_projects_compiler(&args).await,
-            "delphi_compile_selected_project" => compile_selected_project(&args).await,
+            "delphi_compile_project"          => compile_project(&args).await,
             "delphi_format_file"              => format_file(&args).await,
             _ => format!("Unknown tool: {name}"),
         };
@@ -191,7 +181,7 @@ async fn list_projects() -> String {
 async fn select_project(args: &Value) -> String {
     let project_id = match args.get("project_id").and_then(|v| v.as_u64()) {
         Some(id) => id as usize,
-        None => return "Missing required parameter: project_id".to_string(),
+        _ => return "Missing required parameter: project_id".to_string(),
     };
     match commands::cmd_select_project(project_id).await {
         Ok(result) => result.to_string(),
@@ -214,7 +204,7 @@ async fn get_available_compilers() -> String {
 async fn set_group_projects_compiler(args: &Value) -> String {
     let compiler_key = match args.get("compiler").and_then(|v| v.as_str()) {
         Some(k) => k.to_string(),
-        None => return "Missing required parameter: compiler".to_string(),
+        _ => return "Missing required parameter: compiler".to_string(),
     };
     match commands::cmd_set_group_compiler(compiler_key).await {
         Ok(result) => result.to_string(),
@@ -222,7 +212,7 @@ async fn set_group_projects_compiler(args: &Value) -> String {
     }
 }
 
-async fn compile_selected_project(args: &Value) -> String {
+async fn compile_project(args: &Value) -> String {
     let rebuild = args.get("rebuild").and_then(|v| v.as_bool()).unwrap_or(false);
     let project_id = args.get("project_id").and_then(|v| v.as_u64()).map(|id| id as usize);
     match commands::cmd_compile(rebuild, project_id).await {

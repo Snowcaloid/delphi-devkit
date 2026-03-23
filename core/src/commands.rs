@@ -23,6 +23,7 @@ pub struct ProjectSummary {
     pub name: String,
     pub directory: String,
     pub dproj: Option<String>,
+    pub exe: Option<String>,
     pub active: bool,
 }
 
@@ -66,6 +67,9 @@ impl fmt::Display for ProjectListResult {
                 for p in &ws.projects {
                     let marker = if p.active { " *" } else { "" };
                     writeln!(f, "  [{}]{} {} ({})", p.id, marker, p.name, p.directory)?;
+                    if let Some(exe) = &p.exe {
+                        writeln!(f, "       exe: {exe}")?;
+                    }
                 }
             }
         }
@@ -78,6 +82,9 @@ impl fmt::Display for ProjectListResult {
                 for p in &gp.projects {
                     let marker = if p.active { " *" } else { "" };
                     writeln!(f, "  [{}]{} {} ({})", p.id, marker, p.name, p.directory)?;
+                    if let Some(exe) = &p.exe {
+                        writeln!(f, "       exe: {exe}")?;
+                    }
                 }
             }
         }
@@ -137,7 +144,7 @@ impl fmt::Display for EnvironmentInfo {
                     }
                 }
             }
-            None => {
+            _ => {
                 writeln!(f, "No active project.")?;
             }
         }
@@ -275,7 +282,7 @@ pub async fn cmd_get_environment_info() -> Result<EnvironmentInfo> {
 
     let project = match projects_data.active_project_id {
         Some(id) => projects_data.get_project(id),
-        None => None,
+        _ => None,
     };
 
     let env_project = project.map(|p| {
@@ -352,6 +359,7 @@ pub async fn cmd_list_projects() -> Result<ProjectListResult> {
         name: p.name.clone(),
         directory: p.directory.clone(),
         dproj: p.dproj.clone(),
+        exe: p.exe.clone(),
         active: Some(p.id) == active_id,
     };
 
@@ -483,8 +491,9 @@ impl fmt::Display for FormatFileResult {
     }
 }
 
-/// Compiles a project. If `project_id` is `Some`, that project is
-/// selected first; otherwise the currently active project is compiled.
+/// Compiles a project. If `project_id` is `Some`, that project is compiled
+/// directly **without** changing the active project in state; otherwise the
+/// currently active project is compiled.
 /// Collects compiler broadcast output and returns it as a `CompileOutput`.
 pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<CompileOutput> {
     cmd_compile_with_progress(rebuild, project_id, None).await
@@ -497,26 +506,24 @@ pub async fn cmd_compile_with_progress(
     project_id: Option<usize>,
     on_progress: Option<CompileProgressCallback>,
 ) -> Result<CompileOutput> {
-    // If an explicit project was requested, select it first.
-    if let Some(pid) = project_id {
-        cmd_select_project(pid).await?;
-    }
-
     let (project_name, resolved_id, link_id) = {
         let data = PROJECTS_DATA.read().await;
-        let active_id = match data.active_project_id {
+        // Use the explicitly requested project_id, falling back to the active project.
+        // We intentionally do NOT call cmd_select_project here so that the active
+        // project in state is never changed as a side-effect of a compile call.
+        let target_id = match project_id.or(data.active_project_id) {
             Some(id) => id,
-            None => bail!("No active project selected."),
+            _ => bail!("No active project selected."),
         };
-        let project = match data.get_project(active_id) {
+        let project = match data.get_project(target_id) {
             Some(p) => p,
-            None => bail!("Active project not found."),
+            _ => bail!("Project with ID {target_id} not found."),
         };
         let name = project.name.clone();
-        let lid = find_project_link_id(&data, active_id);
+        let lid = find_project_link_id(&data, target_id);
         match lid {
-            Some(lid) => (name, active_id, lid),
-            None => bail!("Project \"{name}\" has no compiled links."),
+            Some(lid) => (name, target_id, lid),
+            _ => bail!("Project \"{name}\" has no compiled links."),
         }
     };
 

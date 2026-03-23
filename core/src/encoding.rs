@@ -21,7 +21,7 @@ pub fn decode_bytes(bytes: &[u8], label: &str) -> String {
                 let (decoded, _, _) = enc.decode(bytes);
                 decoded.into_owned()
             }
-            None => String::from_utf8_lossy(bytes).to_string(),
+            _ => String::from_utf8_lossy(bytes).to_string(),
         },
     }
 }
@@ -55,7 +55,7 @@ pub fn encode_string(s: &str, label: &str) -> Vec<u8> {
                 let (bytes, _, _) = enc.encode(s);
                 bytes.into_owned()
             }
-            None => s.as_bytes().to_vec(),
+            _ => s.as_bytes().to_vec(),
         },
     }
 }
@@ -136,7 +136,7 @@ pub fn decode_line(bytes: &[u8]) -> String {
                 let (decoded, _, _) = encoding.decode(bytes);
                 decoded.into_owned()
             }
-            None => String::from_utf8_lossy(bytes).to_string(),
+            _ => String::from_utf8_lossy(bytes).to_string(),
         },
     }
 }
@@ -294,7 +294,7 @@ fn decode_utf32(bytes: &[u8], little_endian: bool) -> String {
         };
         match char::from_u32(code_point) {
             Some(c) => chars.push(c),
-            None => chars.push(char::REPLACEMENT_CHARACTER),
+            _ => chars.push(char::REPLACEMENT_CHARACTER),
         }
     }
     chars.into_iter().collect()
