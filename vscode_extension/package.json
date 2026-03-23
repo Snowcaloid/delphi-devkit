@@ -721,6 +721,12 @@
             "Do not show Configurations and Platforms in the project tree"
           ],
           "description": "Controls where build configurations and target platforms are displayed in the project tree."
+        },
+        "ddk.compiler.resultTimeout": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 0,
+          "markdownDescription": "How long (in milliseconds) the compilation result is shown in the status bar after a build finishes. Set to `0` to disable the result display entirely."
         }
       }
     },

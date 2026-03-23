@@ -21,6 +21,7 @@ export namespace PROJECTS {
   export namespace SETTINGS {
     export const SECTION = 'ddk';
     export const COMPILER_ENCODING = 'compiler.encoding';
+    export const COMPILER_RESULT_TIMEOUT = 'compiler.resultTimeout';
   }
   export namespace COMMAND {
     export const ADD_WORKSPACE = `${PROJECTS.CONFIG.KEY}.addWorkspace`;
@@ -84,6 +85,7 @@ export namespace PROJECTS {
 
   export namespace STATUS_BAR {
     export const COMPILER = 'ddk.statusBar.projects.compiler';
+    export const COMPILATION = 'ddk.statusBar.projects.compilation';
   }
 
   export namespace SCHEME {
