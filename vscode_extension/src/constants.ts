@@ -134,6 +134,7 @@ export namespace COMMANDS {
   export const EDIT_COMPILER_CONFIGURATIONS = 'ddk.editCompilerConfigurations';
   export const RESET_COMPILER_CONFIGURATIONS = 'ddk.resetCompilerConfigurations';
   export const EDIT_PROJECTS_DATA = 'ddk.editProjectsData';
+  export const QUICK_PICK_PROJECT = 'ddk.quickPickProject';
 }
 
 export namespace FORMAT {

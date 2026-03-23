@@ -4,6 +4,7 @@ import { join } from "path";
 import { promises as fs } from 'fs';
 import { Runtime } from "./runtime";
 import { env as osEnv } from "process";
+import { pickAndSelectProject } from "./projects/pickers/projectPicker";
 
 export class GeneralCommands {
   public static get registers(): Disposable[] {
@@ -14,7 +15,8 @@ export class GeneralCommands {
       commands.registerCommand(COMMANDS.IMPORT_COMPILERS, this.importCompilers.bind(this)),
       commands.registerCommand(COMMANDS.EDIT_COMPILER_CONFIGURATIONS, this.editCompilerConfigurations.bind(this)),
       commands.registerCommand(COMMANDS.RESET_COMPILER_CONFIGURATIONS, this.resetCompilerConfigurations.bind(this)),
-      commands.registerCommand(COMMANDS.EDIT_PROJECTS_DATA, this.editProjectsData.bind(this))
+      commands.registerCommand(COMMANDS.EDIT_PROJECTS_DATA, this.editProjectsData.bind(this)),
+      commands.registerCommand(COMMANDS.QUICK_PICK_PROJECT, () => pickAndSelectProject())
     ];
   }
 

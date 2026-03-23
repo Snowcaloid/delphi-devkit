@@ -848,6 +848,10 @@
     ],
     "keybindings": [
       {
+        "command": "ddk.quickPickProject",
+        "key": "ctrl+shift+alt+f1"
+      },
+      {
         "command": "ddk.dfm.swapToDfmPas",
         "key": "alt+f12",
         "mac": "alt+f12",
@@ -872,6 +876,10 @@
         "command": "ddk.projects.cancelCompilation",
         "key": "ctrl+f2",
         "when": "ddk:isCompiling == true"
+      },
+      {
+        "command": "ddk.quickPickProject",
+        "key": "ctrl+shift+alt+f1"
       }
     ]
   },
