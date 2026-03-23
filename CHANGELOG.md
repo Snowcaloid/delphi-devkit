@@ -4,6 +4,24 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [2.1.2] - 2026-03-23
+
+### Added
+
+- **Compilation status bar item**: a new status bar item appears while a build is in progress, showing a spinning icon and the current project name. On completion it briefly displays a success, failure, or cancellation message before disappearing.
+- **`ddk.compiler.resultTimeout` setting**: controls how long (in milliseconds) the compilation result is shown in the status bar after a build finishes. Defaults to `5000`. Set to `0` to disable the result display entirely.
+- **Quick Pick Project** (`Ctrl+Shift+Alt+F1`): new command that opens a grouped quick-pick list of all projects across workspaces and the loaded group project, with the active project pre-marked. Selecting a project applies the change immediately.
+
+### Changed
+
+- **MCP tool renamed**: `delphi_compile_selected_project` → `delphi_compile_project`. The tool description has been simplified.
+- **Compile without side-effects**: `cmd_compile` no longer calls `cmd_select_project` when a `project_id` is provided; the target project is resolved by ID without changing the active project in state.
+- **`ProjectSummary` now includes `exe`**: the resolved executable path is included in project list results; the CLI `project list` output now shows it below each project entry.
+
+### Removed
+
+- Removed several unused utility functions: `removeBOM`, `findIniFromExecutable`, `assertWarning`, `assertInfo`, `getCompilerOfWorkspace`, `getGroupProjectOfLink`, and `BaseFileItem.projectUri`.
+
 ## [2.0.5] - 2026-03-02
 
 ### Added
