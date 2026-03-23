@@ -1291,6 +1291,25 @@ impl CompilerDirectiveKind {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Private helpers (shared within this module)
+// ---------------------------------------------------------------------------
+
+/// Split `text` at the first ASCII-whitespace boundary.
+///
+/// Returns `(first_word, rest_of_string)`.
+fn split_directive(text: &str) -> (&str, &str) {
+    match text.find(|c: char| c.is_ascii_whitespace()) {
+        Some(pos) => (&text[..pos], &text[pos + 1..]),
+        _ => (text, ""),
+    }
+}
+
+/// Parse `ON` / `OFF` string to `bool`.  Defaults to `true`.
+fn parse_on_off(s: &str) -> bool {
+    !s.trim().eq_ignore_ascii_case("OFF")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,4 +1,4 @@
-use crate::parser::token::Token;
+use crate::parser::{directives::DirectiveState, token::{MessageLevel, Token}};
 use logos::Logos;
 
 pub struct Lexer<'src> {
@@ -10,76 +10,253 @@ impl<'src> Lexer<'src> {
         Self { source }
     }
 
-    pub fn split_directives(&self) -> Vec<PrecToken> {
-        let mut lexer = Token::lexer(&self.source);
-        let mut result = vec![];
-        while let Some(token) = lexer.next() {
-            if let Ok(token) = token {
-                result.push(PrecToken::from_token(lexer, token));
-            } else {
-                dbg!("Error: {}", token.unwrap_err());
-            }
-        }
-        result
+    /// Lex `source` and return a structured token sequence where compiler
+    /// directives are represented as [`PrecToken::Directive`] nodes with
+    /// their nested body tokens collected recursively.
+    pub fn split_directives(&self) -> Vec<PrecToken<'_>> {
+        let mut logos_lexer = Token::lexer(self.source);
+        let (tokens, _) = collect_tokens(&mut logos_lexer);
+        tokens
     }
 }
 
-pub enum PrecToken<'src> {
-    Token(Token<'src>),
-    Directive(LexDirective<'src>)
-}
+// ---------------------------------------------------------------------------
+// Recursive token collection
+// ---------------------------------------------------------------------------
 
-impl<'src> PrecToken<'src> {
-    pub fn from_token(lexer: &mut logos::Lexer<'src, Token<'src>>, token: Token<'src>) -> Self {
-        match token {
-            Token::DirectiveBrace(inner) => Self::Directive(LexDirective::new(inner, lexer)),
-            _ => Self::Token(token),
-        }
-    }
-}
-pub enum LexDirective<'src> {
-    /// `{$IF <expr>}`
-    If {
-        condition: &'src str,
-        code: &'src str,
-    },
-    /// `{$IFDEF <symbol>}`
-    IfDef {
-        condition: &'src str,
-        code: &'src str,
-    },
-    /// `{$IFNDEF <symbol>}`
-    IfNDef {
-        condition: &'src str,
-        code: &'src str,
-    },
-    /// `{$IFOPT <option>}` — e.g. `{$IFOPT C+}`
-    IfOpt {
-        condition: &'src str,
-        code: &'src str,
-    },
-    /// `{$ELSEIF <expr>}`
-    ElseIf {
-        condition: &'src str,
-        code: &'src str,
-    },
-    /// `{$ELSE}`
-    Else {
-        code: &'src str,
-    },
-    /// `{$ENDIF}` or `{$IFEND}` (controlled by `{$LEGACYIFEND}`)
+/// Signals why a [`collect_tokens`] call returned early.
+enum BlockTerminator {
+    /// `{$ENDIF}` / `{$IFEND}` terminated an IF-family block.
     EndIf,
-    /// `{$IFEND}`  (synonym for `{$ENDIF}` when `{$LEGACYIFEND ON}`)
+    /// `{$ENDREGION}` terminated a REGION block.
+    EndRegion,
+    /// The token stream was exhausted.
+    Eof,
+}
+
+/// Collect [`PrecToken`]s from `lexer` recursively.
+///
+/// Processing rules:
+/// - Plain source tokens become [`PrecToken::Token`].
+/// - Simple (non-block) directives become [`PrecToken::Directive`].
+/// - Block-opening directives (`IF`, `IFDEF`, `IFNDEF`, `IFOPT`, `REGION`)
+///   trigger a recursive call; the collected body is embedded in the directive.
+/// - `{$ELSE}` and `{$ELSEIF}` collect their own body recursively, push
+///   themselves into the **current** result, then return early — so they appear
+///   nested inside the preceding IF/ELSEIF body.
+/// - `{$ENDIF}`, `{$IFEND}`, `{$ENDREGION}` return early to signal the
+///   parent call that the block is closed.
+fn collect_tokens<'src>(
+    lexer: &mut logos::Lexer<'src, Token<'src>>,
+) -> (Vec<PrecToken<'src>>, BlockTerminator) {
+    let mut result: Vec<PrecToken<'src>> = vec![];
+
+    while let Some(tok) = lexer.next() {
+        match tok {
+            Ok(Token::DirectiveBrace(inner)) => {
+                let trimmed = inner.trim();
+                let (kw, rest) = split_directive(trimmed);
+                let kw_up = kw.to_ascii_uppercase();
+
+                match kw_up.as_str() {
+                    // ----------------------------------------------------------
+                    // Block-opening: IF family
+                    // ----------------------------------------------------------
+                    "IF" => {
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::If {
+                            condition: tokenize_expr(rest.trim()),
+                            body,
+                        }));
+                    }
+                    "IFDEF" => {
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::IfDef {
+                            directive: rest.trim(),
+                            state: DirectiveState::Unknown,
+                            body,
+                        }));
+                    }
+                    "IFNDEF" => {
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::IfNDef {
+                            directive: rest.trim(),
+                            state: DirectiveState::Unknown,
+                            body,
+                        }));
+                    }
+                    "IFOPT" => {
+                        let (letter, on) = parse_ifopt(rest.trim());
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::IfOpt {
+                            letter,
+                            on,
+                            state: DirectiveState::Unknown,
+                            body,
+                        }));
+                    }
+
+                    // ----------------------------------------------------------
+                    // ELSE: collect its own body, push, then terminate current block.
+                    // This causes ELSE to appear nested inside the preceding IF body.
+                    // ----------------------------------------------------------
+                    "ELSE" => {
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::Else { body }));
+                        return (result, BlockTerminator::EndIf);
+                    }
+
+                    // ----------------------------------------------------------
+                    // ELSEIF: collect its own body, push, then terminate current block.
+                    // This causes ELSEIF to appear nested inside the preceding IF body.
+                    // ----------------------------------------------------------
+                    "ELSEIF" => {
+                        let (body, _) = collect_tokens(lexer);
+                        result.push(PrecToken::Directive(LexDirective::ElseIf {
+                            condition: tokenize_expr(rest.trim()),
+                            state: DirectiveState::Unknown,
+                            body,
+                        }));
+                        return (result, BlockTerminator::EndIf);
+                    }
+
+                    // ----------------------------------------------------------
+                    // Block-closing: IF terminators
+                    // ----------------------------------------------------------
+                    "ENDIF" | "IFEND" => return (result, BlockTerminator::EndIf),
+
+                    // ----------------------------------------------------------
+                    // Block-opening: REGION
+                    // ----------------------------------------------------------
+                    "REGION" => {
+                        let label = rest.trim();
+                        let (body, _) = collect_tokens(lexer);
+                        let name = if label.is_empty() { None } else { Some(label) };
+                        result.push(PrecToken::Directive(LexDirective::Region { name, body }));
+                    }
+
+                    // ----------------------------------------------------------
+                    // Block-closing: ENDREGION
+                    // ----------------------------------------------------------
+                    "ENDREGION" => return (result, BlockTerminator::EndRegion),
+
+                    // ----------------------------------------------------------
+                    // Everything else: simple (non-block) directive
+                    // ----------------------------------------------------------
+                    _ => {
+                        result.push(PrecToken::Directive(LexDirective::parse_simple(inner)));
+                    }
+                }
+            }
+
+            Ok(token) => result.push(PrecToken::Token(token)),
+            Err(_) => {} // skip unrecognised input
+        }
+    }
+
+    (result, BlockTerminator::Eof)
+}
+
+// ---------------------------------------------------------------------------
+// CondToken
+// ---------------------------------------------------------------------------
+
+/// A single token from a directive condition expression, paired with the
+/// source text it matched.
+///
+/// Needed because [`Token::Ident`] and other zero-data variants do not carry
+/// the matched text; the text is captured separately via [`logos::Lexer::slice`].
+pub struct CondToken<'src> {
+    pub kind: Token<'src>,
+    pub text: &'src str,
+}
+
+// ---------------------------------------------------------------------------
+// PrecToken
+// ---------------------------------------------------------------------------
+
+/// A preprocessed token: either a plain source token or a structured
+/// compiler directive (possibly containing nested tokens in its body).
+pub enum PrecToken<'src> {
+    /// A regular source token (not a compiler directive).
+    Token(Token<'src>),
+    /// A parsed compiler directive, potentially containing nested [`PrecToken`]s.
+    Directive(LexDirective<'src>),
+}
+
+// ---------------------------------------------------------------------------
+// LexDirective
+// ---------------------------------------------------------------------------
+
+/// A structured representation of a `{$…}` compiler directive.
+///
+/// Block directives (IF-family, REGION) recursively contain all nested
+/// source tokens and inner directives in their `body` field.
+pub enum LexDirective<'src> {
+    // --- Conditional compilation (block directives) ---
+
+    /// `{$IF <expr>} … {$ENDIF}`
+    If {
+        /// The condition expression, tokenized (excluding whitespace).
+        condition: Vec<CondToken<'src>>,
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$IFDEF <directive>} … {$ENDIF}`
+    IfDef {
+        /// The directive name (a single identifier).
+        directive: &'src str,
+        state: DirectiveState,
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$IFNDEF <directive>} … {$ENDIF}`
+    IfNDef {
+        /// The directive name (a single identifier).
+        directive: &'src str,
+        state: DirectiveState,
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$IFOPT <option>} … {$ENDIF}` — e.g. `{$IFOPT C+}`
+    IfOpt {
+        /// The compiler-switch letter, upper-cased.
+        letter: char,
+        /// `true` if the option is `+`, `false` if `-`.
+        on: bool,
+        state: DirectiveState,
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$ELSEIF <expr>} … {$ENDIF}` — nested inside an IF body
+    ElseIf {
+        /// The condition expression, tokenized (excluding whitespace).
+        condition: Vec<CondToken<'src>>,
+        state: DirectiveState,
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$ELSE} … {$ENDIF}` — nested inside an IF/ELSEIF body
+    Else {
+        body: Vec<PrecToken<'src>>,
+    },
+    /// `{$ENDIF}` / `{$IFEND}` — block terminator.
+    ///
+    /// Normally consumed by the recursive collector; only surfaced here
+    /// if encountered outside any IF block (malformed input).
+    EndIf,
+    /// `{$IFEND}` synonym (used with `{$LEGACYIFEND ON}`).
     IfEnd,
+
     // --- Define / undefine ---
+
     /// `{$DEFINE <symbol>}`
     Define(&'src str),
     /// `{$UNDEF <symbol>}` / `{$UNDEFINE <symbol>}`
     Undef(&'src str),
+
     // --- Include ---
+
     /// `{$I <filename>}` / `{$INCLUDE <filename>}`
     Include(&'src str),
-    // --- Compiler switch  e.g. `{$O+}`, `{$HINTS ON}` ---
+
+    // --- Compiler switches ---
+
     /// A single-character compiler switch with `+`/`-` suffix, e.g. `{$O+}`.
     Switch {
         /// The switch letter, upper-cased.
@@ -98,13 +275,21 @@ pub enum LexDirective<'src> {
         level: MessageLevel,
         text: &'src str,
     },
-    /// `{$REGION <label>}` / `{$ENDREGION}`
+
+    // --- Region ---
+
+    /// `{$REGION <label>} … {$ENDREGION}`
     Region {
         name: Option<&'src str>,
-        code: &'src str,
+        body: Vec<PrecToken<'src>>,
     },
-    /// `{$ENDREGION}`
+    /// `{$ENDREGION}` — block terminator.
+    ///
+    /// Normally consumed by the recursive collector.
     EndRegion,
+
+    // --- Misc compiler flags ---
+
     /// `{$LEGACYIFEND ON|OFF}`
     LegacyIfEnd(bool),
     /// `{$SCOPEDENUMS ON|OFF}`
@@ -135,59 +320,37 @@ pub enum LexDirective<'src> {
     NoDefine(&'src str),
     /// `{$OBJEXPORTALL ON|OFF}`
     ObjExportAll(bool),
+    /// Any directive not specifically recognised above.
     Other(&'src str),
 }
 
 impl<'src> LexDirective<'src> {
-    /// Parse the *inner text* of a compiler directive (everything after `{$`
-    /// and before `}`) into a structured [`LexDirective`].
+    /// Parse a **non-block** directive from its raw inner text (everything
+    /// between `{$` and `}`).
     ///
-    /// Parsing is **case-insensitive**.
-    pub fn new(inner: &'src str, lexer: &mut logos::Lexer<'src, Token<'src>>) -> Self {
+    /// Block directives (IF family, REGION, and their ELSE/ELSEIF/ENDIF/ENDREGION
+    /// terminators) are handled by [`collect_tokens`] and are never passed
+    /// to this method.
+    fn parse_simple(inner: &'src str) -> Self {
         let trimmed = inner.trim();
-        // Split on the first whitespace to get keyword + rest.
         let (kw, rest) = split_directive(trimmed);
-        let kw_up: std::string::String = kw.to_ascii_uppercase();
+        let kw_up = kw.to_ascii_uppercase();
 
-        // Single-letter switch with no space: "O+", "R-", "A8" etc.
-        // Detect this before the keyword match so we don't fall through.
+        // Single-letter switch with no space: "O+", "R-" etc.
         if kw.len() == 2 && kw.is_ascii() {
             let mut chars = kw.chars();
             let letter = chars.next().unwrap().to_ascii_uppercase();
             let suffix = chars.next().unwrap();
-            if rest.is_empty() {
-                if suffix == '+' {
-                    return Self::Switch { letter, on: true };
-                } else if suffix == '-' {
-                    return Self::Switch { letter, on: false };
-                }
+            if rest.is_empty() && (suffix == '+' || suffix == '-') {
+                return Self::Switch { letter, on: suffix == '+' };
             }
         }
 
         match kw_up.as_str() {
-            "IF" => Self::If(rest.into()),
-            "IFDEF" => Self::IfDef(rest.into()),
-            "IFNDEF" => Self::IfNDef(rest.into()),
-            "IFOPT" => Self::IfOpt(rest.into()),
-            "ELSEIF" => Self::ElseIf(rest.into()),
-            "ELSE" => Self::Else,
-            "ENDIF" => Self::EndIf,
-            "IFEND" => Self::IfEnd,
+            "DEFINE" => Self::Define(rest.trim()),
+            "UNDEF" | "UNDEFINE" => Self::Undef(rest.trim()),
 
-            "DEFINE" => Self::Define(rest.trim().into()),
-            "UNDEF" | "UNDEFINE" => Self::Undef(rest.trim().into()),
-
-            "I" | "INCLUDE" => Self::Include(rest.trim().into()),
-
-            "REGION" => {
-                let label = rest.trim();
-                if label.is_empty() {
-                    Self::Region(None)
-                } else {
-                    Self::Region(Some(label.into()))
-                }
-            }
-            "ENDREGION" => Self::EndRegion,
+            "I" | "INCLUDE" => Self::Include(rest.trim()),
 
             "MESSAGE" => {
                 let (level_str, text) = split_directive(rest.trim());
@@ -196,12 +359,9 @@ impl<'src> LexDirective<'src> {
                     "WARN" | "WARNING" => MessageLevel::Warn,
                     "ERROR" => MessageLevel::Error,
                     "FATAL" => MessageLevel::Fatal,
-                    _ => MessageLevel::Hint, // fallback
+                    _ => MessageLevel::Hint,
                 };
-                Self::Message {
-                    level,
-                    text: text.trim().into(),
-                }
+                Self::Message { level, text: text.trim() }
             }
 
             "LEGACYIFEND" => Self::LegacyIfEnd(parse_on_off(rest)),
@@ -211,22 +371,16 @@ impl<'src> LexDirective<'src> {
             "WEAKPACKAGEUNIT" => Self::WeakPackageUnit(parse_on_off(rest)),
             "OBJEXPORTALL" => Self::ObjExportAll(parse_on_off(rest)),
 
-            "MINENUMSIZE" => {
-                let n: u8 = rest.trim().parse().unwrap_or(1);
-                Self::MinEnumSize(n)
-            }
-            "ALIGN" | "A" => {
-                let n: u8 = rest.trim().parse().unwrap_or(8);
-                Self::Align(n)
-            }
+            "MINENUMSIZE" => Self::MinEnumSize(rest.trim().parse().unwrap_or(1)),
+            "ALIGN" | "A" => Self::Align(rest.trim().parse().unwrap_or(8)),
 
-            "APPTYPE" => Self::AppType(rest.trim().into()),
-            "LIBSUFFIX" => Self::LibSuffix(rest.trim().into()),
-            "RTTI" => Self::Rtti(rest.trim().into()),
-            "HPPEMIT" => Self::HppEmit(rest.trim().into()),
-            "EXTERNALSYM" => Self::ExternalSym(rest.trim().into()),
-            "NOINCLUDE" => Self::NoInclude(rest.trim().into()),
-            "NODEFINE" => Self::NoDefine(rest.trim().into()),
+            "APPTYPE" => Self::AppType(rest.trim()),
+            "LIBSUFFIX" => Self::LibSuffix(rest.trim()),
+            "RTTI" => Self::Rtti(rest.trim()),
+            "HPPEMIT" => Self::HppEmit(rest.trim()),
+            "EXTERNALSYM" => Self::ExternalSym(rest.trim()),
+            "NOINCLUDE" => Self::NoInclude(rest.trim()),
+            "NODEFINE" => Self::NoDefine(rest.trim()),
 
             // Single-letter switch with a space: "O +" or "O -"
             _ if kw.len() == 1 && kw.is_ascii() => {
@@ -237,19 +391,49 @@ impl<'src> LexDirective<'src> {
                 } else if suffix == "-" {
                     Self::Switch { letter, on: false }
                 } else {
-                    Self::Other(inner.into())
+                    Self::Other(inner)
                 }
             }
 
             // Long-form option with value: "HINTS ON", "WARN SYMBOL_DEPRECATED OFF" …
             _ if !rest.is_empty() => Self::Option {
-                keyword: kw_up.as_str().into(),
-                value: rest.trim().into(),
+                keyword: kw,
+                value: rest.trim(),
             },
 
-            _ => Self::Other(inner.into()),
+            _ => Self::Other(inner),
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+/// Lex a directive condition expression into a sequence of [`CondToken`]s,
+/// discarding whitespace and newline trivia.
+///
+/// The input `expr` must be a slice of the original source so that
+/// `logos::Lexer::slice` returns pointers with the correct `'src` lifetime.
+fn tokenize_expr<'src>(expr: &'src str) -> Vec<CondToken<'src>> {
+    let mut lex = Token::lexer(expr);
+    let mut out = vec![];
+    while let Some(Ok(kind)) = lex.next() {
+        if !matches!(kind, Token::Whitespace | Token::Newline) {
+            out.push(CondToken { kind, text: lex.slice() });
+        }
+    }
+    out
+}
+
+/// Parse an `{$IFOPT}` operand such as `C+` or `R-` into `(letter, on)`.
+///
+/// Defaults to `('?', false)` for malformed input.
+fn parse_ifopt(s: &str) -> (char, bool) {
+    let mut chars = s.chars();
+    let letter = chars.next().unwrap_or('?').to_ascii_uppercase();
+    let on = chars.next().map_or(false, |c| c == '+');
+    (letter, on)
 }
 
 /// Split `text` at the first ASCII-whitespace boundary.
