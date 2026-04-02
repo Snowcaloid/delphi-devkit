@@ -2,7 +2,17 @@ use chrono::{DateTime, Local};
 use tower_lsp::lsp_types::*;
 use std::fmt::Display;
 
+// Standard MSBuild / dcc32 format:
+// <file>(<line>[,<col>]): (error|warning|hint|fatal) <CODE>: <message> [<project>]
 const MSBUILD_OUTPUT_REGEX: &str = r"^(?P<file>.*?)[(](?P<line>\d+)(?:,(?P<column>\d+))?[)]:\s+(?P<kind>.*?)\s+(?P<code>[A-Z]\d+):\s+(?P<message>.*?)(?:\s+\[.*\])?$";
+
+// Delphi 2007 / Borland MSBuild wrapper format:
+// <target_file> : (warning|error|hint|fatal) : <source_file>(<line>) <localized_label>: <CODE> <message> [<project>]
+const DELPHI2007_MSBUILD_REGEX: &str = r"^.*?\s+:\s+(?:warning|error|hint|fatal)\s+:\s+(?P<file>.*?)[(](?P<line>\d+)(?:,(?P<column>\d+))?[)]\s+\S+\s+(?P<code>[A-Z]\d+)\s+(?P<message>.*?)(?:\s+\[.*\])?$";
+
+// Delphi 2007 simple / duplicate format (indented line, no MSBuild wrapper):
+//   <source_file>(<line>) <localized_label>: <CODE> <message>
+const DELPHI2007_SIMPLE_REGEX: &str = r"^\s+(?P<file>[A-Za-z]:\\[^(]*?)[(](?P<line>\d+)(?:,(?P<column>\d+))?[)]\s+\S+\s+(?P<code>[A-Z]\d+)\s+(?P<message>.*)$";
 
 #[derive(Debug)]
 pub enum DiagnosticKind {
@@ -56,39 +66,55 @@ impl Display for CompilerLineDiagnostic {
 
 lazy_static::lazy_static! {
     pub static ref COMPILER_OUTPUT_REGEX: regex::Regex = regex::Regex::new(MSBUILD_OUTPUT_REGEX).unwrap();
+    static ref DELPHI2007_MSBUILD_OUTPUT_REGEX: regex::Regex = regex::Regex::new(DELPHI2007_MSBUILD_REGEX).unwrap();
+    static ref DELPHI2007_SIMPLE_OUTPUT_REGEX: regex::Regex = regex::Regex::new(DELPHI2007_SIMPLE_REGEX).unwrap();
+}
+
+fn build_from_captures(captures: regex::Captures, compiler_name: String) -> Option<CompilerLineDiagnostic> {
+    let file = captures.name("file")?.as_str().trim().to_string();
+    let line_num = captures.name("line")?.as_str().parse().ok()?;
+    let column = captures
+        .name("column")
+        .and_then(|m| m.as_str().parse().ok());
+    let message = captures.name("message")?.as_str().to_string();
+    let code = captures.name("code")?.as_str().to_string();
+    let kind = if code.starts_with('H') {
+        DiagnosticKind::HINT
+    } else if code.starts_with('W') {
+        DiagnosticKind::WARN
+    } else {
+        DiagnosticKind::ERROR
+    };
+    Some(CompilerLineDiagnostic {
+        time: Local::now(),
+        file,
+        line: line_num,
+        column,
+        message,
+        code,
+        kind,
+        compiler_name,
+    })
 }
 
 impl CompilerLineDiagnostic {
+    /// Try to parse a raw compiler output line into a [`CompilerLineDiagnostic`].
+    ///
+    /// Attempts three formats in order:
+    /// 1. Standard MSBuild / dcc32 format
+    /// 2. Delphi 2007 Borland.Delphi.Targets MSBuild wrapper
+    /// 3. Delphi 2007 indented simple / duplicate format
     pub fn from_line(line: &str, compiler_name: String) -> Option<Self> {
         if let Some(captures) = COMPILER_OUTPUT_REGEX.captures(line) {
-            let file = captures.name("file")?.as_str().to_string();
-            let line = captures.name("line")?.as_str().parse().ok()?;
-            let column = captures
-                .name("column")
-                .and_then(|m| m.as_str().parse().ok());
-            let message = captures.name("message")?.as_str().to_string();
-            let code = captures.name("code")?.as_str().to_string();
-            let kind = if code.starts_with('H') {
-                DiagnosticKind::HINT
-            } else if code.starts_with('W') {
-                DiagnosticKind::WARN
-            } else {
-                DiagnosticKind::ERROR
-            };
-
-            Some(CompilerLineDiagnostic {
-                time: Local::now(),
-                file,
-                line,
-                column,
-                message,
-                code,
-                kind,
-                compiler_name
-            })
-        } else {
-            None
+            return build_from_captures(captures, compiler_name);
         }
+        if let Some(captures) = DELPHI2007_MSBUILD_OUTPUT_REGEX.captures(line) {
+            return build_from_captures(captures, compiler_name);
+        }
+        if let Some(captures) = DELPHI2007_SIMPLE_OUTPUT_REGEX.captures(line) {
+            return build_from_captures(captures, compiler_name);
+        }
+        None
     }
 }
 

@@ -531,6 +531,13 @@ enum OutputKind {
     Stderr,
 }
 
+lazy_static::lazy_static! {
+    // Matches Delphi 2007 compiler-progress lines: indented Windows absolute path with no
+    // line-number notation, e.g. "  C:\Delphi\VSS\...\SomeUnit".
+    static ref PATH_ONLY_LINE_REGEX: regex::Regex =
+        regex::Regex::new(r"^\s+[A-Za-z]:\\[^()\r\n]*$").unwrap();
+}
+
 async fn process_output_lines<R: AsyncRead + Unpin + Send>(
     client: Option<tower_lsp::Client>,
     mut reader: BufReader<R>,
@@ -541,6 +548,9 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
     use tokio::io::AsyncBufReadExt;
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     let mut last_file = String::new();
+    // Tracks the last emitted (file, line, code) key to deduplicate consecutive identical
+    // diagnostics that Delphi 2007 outputs twice (once wrapped in MSBuild format, once plain).
+    let mut last_diag_key: Option<(String, u32, String)> = None;
     let mut buf = Vec::new();
 
     loop {
@@ -554,7 +564,12 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
         let line = crate::encoding::decode_line(&buf)
             .trim_end_matches(['\r', '\n'])
             .to_string();
-        if line.is_empty() {
+        // Skip blank / whitespace-only lines (Delphi 2007 emits many)
+        if line.trim().is_empty() {
+            continue;
+        }
+        // Skip path-only compiler-progress lines, e.g. "  C:\Delphi\VSS\...\SomeUnit"
+        if PATH_ONLY_LINE_REGEX.is_match(&line) {
             continue;
         }
         if compiler_state::is_cancelled() {
@@ -569,6 +584,15 @@ async fn process_output_lines<R: AsyncRead + Unpin + Send>(
                     diagnostic.file = resolved.to_string_lossy().to_string();
                 }
             }
+            // Deduplicate: Delphi 2007 emits the same diagnostic twice – once in the
+            // Borland.Delphi.Targets MSBuild wrapper and once as a plain indented line.
+            // Skip the second occurrence when it has the same (file, line, code) as the
+            // diagnostic we just emitted.
+            let key = (diagnostic.file.clone(), diagnostic.line, diagnostic.code.clone());
+            if last_diag_key.as_ref() == Some(&key) {
+                continue;
+            }
+            last_diag_key = Some(key);
             if last_file != diagnostic.file && !diagnostics.is_empty() {
                 compiler_state::track_diagnosed_file(last_file.clone());
                 publish_diagnostics(client.as_ref(), &last_file, &diagnostics).await;

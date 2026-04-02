@@ -51,6 +51,35 @@ fn parses_fatal_error() {
 //  CompilerLineDiagnostic::from_line – non-matching inputs
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CompilerLineDiagnostic::from_line – Delphi 2007 formats
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn parses_delphi2007_msbuild_wrapper_format() {
+    let line = r"C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727\Borland.Delphi.Targets : warning : C:\Delphi\VSS\BeasJSONMessage.pas(107) Warnung: W1036 Variable 'aHelpContext' ist moeglicherweise nicht initialisiert worden [c:\Delphi\VSS\be.dproj]";
+    let diag = CompilerLineDiagnostic::from_line(line, "dcc32".into());
+    assert!(diag.is_some());
+    let diag = diag.unwrap();
+    assert_eq!(diag.file, r"C:\Delphi\VSS\BeasJSONMessage.pas");
+    assert_eq!(diag.line, 107);
+    assert_eq!(diag.column, None);
+    assert_eq!(diag.code, "W1036");
+    assert_eq!(format!("{}", diag.kind), "WARN");
+}
+
+#[test]
+fn parses_delphi2007_simple_indented_format() {
+    let line = "  C:\\Delphi\\VSS\\BeasJSONMessage.pas(107) Warnung: W1036 Variable 'aHelpContext' ist moeglicherweise nicht initialisiert worden";
+    let diag = CompilerLineDiagnostic::from_line(line, "dcc32".into());
+    assert!(diag.is_some());
+    let diag = diag.unwrap();
+    assert_eq!(diag.file, r"C:\Delphi\VSS\BeasJSONMessage.pas");
+    assert_eq!(diag.line, 107);
+    assert_eq!(diag.code, "W1036");
+    assert_eq!(format!("{}", diag.kind), "WARN");
+}
+
 #[test]
 fn rejects_non_matching_line() {
     assert!(CompilerLineDiagnostic::from_line("Build succeeded.", "dcc32".into()).is_none());
