@@ -15,6 +15,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
   The VS Code extension's compiler output (delivered via the LSP server) is unaffected.
 
+### Fixed
+
+- **Configuration override now actually takes effect during compilation**: the per-project / per-workspace / per-group-project configuration override (Debug, Release, …) was silently ignored. Delphi's `.dproj` conditional `PropertyGroup`s are keyed off the `$(Config)` MSBuild property, but the compiler invocation was only setting `$(Configuration)` — so MSBuild fell through to the dproj's default. The compile command now sets both `Config` and `Configuration`, so overrides actually apply.
+
 
 ## [2.1.2] - 2026-03-23
 

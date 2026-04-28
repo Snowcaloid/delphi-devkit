@@ -412,6 +412,7 @@ impl Compiler {
                 .arg(project_file)
                 .arg(format!("/t:Clean,{}", target))
                 .args(args.split_whitespace())
+                .arg(format!("/p:Config={}", eff_config))
                 .arg(format!("/p:Configuration={}", eff_config))
                 .arg(format!("/p:Platform={}", eff_platform))
                 .envs(envs)
