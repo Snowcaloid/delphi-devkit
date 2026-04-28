@@ -4,6 +4,18 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [Unreleased]
+
+### Added
+
+- **Compile output filtering for CLI and MCP**: the `ddk compile` CLI command and the MCP `delphi_compile_project` tool now strip the decorative banner box from compiler output and suppress warnings and hints by default to reduce token usage for AI consumers. Errors and the final status line are always shown. New flags (CLI) / parameters (MCP):
+  - `--show-warnings` / `show_warnings`: include warning lines verbatim.
+  - `--show-hints` / `show_hints`: include hint lines verbatim.
+  - `--summarize-diagnostics` / `summarize_diagnostics`: append a per-file `<file>: X warn, Y hint` summary for any warnings or hints that were suppressed.
+
+  The VS Code extension's compiler output (delivered via the LSP server) is unaffected.
+
+
 ## [2.1.2] - 2026-03-23
 
 ### Added

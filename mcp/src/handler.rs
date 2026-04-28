@@ -13,6 +13,7 @@ use serde_json::Value;
 use std::sync::Arc;
 
 use ddk_core::commands;
+use ddk_core::commands::CompileFilterOptions;
 
 // ---------------------------------------------------------------------------
 // README content embedded at compile time
@@ -78,7 +79,11 @@ pub struct SetGroupProjectsCompilerArgs {
         Pass project_id to target a specific project (does not change the active project). \
         Omit project_id to compile the currently active project. \
         Use delphi_list_projects to discover IDs. Always match by project name from the user's request. \
-        Returns raw compiler output — always present: banner lines, all errors with file/line, and the final summary. \
+        Returns compiler output with the decorative banner stripped. \
+        By default warnings and hints are suppressed to save tokens — \
+        set show_warnings / show_hints to surface them verbatim, \
+        or summarize_diagnostics to receive a per-file `<file>: X warn, Y hint` summary. \
+        Errors are always shown. \
         Only surface warnings from files you modified this session."
 )]
 #[derive(Debug, Deserialize, Serialize, macros::JsonSchema)]
@@ -88,6 +93,13 @@ pub struct CompileSelectedProjectArgs {
     /// Optional project ID to compile. If provided, that specific project is compiled
     /// without changing the active project. If omitted, the currently active project is compiled.
     pub project_id: Option<u64>,
+    /// Show warning lines verbatim instead of suppressing them. Default: false.
+    pub show_warnings: Option<bool>,
+    /// Show hint lines verbatim instead of suppressing them. Default: false.
+    pub show_hints: Option<bool>,
+    /// Emit a per-file `<file>: X warn, Y hint` summary for any
+    /// warnings/hints that were not shown verbatim. Default: false.
+    pub summarize_diagnostics: Option<bool>,
 }
 
 #[macros::mcp_tool(
@@ -215,7 +227,16 @@ async fn set_group_projects_compiler(args: &Value) -> String {
 async fn compile_project(args: &Value) -> String {
     let rebuild = args.get("rebuild").and_then(|v| v.as_bool()).unwrap_or(false);
     let project_id = args.get("project_id").and_then(|v| v.as_u64()).map(|id| id as usize);
-    match commands::cmd_compile(rebuild, project_id).await {
+    let filter = CompileFilterOptions {
+        trim_banners: true,
+        show_warnings: args.get("show_warnings").and_then(|v| v.as_bool()).unwrap_or(false),
+        show_hints: args.get("show_hints").and_then(|v| v.as_bool()).unwrap_or(false),
+        summarize_diagnostics: args
+            .get("summarize_diagnostics")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+    };
+    match commands::cmd_compile(rebuild, project_id, filter).await {
         Ok(output) => output.to_string(),
         Err(e) => format!("{e}"),
     }

@@ -228,6 +228,27 @@ pub struct CompileOutput {
 
 pub type CompileProgressCallback = std::sync::Arc<dyn Fn(String) + Send + Sync>;
 
+/// Output filter options for `cmd_compile` / `cmd_compile_with_progress`.
+///
+/// The VS Code extension consumes compiler events directly via the LSP server
+/// (which never goes through these commands), so its output remains untouched.
+/// CLI and MCP callers should set these to reduce token noise.
+#[derive(Debug, Clone, Default)]
+pub struct CompileFilterOptions {
+    /// Strip box-drawing border lines from start/completed banners and trim
+    /// the centered padding on the remaining info lines.
+    pub trim_banners: bool,
+    /// Emit warning lines verbatim. When false, warnings are hidden (and
+    /// optionally counted toward `summarize_diagnostics`).
+    pub show_warnings: bool,
+    /// Emit hint lines verbatim. When false, hints are hidden (and optionally
+    /// counted toward `summarize_diagnostics`).
+    pub show_hints: bool,
+    /// Emit a per-file summary `<file>: X warn, Y hint` after each project's
+    /// completion event for any diagnostics that were not shown verbatim.
+    pub summarize_diagnostics: bool,
+}
+
 impl fmt::Display for CompileOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let summary = if self.cancelled {
@@ -248,6 +269,118 @@ impl fmt::Display for CompileOutput {
             write!(f, "\n\nCompiler output:\n{}", self.lines.join("\n"))?;
         }
         Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Output-filter helpers (used by cmd_compile_with_progress)
+// ---------------------------------------------------------------------------
+
+/// Returns `true` if `line` is a banner border (only box-drawing chars and
+/// whitespace). These are the decorative top/bottom rows of the compile
+/// banner that have no value for an LLM consumer.
+fn is_banner_border_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    trimmed.chars().all(|c| matches!(
+        c,
+        '╒' | '╕' | '╘' | '╛'
+        | '╔' | '╗' | '╚' | '╝'
+        | '┏' | '┓' | '┗' | '┛'
+        | '╓' | '╖' | '╙' | '╜'
+        | '┍' | '┑' | '┕' | '┙'
+        | '┌' | '┐' | '└' | '┘'
+        | '─' | '━' | '═' | ' '
+    ))
+}
+
+/// Trim a banner line vector for compact CLI/MCP output: drop border rows and
+/// strip the centering padding from the remaining info rows.
+fn trim_banner_lines(lines: Vec<String>) -> Vec<String> {
+    lines
+        .into_iter()
+        .filter(|l| !is_banner_border_line(l))
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+lazy_static::lazy_static! {
+    /// Matches the formatted-diagnostic line emitted by
+    /// `CompilerLineDiagnostic::Display`:
+    ///   `HH:MM:SS.mmm: [KIND][CODE] file:line[:col] - message`
+    static ref FORMATTED_DIAG_REGEX: regex::Regex = regex::Regex::new(
+        r"^\d{2}:\d{2}:\d{2}\.\d+:\s+\[(?P<kind>WARN|HINT|ERROR)\]\[[A-Z]\d+\]\s+(?P<file>.+?):\d+(?::\d+)?\s+-\s"
+    ).unwrap();
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DiagKind {
+    Warn,
+    Hint,
+    Error,
+}
+
+/// Attempt to classify a streamed compiler line as a formatted diagnostic.
+/// Returns `(kind, file_basename_without_extension)` on match.
+fn classify_diagnostic_line(line: &str) -> Option<(DiagKind, String)> {
+    let caps = FORMATTED_DIAG_REGEX.captures(line)?;
+    let kind = match caps.name("kind")?.as_str() {
+        "WARN" => DiagKind::Warn,
+        "HINT" => DiagKind::Hint,
+        "ERROR" => DiagKind::Error,
+        _ => return None,
+    };
+    let file = caps.name("file")?.as_str();
+    Some((kind, diag_file_basename(file)))
+}
+
+/// Extract `<filename without extension>` from a path string.
+/// Handles both `/` and `\` separators since Delphi runs on Windows.
+fn diag_file_basename(path: &str) -> String {
+    let last = path.rsplit(|c| c == '/' || c == '\\').next().unwrap_or(path);
+    match last.rsplit_once('.') {
+        Some((stem, _ext)) if !stem.is_empty() => stem.to_string(),
+        _ => last.to_string(),
+    }
+}
+
+/// Per-project tracker for warnings/hints suppressed from streamed output.
+/// Counts are aggregated by file basename in insertion order so the summary
+/// reflects the order diagnostics arrived.
+#[derive(Debug, Default)]
+struct DiagCounts {
+    order: Vec<String>,
+    counts: std::collections::HashMap<String, (u32, u32)>,
+}
+
+impl DiagCounts {
+    fn add(&mut self, file: &str, kind: DiagKind) {
+        let entry = self.counts.entry(file.to_string()).or_insert_with(|| {
+            self.order.push(file.to_string());
+            (0, 0)
+        });
+        match kind {
+            DiagKind::Warn => entry.0 += 1,
+            DiagKind::Hint => entry.1 += 1,
+            DiagKind::Error => {}
+        }
+    }
+
+    fn drain_summary_lines(&mut self) -> Vec<String> {
+        let mut out = Vec::new();
+        for file in self.order.drain(..) {
+            if let Some((w, h)) = self.counts.remove(&file) {
+                if w == 0 && h == 0 {
+                    continue;
+                }
+                out.push(format!("{file}: {w} warn, {h} hint"));
+            }
+        }
+        self.counts.clear();
+        out
     }
 }
 
@@ -495,8 +628,12 @@ impl fmt::Display for FormatFileResult {
 /// directly **without** changing the active project in state; otherwise the
 /// currently active project is compiled.
 /// Collects compiler broadcast output and returns it as a `CompileOutput`.
-pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<CompileOutput> {
-    cmd_compile_with_progress(rebuild, project_id, None).await
+pub async fn cmd_compile(
+    rebuild: bool,
+    project_id: Option<usize>,
+    filter: CompileFilterOptions,
+) -> Result<CompileOutput> {
+    cmd_compile_with_progress(rebuild, project_id, filter, None).await
 }
 
 /// Compiles a project and optionally invokes `on_progress` for each emitted
@@ -504,6 +641,7 @@ pub async fn cmd_compile(rebuild: bool, project_id: Option<usize>) -> Result<Com
 pub async fn cmd_compile_with_progress(
     rebuild: bool,
     project_id: Option<usize>,
+    filter: CompileFilterOptions,
     on_progress: Option<CompileProgressCallback>,
 ) -> Result<CompileOutput> {
     let (project_name, resolved_id, link_id) = {
@@ -539,31 +677,70 @@ pub async fn cmd_compile_with_progress(
         std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let collected_clone = collected.clone();
     let progress_callback = on_progress.clone();
+    let filter_opts = filter.clone();
     let mut receiver = CompilerProgress::subscribe();
 
     let collect_handle = tokio::spawn(async move {
+        let mut counts = DiagCounts::default();
+        let emit = |callback: &Option<CompileProgressCallback>,
+                    lines: &mut Vec<String>,
+                    out: Vec<String>| {
+            if let Some(cb) = callback {
+                for line in &out {
+                    cb(line.clone());
+                }
+            }
+            lines.extend(out);
+        };
         loop {
             match receiver.recv().await {
                 Ok(event) => {
                     let mut lines = collected_clone.lock().unwrap();
                     match event {
                         CompilerProgressParams::Start { lines: ls }
-                        | CompilerProgressParams::SingleProjectStarted { lines: ls, .. }
-                        | CompilerProgressParams::Completed { lines: ls, .. }
+                        | CompilerProgressParams::SingleProjectStarted { lines: ls, .. } => {
+                            let out = if filter_opts.trim_banners {
+                                trim_banner_lines(ls)
+                            } else {
+                                ls
+                            };
+                            emit(&progress_callback, &mut lines, out);
+                        }
+                        CompilerProgressParams::Completed { lines: ls, .. }
                         | CompilerProgressParams::SingleProjectCompleted { lines: ls, .. } => {
-                            if let Some(callback) = &progress_callback {
-                                for line in &ls {
-                                    callback(line.clone());
+                            // Drain pending per-project diagnostic summary first
+                            // so it appears immediately before the footer.
+                            if filter_opts.summarize_diagnostics {
+                                let summary = counts.drain_summary_lines();
+                                if !summary.is_empty() {
+                                    emit(&progress_callback, &mut lines, summary);
                                 }
+                            } else {
+                                counts.drain_summary_lines();
                             }
-                            lines.extend(ls);
+                            let out = if filter_opts.trim_banners {
+                                trim_banner_lines(ls)
+                            } else {
+                                ls
+                            };
+                            emit(&progress_callback, &mut lines, out);
                         }
                         CompilerProgressParams::Stdout { line }
                         | CompilerProgressParams::Stderr { line } => {
-                            if let Some(callback) = &progress_callback {
-                                callback(line.clone());
+                            if let Some((kind, file)) = classify_diagnostic_line(&line) {
+                                let suppress = match kind {
+                                    DiagKind::Warn => !filter_opts.show_warnings,
+                                    DiagKind::Hint => !filter_opts.show_hints,
+                                    DiagKind::Error => false,
+                                };
+                                if suppress {
+                                    if filter_opts.summarize_diagnostics {
+                                        counts.add(&file, kind);
+                                    }
+                                    continue;
+                                }
                             }
-                            lines.push(line);
+                            emit(&progress_callback, &mut lines, vec![line]);
                         }
                     }
                 }

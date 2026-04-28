@@ -9,6 +9,7 @@ use clap::{Parser, Subcommand};
 use std::io::{self, Write};
 
 use ddk_core::commands;
+use ddk_core::commands::CompileFilterOptions;
 use ddk_core::projects::{CompilerConfigurations, ProjectsData};
 use ddk_core::state::Stateful;
 
@@ -43,6 +44,19 @@ enum Commands {
         /// Project ID to compile. If provided, selects the project first.
         #[arg(long, short)]
         project: Option<usize>,
+
+        /// Show warning lines verbatim instead of suppressing them.
+        #[arg(long)]
+        show_warnings: bool,
+
+        /// Show hint lines verbatim instead of suppressing them.
+        #[arg(long)]
+        show_hints: bool,
+
+        /// Emit a per-file `<file>: X warn, Y hint` summary for any
+        /// warnings/hints that were not shown verbatim.
+        #[arg(long)]
+        summarize_diagnostics: bool,
     },
 
     /// Show environment info for the active project.
@@ -149,15 +163,28 @@ async fn main() -> Result<()> {
             }
         },
 
-        Commands::Compile { rebuild, project } => {
+        Commands::Compile {
+            rebuild,
+            project,
+            show_warnings,
+            show_hints,
+            summarize_diagnostics,
+        } => {
+            let filter = CompileFilterOptions {
+                trim_banners: true,
+                show_warnings,
+                show_hints,
+                summarize_diagnostics,
+            };
             if cli.json {
-                let output = commands::cmd_compile(rebuild, project).await?;
+                let output = commands::cmd_compile(rebuild, project, filter).await?;
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {
                 let stdout = std::sync::Arc::new(std::sync::Mutex::new(io::stdout()));
                 let output = commands::cmd_compile_with_progress(
                     rebuild,
                     project,
+                    filter,
                     Some(std::sync::Arc::new(move |line: String| {
                         let mut handle = stdout.lock().unwrap();
                         let _ = writeln!(handle, "{line}");

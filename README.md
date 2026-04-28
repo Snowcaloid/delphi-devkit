@@ -45,16 +45,24 @@ Or download `ddk-windows-x86_64.zip` from the [latest release](https://github.co
 
 ### CLI Usage
 ```
-ddk project list                # List all known projects
-ddk project select <ID>         # Select a project by ID
-ddk compiler list               # List available compiler configurations
-ddk compiler set <KEY>          # Set the group project compiler
-ddk compile                     # Compile the active project
-ddk compile --rebuild -p <ID>   # Rebuild a specific project by ID
-ddk env                         # Show active project & compiler info
-ddk info                        # Print the DDK README
-ddk --json <command>            # Output as JSON
+ddk project list                       # List all known projects
+ddk project select <ID>                # Select a project by ID
+ddk compiler list                      # List available compiler configurations
+ddk compiler set <KEY>                 # Set the group project compiler
+ddk compile                            # Compile the active project
+ddk compile --rebuild -p <ID>          # Rebuild a specific project by ID
+ddk compile --show-warnings            # Include warnings verbatim
+ddk compile --show-hints               # Include hints verbatim
+ddk compile --summarize-diagnostics    # Append `<file>: X warn, Y hint` per project
+ddk env                                # Show active project & compiler info
+ddk info                               # Print the DDK README
+ddk --json <command>                   # Output as JSON
 ```
+
+Compile output for the CLI and the MCP `delphi_compile_project` tool is
+trimmed for AI / token-efficient consumption: the decorative banner box is
+stripped and warning / hint lines are hidden by default. Errors and the final
+status line are always shown.
 
 ## Demos
 
