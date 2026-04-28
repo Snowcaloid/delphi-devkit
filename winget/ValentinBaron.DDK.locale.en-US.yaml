@@ -2,7 +2,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
 
 PackageIdentifier: ValentinBaron.DDK
-PackageVersion: 2.1.2
+PackageVersion: 2.1.3
 PackageLocale: en-US
 Publisher: Valentin Baron
 PublisherUrl: https://github.com/valentin-baron

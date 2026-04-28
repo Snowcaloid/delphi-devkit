@@ -4,7 +4,7 @@ All notable changes to the "delphi-devkit" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [2.1.3] - 2026-04-28
 
 ### Added
 
